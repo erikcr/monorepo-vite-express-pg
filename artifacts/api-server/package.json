@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsx build.ts",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@repo/db": "workspace:*",
@@ -18,8 +19,14 @@
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "@types/supertest": "^6.0.2",
     "esbuild": "^0.24.2",
+    "pg": "^8.13.1",
+    "pg-mem": "^2.8.1",
+    "supertest": "^7.0.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
   }
 }
