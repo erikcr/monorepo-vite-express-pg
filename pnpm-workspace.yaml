@@ -1,0 +1,10 @@
+packages:
+  - 'artifacts/*'
+  - 'lib/*'
+
+# Supply-chain security: only these packages may run install scripts
+onlyBuiltDependencies:
+  - esbuild
+  - '@biomejs/biome'
+  - better-sqlite3
+  - sharp

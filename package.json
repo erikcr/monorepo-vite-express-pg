@@ -1,0 +1,20 @@
+{
+  "name": "monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "build": "pnpm -r --filter='./artifacts/*' build",
+    "dev": "pnpm --parallel --filter='./artifacts/*' dev",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "db:generate": "pnpm --filter @repo/db generate",
+    "db:migrate": "pnpm --filter @repo/db migrate",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:studio": "pnpm --filter @repo/db studio"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
