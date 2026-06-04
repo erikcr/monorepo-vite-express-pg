@@ -11,7 +11,8 @@
     "db:generate": "pnpm --filter @repo/db generate",
     "db:migrate": "pnpm --filter @repo/db migrate",
     "db:seed": "tsx scripts/seed.ts",
-    "db:studio": "pnpm --filter @repo/db studio"
+    "db:studio": "pnpm --filter @repo/db studio",
+    "test": "pnpm -r test"
   },
   "devDependencies": {
     "tsx": "^4.19.2",
