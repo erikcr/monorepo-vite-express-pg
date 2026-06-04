@@ -1,0 +1,102 @@
+openapi: "3.1.0"
+info:
+  title: Monorepo API
+  version: "1.0.0"
+  description: Template API
+
+servers:
+  - url: http://localhost:3000
+    description: Local
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      tags: [system]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /api/example:
+    get:
+      operationId: listExamples
+      summary: List example records
+      tags: [example]
+      parameters:
+        - name: orgId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Example"
+
+    post:
+      operationId: createExample
+      summary: Create an example record
+      tags: [example]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExampleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Example"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, ts]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        ts:
+          type: string
+          format: date-time
+
+    Example:
+      type: object
+      required: [id, orgId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        orgId:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateExampleInput:
+      type: object
+      required: [orgId, name]
+      properties:
+        orgId:
+          type: string
+        name:
+          type: string

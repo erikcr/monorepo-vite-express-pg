@@ -1,0 +1,17 @@
+import { config } from "dotenv";
+import { resolve } from "node:path";
+
+config({ path: resolve(process.cwd(), "../../.env") });
+config({ path: resolve(process.cwd(), ".env") });
+
+function require(key: string): string {
+  const val = process.env[key];
+  if (!val) throw new Error(`Missing required env var: ${key}`);
+  return val;
+}
+
+export const env = {
+  get DATABASE_URL() { return require("DATABASE_URL"); },
+  get PORT() { return process.env.PORT ?? "3000"; },
+  get NODE_ENV() { return process.env.NODE_ENV ?? "development"; },
+};

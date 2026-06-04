@@ -1,0 +1,37 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Example, CreateExampleInput } from "@repo/api-zod";
+import { apiFetch } from "./client.js";
+
+export { apiFetch };
+
+// ── Example ──────────────────────────────────────────────────────────────────
+
+export function useExamples(orgId?: string) {
+  const params = orgId ? `?orgId=${encodeURIComponent(orgId)}` : "";
+  return useQuery<Example[]>({
+    queryKey: ["examples", orgId],
+    queryFn: () => apiFetch(`/api/example${params}`),
+  });
+}
+
+export function useCreateExample() {
+  const qc = useQueryClient();
+  return useMutation<Example, Error, CreateExampleInput>({
+    mutationFn: (input) =>
+      apiFetch("/api/example", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["examples"] }),
+  });
+}
+
+// ── Health ────────────────────────────────────────────────────────────────────
+
+export function useHealth() {
+  return useQuery<{ status: string; ts: string }>({
+    queryKey: ["health"],
+    queryFn: () => apiFetch("/health"),
+    staleTime: 30_000,
+  });
+}
