@@ -6,4 +6,3 @@ dist
 *.tsbuildinfo
 .vercel
 .DS_Store
-pnpm-lock.yaml
