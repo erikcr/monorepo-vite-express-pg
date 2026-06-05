@@ -7,7 +7,8 @@
     "build": "pnpm -r --filter='./artifacts/*' build",
     "dev": "pnpm --parallel --filter='./artifacts/*' dev",
     "typecheck": "pnpm -r typecheck",
-    "lint": "pnpm -r lint",
+    "lint": "biome check .",
+    "format": "biome format --write .",
     "db:generate": "pnpm --filter @repo/db generate",
     "db:migrate": "pnpm --filter @repo/db migrate",
     "db:seed": "tsx scripts/seed.ts",
@@ -15,6 +16,7 @@
     "test": "pnpm -r test"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   }
