@@ -1,15 +1,16 @@
 import PgBoss from "pg-boss";
 import { env } from "@repo/env";
+import { logger } from "./logger.js";
 
 const boss = new PgBoss(env.DATABASE_URL);
 
-boss.on("error", (err) => console.error("pg-boss error:", err));
+boss.on("error", (err) => logger.error({ err }, "pg-boss error"));
 
 await boss.start();
 
 await boss.work("example-job", async (job) => {
-  console.log("processing job:", job.id, job.data);
+  logger.info({ jobId: job.id }, "processing job");
   // TODO: add job handlers
 });
 
-console.log("worker started");
+logger.info("worker started");

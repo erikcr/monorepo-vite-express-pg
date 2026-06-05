@@ -3,6 +3,7 @@ import cors from "cors";
 import { env } from "@repo/env";
 import { healthRouter } from "./routes/health.js";
 import { createExampleRouter } from "./routes/example.js";
+import { logger } from "./logger.js";
 import type { Db } from "@repo/db";
 
 export function createApp(db: Db): Express {
@@ -27,8 +28,8 @@ export function createApp(db: Db): Express {
   // Global error handler — must be last and have 4 params
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    console.error(err.stack);
     const status = (err as { status?: number }).status ?? 500;
+    logger.error({ err, status }, "unhandled error");
     res.status(status).json({ error: err.message ?? "Internal server error" });
   });
 
