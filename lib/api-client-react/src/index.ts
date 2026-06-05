@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Example, CreateExampleInput } from "@repo/api-zod";
+import type { CreateExampleInput, Example } from "@repo/api-zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./client.js";
 
 export { apiFetch };

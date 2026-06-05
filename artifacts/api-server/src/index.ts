@@ -1,5 +1,5 @@
-import { env } from "@repo/env";
 import { db } from "@repo/db";
+import { env } from "@repo/env";
 import { createApp } from "./app.js";
 import { logger } from "./logger.js";
 

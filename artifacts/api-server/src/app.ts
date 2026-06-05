@@ -1,10 +1,10 @@
-import express, { type Express, type Request, type Response, type NextFunction } from "express";
-import cors from "cors";
-import { env } from "@repo/env";
-import { healthRouter } from "./routes/health.js";
-import { createExampleRouter } from "./routes/example.js";
-import { logger } from "./logger.js";
 import type { Db } from "@repo/db";
+import { env } from "@repo/env";
+import cors from "cors";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
+import { logger } from "./logger.js";
+import { createExampleRouter } from "./routes/example.js";
+import { healthRouter } from "./routes/health.js";
 
 export function createApp(db: Db): Express {
   const app = express();

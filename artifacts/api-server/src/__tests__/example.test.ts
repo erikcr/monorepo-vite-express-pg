@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll } from "vitest";
 import supertest from "supertest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
 
@@ -17,9 +17,7 @@ describe("/api/example", () => {
   });
 
   it("POST / creates a record and returns 201", async () => {
-    const res = await request
-      .post("/api/example")
-      .send({ orgId: "org_test", name: "Alpha" });
+    const res = await request.post("/api/example").send({ orgId: "org_test", name: "Alpha" });
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({ orgId: "org_test", name: "Alpha" });
     expect(typeof res.body.id).toBe("string");
@@ -45,8 +43,6 @@ describe("/api/example", () => {
     const res = await request.get("/api/example?orgId=org_filter");
     expect(res.status).toBe(200);
     expect(res.body.length).toBeGreaterThanOrEqual(1);
-    expect(
-      res.body.every((r: { orgId: string }) => r.orgId === "org_filter")
-    ).toBe(true);
+    expect(res.body.every((r: { orgId: string }) => r.orgId === "org_filter")).toBe(true);
   });
 });

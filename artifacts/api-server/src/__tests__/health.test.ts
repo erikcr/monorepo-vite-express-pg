@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll } from "vitest";
 import supertest from "supertest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
 
