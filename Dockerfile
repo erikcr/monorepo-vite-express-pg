@@ -18,8 +18,6 @@ FROM node:22-alpine AS runtime
 WORKDIR /app
 COPY --from=build /app/artifacts/api-server/dist ./dist
 COPY --from=build /app/lib/db/migrations ./migrations
-COPY scripts/migrate-and-start.sh ./
-RUN chmod +x migrate-and-start.sh
 ENV NODE_ENV=production
 EXPOSE 3000
-CMD ["./migrate-and-start.sh"]
+CMD ["node", "dist/index.js"]
