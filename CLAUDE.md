@@ -66,6 +66,22 @@ For multi-step tasks, state a brief plan:
 
 ## Part B — Project Reference
 
+### Session Start
+
+At the start of every session, check whether `docs/PROJECT.md` exists. If it does, read it before doing anything else — it contains the project's objective, V1 feature scope, data model, and success criteria. Every code change should be evaluated against it.
+
+If `docs/PROJECT.md` does **not** exist and the user appears to be starting a new project, suggest running `/new-project` before writing any code.
+
+### Project Documentation
+
+All project-level documentation lives in `docs/` — not at the root.
+
+```
+docs/
+  PROJECT.md       # scope, objectives, V1 features, success criteria (created by /new-project)
+  ARCHITECTURE.md  # stack decisions and key patterns
+```
+
 ### Stack
 
 | Layer | Technology |
@@ -90,9 +106,10 @@ lib/                 Shared packages (imported by artifacts)
   api-zod/           Zod schemas derived from spec
   api-client-react/  React Query hooks + fetch client
   env/               Typed env var loader
+docs/                Project documentation (PROJECT.md, ARCHITECTURE.md)
 scripts/             One-off scripts (seed, migrate-and-start)
 .claude/commands/    Shared Claude Code skills (committed)
-.github/workflows/   CI (typecheck → test → build → e2e)
+.github/workflows/   CI (lint → typecheck → test → build → e2e)
 ```
 
 ### Key Patterns
@@ -134,6 +151,10 @@ pnpm db:migrate               # run pending migrations
 pnpm db:seed                  # seed example data
 pnpm db:studio                # open Drizzle Studio
 
+# Lint & format
+pnpm lint                     # Biome check (all packages)
+pnpm format                   # Biome format --write (all packages)
+
 # Type checking & tests
 pnpm typecheck                # all packages
 pnpm test                     # all packages (vitest)
@@ -149,7 +170,7 @@ pnpm build                    # all artifacts
 - **API tests** — supertest against `createApp(testDb)`, db backed by pg-mem (no real Postgres needed)
 - **Component tests** — `@testing-library/react` + jsdom environment
 - **E2E** — Playwright health-page smoke test in `artifacts/web/e2e/`
-- **CI** — GitHub Actions: typecheck → test → build → e2e on every push/PR
+- **CI** — GitHub Actions: lint → typecheck → test → build → e2e on every push/PR
 
 ### Deployment
 
