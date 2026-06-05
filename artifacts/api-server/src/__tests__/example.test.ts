@@ -32,6 +32,12 @@ describe("/api/example", () => {
     expect(res.body.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("POST / returns 400 when body is invalid", async () => {
+    const res = await request.post("/api/example").send({ orgId: "", name: "" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
   it("GET /?orgId= filters by org", async () => {
     await request.post("/api/example").send({ orgId: "org_filter", name: "Filtered" });
     await request.post("/api/example").send({ orgId: "org_other", name: "Other" });
