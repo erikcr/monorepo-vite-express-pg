@@ -4,7 +4,7 @@ RUN npm install -g pnpm@9.15.4
 # ── Install dependencies ──────────────────────────────────────────────────────
 FROM base AS deps
 WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.json ./
 COPY lib/ ./lib/
 COPY artifacts/api-server/ ./artifacts/api-server/
 RUN pnpm install --frozen-lockfile --filter @repo/api-server...
