@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignore": ["**/node_modules/**", "**/dist/**", "**/migrations/**"]
+    "ignore": ["**/node_modules/**", "**/dist/**", "**/migrations/**", "**/test-results/**"]
   },
   "formatter": {
     "enabled": true,
