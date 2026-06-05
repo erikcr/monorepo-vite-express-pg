@@ -1,8 +1,8 @@
-import { Router } from "express";
-import { exampleTable } from "@repo/db/schema";
 import { CreateExampleInputSchema } from "@repo/api-zod";
-import { eq } from "drizzle-orm";
 import type { Db } from "@repo/db";
+import { exampleTable } from "@repo/db/schema";
+import { eq } from "drizzle-orm";
+import { Router } from "express";
 
 export function createExampleRouter(db: Db) {
   const router = Router();

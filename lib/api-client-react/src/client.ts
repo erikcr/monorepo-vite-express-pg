@@ -1,12 +1,7 @@
 const API_BASE =
-  typeof window !== "undefined"
-    ? ""
-    : (process.env.API_URL ?? "http://localhost:3000");
+  typeof window !== "undefined" ? "" : (process.env.API_URL ?? "http://localhost:3000");
 
-export async function apiFetch<T>(
-  path: string,
-  init?: RequestInit
-): Promise<T> {
+export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json", ...init?.headers },
     ...init,

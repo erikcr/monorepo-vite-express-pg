@@ -1,9 +1,5 @@
-import { describe, it, expect } from "vitest";
-import {
-  HealthResponseSchema,
-  ExampleSchema,
-  CreateExampleInputSchema,
-} from "../index.js";
+import { describe, expect, it } from "vitest";
+import { CreateExampleInputSchema, ExampleSchema, HealthResponseSchema } from "../index.js";
 
 const validUuid = "123e4567-e89b-12d3-a456-426614174000";
 const validTs = new Date().toISOString();
@@ -23,7 +19,13 @@ describe("HealthResponseSchema", () => {
 });
 
 describe("ExampleSchema", () => {
-  const valid = { id: validUuid, orgId: "org_1", name: "Test", createdAt: validTs, updatedAt: validTs };
+  const valid = {
+    id: validUuid,
+    orgId: "org_1",
+    name: "Test",
+    createdAt: validTs,
+    updatedAt: validTs,
+  };
 
   it("accepts a valid example", () => {
     expect(ExampleSchema.safeParse(valid).success).toBe(true);

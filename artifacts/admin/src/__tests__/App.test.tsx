@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import App from "../App.tsx";
 
 vi.mock("@repo/api-client-react", () => ({
@@ -14,11 +14,11 @@ describe("App (admin)", () => {
 
   it("shows the admin heading", () => {
     render(<App />);
-    expect(screen.getByText(/admin/i)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /admin/i })).toBeTruthy();
   });
 
   it("shows loading state", () => {
     render(<App />);
-    expect(screen.getByText(/loading/i)).toBeTruthy();
+    expect(screen.getByText("Loading…")).toBeTruthy();
   });
 });
