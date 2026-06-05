@@ -6,8 +6,8 @@ import { createTestDb } from "../test-helpers/create-test-db.js";
 describe("/api/example", () => {
   let request: ReturnType<typeof supertest>;
 
-  beforeAll(() => {
-    request = supertest(createApp(createTestDb()));
+  beforeAll(async () => {
+    request = supertest(createApp(await createTestDb()));
   });
 
   it("GET / returns an array", async () => {
