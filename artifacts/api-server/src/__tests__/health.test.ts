@@ -6,8 +6,8 @@ import { createTestDb } from "../test-helpers/create-test-db.js";
 describe("GET /health", () => {
   let request: ReturnType<typeof supertest>;
 
-  beforeAll(() => {
-    request = supertest(createApp(createTestDb()));
+  beforeAll(async () => {
+    request = supertest(createApp(await createTestDb()));
   });
 
   it("returns 200", async () => {

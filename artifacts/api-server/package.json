@@ -20,15 +20,13 @@
     "pino": "^9.6.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.2.15",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.2",
-    "@types/pg": "^8.11.10",
     "@types/supertest": "^6.0.2",
     "esbuild": "^0.24.2",
     "pino-pretty": "^13.0.0",
-    "pg": "^8.13.1",
-    "pg-mem": "^2.8.1",
     "supertest": "^7.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
