@@ -67,13 +67,18 @@ Railway injects `DATABASE_URL` automatically when you link the Postgres service.
 
 ## Deploying to Vercel (web + admin)
 
-Create two Vercel projects, one for `artifacts/web` and one for `artifacts/admin`:
+Create two Vercel projects, one for `artifacts/web` and one for `artifacts/admin`.
+
+**Required dashboard setting:**
 
 | Setting | Value |
 |---------|-------|
-| Root Directory | `artifacts/web` or `artifacts/admin` |
-| Build Command | `pnpm build` |
-| Output Directory | `dist` |
-| Install Command | `pnpm install` |
+| Root Directory | `artifacts/web` (or `artifacts/admin`) |
+
+All other build settings are driven by `vercel.json` inside each app directory — leave Build Command, Output Directory, and Install Command at their defaults in the dashboard.
+
+The `vercel.json` files use `cd ../..` to run install and build from the repo root, ensuring all pnpm workspace packages are available. `outputDirectory: "dist"` is relative to the Root Directory.
+
+**Common mistake:** setting `outputDirectory` to `artifacts/web/dist` in the dashboard or `vercel.json`. When Root Directory is set, Vercel resolves output relative to it — so `artifacts/web/dist` becomes `artifacts/web/artifacts/web/dist` and the deploy fails with "No Output Directory found".
 
 Set `VITE_API_URL` on each project to your Railway API URL.

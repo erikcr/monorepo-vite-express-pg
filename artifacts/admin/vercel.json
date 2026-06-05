@@ -1,6 +1,7 @@
 {
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "buildCommand": "cd ../.. && pnpm --filter @repo/admin build",
-  "outputDirectory": "artifacts/admin/dist",
+  "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
 }
