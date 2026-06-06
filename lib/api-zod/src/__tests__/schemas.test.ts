@@ -6,15 +6,19 @@ const validTs = new Date().toISOString();
 
 describe("HealthResponseSchema", () => {
   it("accepts a valid response", () => {
-    expect(HealthResponseSchema.safeParse({ status: "ok", ts: validTs }).success).toBe(true);
+    expect(HealthResponseSchema.safeParse({ status: "ok", ts: validTs, db: "ok" }).success).toBe(true);
   });
 
   it("rejects a non-ok status", () => {
-    expect(HealthResponseSchema.safeParse({ status: "error", ts: validTs }).success).toBe(false);
+    expect(HealthResponseSchema.safeParse({ status: "error", ts: validTs, db: "ok" }).success).toBe(false);
   });
 
   it("rejects a missing timestamp", () => {
-    expect(HealthResponseSchema.safeParse({ status: "ok" }).success).toBe(false);
+    expect(HealthResponseSchema.safeParse({ status: "ok", db: "ok" }).success).toBe(false);
+  });
+
+  it("rejects a missing db field", () => {
+    expect(HealthResponseSchema.safeParse({ status: "ok", ts: validTs }).success).toBe(false);
   });
 });
 
