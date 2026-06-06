@@ -168,8 +168,9 @@ pnpm dev                      # start all artifacts in parallel
 pnpm --filter @repo/web dev   # start a single app
 
 # Database
-pnpm db:generate              # generate Drizzle migration from schema changes
-pnpm db:migrate               # run pending migrations
+pnpm db:generate              # generate Drizzle migration from schema changes (no DB needed)
+pnpm db:migrate               # apply pending migrations to local DB (requires DATABASE_URL)
+pnpm db:check                 # verify no uncommitted migrations (runs in CI)
 pnpm db:seed                  # seed example data
 pnpm db:studio                # open Drizzle Studio
 
@@ -189,10 +190,10 @@ pnpm build                    # all artifacts
 ### Testing Approach
 
 - **Unit/integration** — vitest, co-located in `src/__tests__/` per package
-- **API tests** — supertest against `createApp(testDb)`, db backed by PGlite (real PostgreSQL WASM, no external DB needed)
+- **API tests** — supertest against `createApp(testDb)`, db backed by PGlite which runs the actual migration SQL files — schema changes without committed migrations will cause test failures
 - **Component tests** — `@testing-library/react` + jsdom environment
 - **E2E** — Playwright health-page smoke test in `artifacts/web/e2e/`
-- **CI** — GitHub Actions: lint → typecheck → test → build → e2e on every push/PR
+- **CI** — GitHub Actions: lint → typecheck → db-check → test → build → e2e on every push/PR
 
 ### Deployment
 
@@ -208,9 +209,27 @@ vercel login
 /provision-vercel    # Claude skill: creates both Vercel projects, sets env vars
 ```
 
+### Schema change workflow
+
+**Every time you edit `lib/db/src/schema.ts`:**
+
+```bash
+pnpm db:generate   # creates a new SQL file in lib/db/migrations/
+pnpm db:migrate    # applies it to your local DB (requires DATABASE_URL in .env)
+# commit both schema.ts AND the new migration file together
+```
+
+CI runs `pnpm db:check` which re-generates and fails if any new files appear — this
+catches schema changes committed without the corresponding migration. On Railway,
+the pre-deploy command `node dist/migrate.js` applies pending migrations to production
+before the new server starts, so the flow is: push → CI → Railway build → migrate → start.
+
+`pnpm db:generate` never needs a real DB — it only reads `schema.ts` and the
+existing migration files to produce the diff SQL.
+
 ### Adding a New Feature (checklist)
 
-1. Update `lib/db/src/schema.ts` if a new table is needed → run `pnpm db:generate`
+1. Update `lib/db/src/schema.ts` if a new table is needed → run `pnpm db:generate` and commit the migration
 2. Add/update Zod schemas in `lib/api-zod/src/index.ts`
 3. Add route in `artifacts/api-server/src/routes/` and register in `src/app.ts`
 4. Add React Query hook in `lib/api-client-react/src/index.ts`
