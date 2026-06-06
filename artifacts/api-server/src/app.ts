@@ -4,7 +4,7 @@ import cors from "cors";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { logger } from "./logger.js";
 import { createExampleRouter } from "./routes/example.js";
-import { healthRouter } from "./routes/health.js";
+import { createHealthRouter } from "./routes/health.js";
 
 export function createApp(db: Db): Express {
   const app = express();
@@ -17,7 +17,7 @@ export function createApp(db: Db): Express {
   );
   app.use(express.json());
 
-  app.use("/health", healthRouter);
+  app.use("/health", createHealthRouter(db));
   app.use("/api/example", createExampleRouter(db));
 
   // 404

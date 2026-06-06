@@ -15,10 +15,11 @@ describe("GET /health", () => {
     expect(res.status).toBe(200);
   });
 
-  it("returns { status: 'ok' } with a timestamp", async () => {
+  it("returns { status: 'ok' } with a timestamp and db status", async () => {
     const res = await request.get("/health");
     expect(res.body.status).toBe("ok");
     expect(typeof res.body.ts).toBe("string");
     expect(new Date(res.body.ts).getTime()).not.toBeNaN();
+    expect(res.body.db).toBe("ok");
   });
 });

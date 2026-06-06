@@ -1,4 +1,4 @@
-import type { CreateExampleInput, Example } from "@repo/api-zod";
+import type { CreateExampleInput, Example, HealthResponse } from "@repo/api-zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "./client.js";
 
@@ -29,9 +29,10 @@ export function useCreateExample() {
 // ── Health ────────────────────────────────────────────────────────────────────
 
 export function useHealth() {
-  return useQuery<{ status: string; ts: string }>({
+  return useQuery<HealthResponse>({
     queryKey: ["health"],
     queryFn: () => apiFetch("/health"),
     staleTime: 30_000,
+    refetchInterval: 30_000,
   });
 }

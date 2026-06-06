@@ -6,6 +6,7 @@ import { z } from "zod";
 export const HealthResponseSchema = z.object({
   status: z.literal("ok"),
   ts: z.string().datetime(),
+  db: z.enum(["ok", "error"]),
 });
 
 export const ExampleSchema = z.object({
