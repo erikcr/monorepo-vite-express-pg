@@ -1,12 +1,9 @@
 import { useHealth } from "@repo/api-client-react";
 
 function StatusDot({ ok }: { ok: boolean | undefined }) {
-  if (ok === undefined)
-    return <span className="inline-block w-2 h-2 rounded-full bg-border" />;
+  if (ok === undefined) return <span className="inline-block w-2 h-2 rounded-full bg-border" />;
   return (
-    <span
-      className={`inline-block w-2 h-2 rounded-full ${ok ? "bg-success" : "bg-destructive"}`}
-    />
+    <span className={`inline-block w-2 h-2 rounded-full ${ok ? "bg-success" : "bg-destructive"}`} />
   );
 }
 
@@ -29,9 +26,7 @@ export default function App() {
   return (
     <main className="min-h-screen px-page-x py-page-y max-w-xl mx-auto">
       <h1 className="text-2xl font-bold mb-1">Monorepo Template</h1>
-      <p className="text-text-muted mb-8 text-sm">
-        React 19 + Vite + Express 5 + PostgreSQL
-      </p>
+      <p className="text-text-muted mb-8 text-sm">React 19 + Vite + Express 5 + PostgreSQL</p>
 
       {/* Status */}
       <section className="bg-surface-raised border border-border rounded-card p-5 mb-6">
@@ -43,9 +38,7 @@ export default function App() {
             <StatusDot ok={apiOk} />
             <span className="text-sm">
               API server
-              {isLoading && (
-                <span className="text-text-muted ml-2">checking…</span>
-              )}
+              {isLoading && <span className="text-text-muted ml-2">checking…</span>}
               {data?.ts && (
                 <span className="text-text-muted ml-2">
                   last ok {new Date(data.ts).toLocaleTimeString()}
@@ -67,10 +60,7 @@ export default function App() {
         </h2>
         <div className="flex flex-wrap gap-2">
           {swatches.map(({ label, bg, text }) => (
-            <div
-              key={label}
-              className={`${bg} ${text} rounded-button px-3 py-1 text-xs font-mono`}
-            >
+            <div key={label} className={`${bg} ${text} rounded-button px-3 py-1 text-xs font-mono`}>
               {label}
             </div>
           ))}
