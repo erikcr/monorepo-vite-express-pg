@@ -61,6 +61,21 @@ Ask:
 
 ---
 
+### Section 7 — Brand Color
+
+Ask:
+> "What is your brand color? Provide a hex code (e.g. `#3B82F6`) or a color name (indigo, teal, rose, orange…). Press Enter to keep the neutral slate placeholder and update it later."
+
+If the user provides a color:
+- Convert it to an oklch value. Use your knowledge of color science to find the closest perceptually accurate oklch equivalent. Aim for `lightness ~50%, chroma ~0.18–0.25` for saturated colors, lower chroma for muted tones.
+- Derive a light-mode dark variant (same hue, `lightness ~68%, chroma slightly higher`) for the dark mode override.
+- Derive `--color-brand-subtle` (same hue, `lightness ~94%, chroma ~0.02–0.03`) for light mode and (`lightness ~22%, chroma ~0.04`) for dark mode.
+- Edit both `artifacts/web/src/index.css` and `artifacts/admin/src/index.css` and replace the three `--color-brand*` values in the `@theme` block and the corresponding dark mode overrides.
+
+If the user skips: leave the slate placeholder in place. Note that they can update it anytime by editing the `--color-brand` line in each app's `src/index.css`.
+
+---
+
 ## Write the Output
 
 After collecting all six sections, create `docs/PROJECT.md` with this exact structure:

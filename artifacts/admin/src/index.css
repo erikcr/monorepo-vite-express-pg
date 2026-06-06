@@ -1,1 +1,69 @@
 @import "tailwindcss";
+
+/* ─── Brand ──────────────────────────────────────────────────────────────── */
+/* Primary action color. Swap --color-brand to re-theme the entire app.       */
+/* Dark mode uses a lighter value of the same hue for sufficient contrast.    */
+/* Use oklch() for perceptually uniform colors: oklch(lightness% chroma hue)  */
+/* Run /new-project to set this at project creation time.                     */
+@theme {
+  --color-brand: oklch(50% 0.04 256); /* ← swap this for your brand */
+  --color-brand-subtle: oklch(94% 0.02 256);
+  --color-brand-fg: oklch(99% 0.005 256);
+}
+
+/* ─── Semantic surface / text / border ───────────────────────────────────── */
+/* Light mode defaults. Dark mode overrides are at the bottom of this file.   */
+@theme {
+  --color-surface: oklch(98.5% 0 0);
+  --color-surface-raised: oklch(100% 0 0);
+  --color-border: oklch(91% 0 0);
+  --color-border-subtle: oklch(95% 0 0);
+  --color-text: oklch(14% 0 0);
+  --color-text-muted: oklch(56% 0 0);
+}
+
+/* ─── Status ─────────────────────────────────────────────────────────────── */
+@theme {
+  --color-destructive: oklch(60% 0.22 25);
+  --color-destructive-fg: oklch(99% 0.005 25);
+  --color-success: oklch(65% 0.18 145);
+  --color-success-fg: oklch(99% 0.005 145);
+  --color-warning: oklch(78% 0.17 75);
+  --color-warning-fg: oklch(20% 0.05 75);
+}
+
+/* ─── Layout ─────────────────────────────────────────────────────────────── */
+/* Adjust these per app: admin can go tighter than web for data-dense UIs.    */
+@theme {
+  --spacing-page-x: 2rem;
+  --spacing-page-y: 3rem;
+  --radius-card: 0.75rem;
+  --radius-button: 0.5rem;
+  --radius-input: 0.375rem;
+}
+
+/* ─── Dark mode ──────────────────────────────────────────────────────────── */
+/* Overrides @theme surface/text/border values. Brand lightness is bumped up  */
+/* so it remains accessible against dark backgrounds.                         */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-brand: oklch(68% 0.06 256);
+    --color-brand-subtle: oklch(22% 0.04 256);
+    --color-surface: oklch(13% 0 0);
+    --color-surface-raised: oklch(17% 0 0);
+    --color-border: oklch(27% 0 0);
+    --color-border-subtle: oklch(22% 0 0);
+    --color-text: oklch(95% 0 0);
+    --color-text-muted: oklch(60% 0 0);
+  }
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
+@layer base {
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}

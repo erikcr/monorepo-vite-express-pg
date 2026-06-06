@@ -138,6 +138,28 @@ await db.select().from(exampleTable).where(eq(exampleTable.orgId, orgId));
 
 **API client** — consume the API via `@repo/api-client-react` hooks in React apps, not raw fetch.
 
+**Theming** — all colors, spacing, and radii are defined as CSS tokens in `src/index.css` per app using Tailwind 4's `@theme` directive. Always use semantic utility classes; never hard-code Tailwind color scales in components:
+
+```tsx
+// ✓ correct — respects the theme, dark mode works automatically
+<button className="bg-brand text-brand-fg rounded-button px-4 py-2">
+<p className="text-text-muted">
+
+// ✗ wrong — bypasses the theme, breaks when brand changes, ignores dark mode
+<button className="bg-blue-600 text-white rounded-md px-4 py-2">
+<p className="text-gray-500">
+```
+
+Token reference:
+- **Brand** — `brand`, `brand-subtle`, `brand-fg`
+- **Surfaces** — `surface`, `surface-raised`
+- **Text** — `text`, `text-muted`
+- **Borders** — `border`, `border-subtle`
+- **Status** — `destructive`, `destructive-fg`, `success`, `success-fg`, `warning`, `warning-fg`
+- **Layout** — `px-page-x`, `py-page-y`, `rounded-card`, `rounded-button`, `rounded-input`
+
+Dark mode is handled automatically via `@media (prefers-color-scheme: dark)` — no `dark:` prefixes needed for semantic tokens.
+
 ### Commands
 
 ```bash
@@ -167,7 +189,7 @@ pnpm build                    # all artifacts
 ### Testing Approach
 
 - **Unit/integration** — vitest, co-located in `src/__tests__/` per package
-- **API tests** — supertest against `createApp(testDb)`, db backed by pg-mem (no real Postgres needed)
+- **API tests** — supertest against `createApp(testDb)`, db backed by PGlite (real PostgreSQL WASM, no external DB needed)
 - **Component tests** — `@testing-library/react` + jsdom environment
 - **E2E** — Playwright health-page smoke test in `artifacts/web/e2e/`
 - **CI** — GitHub Actions: lint → typecheck → test → build → e2e on every push/PR
