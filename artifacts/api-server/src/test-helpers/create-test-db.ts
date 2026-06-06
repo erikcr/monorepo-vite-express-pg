@@ -1,10 +1,10 @@
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import type { Db } from "@repo/db";
 import * as schema from "@repo/db/schema";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 
 const migrationsFolder = join(
   dirname(fileURLToPath(import.meta.url)),

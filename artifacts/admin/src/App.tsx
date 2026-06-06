@@ -89,11 +89,7 @@ export default function App() {
               value={examplesLoading ? "…" : (examples?.length ?? "—")}
               sub="example table"
             />
-            <StatCard
-              label="Org filter"
-              value="none"
-              sub="set orgId to filter"
-            />
+            <StatCard label="Org filter" value="none" sub="set orgId to filter" />
           </div>
         </section>
 
@@ -103,9 +99,7 @@ export default function App() {
             Example records
           </h2>
           <div className="bg-surface-raised border border-border rounded-card overflow-hidden">
-            {examplesLoading && (
-              <p className="text-sm text-text-muted p-4">Loading…</p>
-            )}
+            {examplesLoading && <p className="text-sm text-text-muted p-4">Loading…</p>}
             {examplesError && (
               <p className="text-sm text-destructive p-4">
                 Failed to load: {String(examplesError)}
