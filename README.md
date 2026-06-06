@@ -68,7 +68,15 @@ Running migrations inside the start command is intentionally avoided — if a mi
 
 ### Environment variables
 
-`DATABASE_URL` is injected automatically when you link the Postgres service to the API service in Railway. No other environment variables are required to get the server running.
+`DATABASE_URL` is injected automatically when you link the Postgres service to the API service in Railway.
+
+Set `CORS_ORIGIN` to a comma-separated list of your Vercel app URLs so the browser can call the API:
+
+```
+CORS_ORIGIN=https://your-web-app.vercel.app,https://your-admin-app.vercel.app
+```
+
+Without this, browsers will block cross-origin requests from Vercel to Railway with a CORS error even though the API is reachable. The default only allows localhost.
 
 ---
 
@@ -114,4 +122,13 @@ If Build Command or Output Directory are manually set in the Vercel dashboard th
 
 ### Environment variables
 
-Set `VITE_API_URL` on each Vercel project to your Railway API server URL. This is the only environment variable required for the frontend apps.
+Set `VITE_API_URL` on each Vercel project to your Railway API server URL:
+
+```
+VITE_API_URL=https://your-api.railway.app
+```
+
+This value is baked into the JS bundle at build time by Vite. If you add or change it in the Vercel dashboard you must trigger a new deploy — existing deploys will not pick it up.
+
+**Why this is required in production.**
+In local development, Vite proxies `/health` and `/api/*` to `localhost:3000`, so no URL is needed. On Vercel there is no proxy — without `VITE_API_URL` all API calls go to the Vercel domain and fail with a 404.
