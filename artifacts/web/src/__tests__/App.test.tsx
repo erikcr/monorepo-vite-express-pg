@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import App from "../App.tsx";
 
 vi.mock("@repo/api-client-react", () => ({
-  useExamples: () => ({ data: undefined, isLoading: true }),
+  useHealth: () => ({ data: undefined, isLoading: true, isError: false }),
 }));
 
 describe("App", () => {
@@ -12,8 +12,13 @@ describe("App", () => {
     expect(document.body).toBeTruthy();
   });
 
-  it("shows loading state", () => {
+  it("shows the status section", () => {
     render(<App />);
-    expect(screen.getByText("Loading…")).toBeTruthy();
+    expect(screen.getByText("Status")).toBeTruthy();
+  });
+
+  it("shows theme tokens section", () => {
+    render(<App />);
+    expect(screen.getByText("Theme tokens")).toBeTruthy();
   });
 });

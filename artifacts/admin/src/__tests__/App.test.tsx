@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import App from "../App.tsx";
 
 vi.mock("@repo/api-client-react", () => ({
+  useHealth: () => ({ data: undefined, isLoading: true, isError: false }),
   useExamples: () => ({ data: undefined, isLoading: true, error: null }),
 }));
 
@@ -17,8 +18,8 @@ describe("App (admin)", () => {
     expect(screen.getByRole("heading", { name: /admin/i })).toBeTruthy();
   });
 
-  it("shows loading state", () => {
+  it("shows the overview section", () => {
     render(<App />);
-    expect(screen.getByText("Loading…")).toBeTruthy();
+    expect(screen.getByText("Overview")).toBeTruthy();
   });
 });
