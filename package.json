@@ -11,6 +11,7 @@
     "format": "biome format --write .",
     "db:generate": "pnpm --filter @repo/db generate",
     "db:migrate": "pnpm --filter @repo/db migrate",
+    "db:check": "pnpm db:generate && git diff --exit-code lib/db/migrations",
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "pnpm --filter @repo/db studio",
     "test": "pnpm -r test"
