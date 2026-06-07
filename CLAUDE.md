@@ -109,7 +109,7 @@ lib/                 Shared packages (imported by artifacts)
 docs/                Project documentation (PROJECT.md, ARCHITECTURE.md)
 scripts/             One-off scripts (seed, migrate-and-start)
 .claude/commands/    Shared Claude Code skills (committed)
-.github/workflows/   CI (lint → typecheck → test → build → e2e)
+.github/workflows/   CI (lint → typecheck → db-check → codegen-check → test → build → e2e)
 ```
 
 ### Key Patterns
@@ -174,6 +174,10 @@ pnpm db:check                 # verify no uncommitted migrations (runs in CI)
 pnpm db:seed                  # seed example data
 pnpm db:studio                # open Drizzle Studio
 
+# Code generation
+pnpm codegen                  # generate Zod schemas + React Query hooks from openapi.yaml
+pnpm codegen:check            # verify generated files match openapi.yaml (runs in CI)
+
 # Lint & format
 pnpm lint                     # Biome check (all packages)
 pnpm format                   # Biome format --write (all packages)
@@ -193,7 +197,7 @@ pnpm build                    # all artifacts
 - **API tests** — supertest against `createApp(testDb)`, db backed by PGlite which runs the actual migration SQL files — schema changes without committed migrations will cause test failures
 - **Component tests** — `@testing-library/react` + jsdom environment
 - **E2E** — Playwright health-page smoke test in `artifacts/web/e2e/`
-- **CI** — GitHub Actions: lint → typecheck → db-check → test → build → e2e on every push/PR
+- **CI** — GitHub Actions: lint → typecheck → db-check → codegen-check → test → build → e2e on every push/PR
 
 ### Deployment
 
@@ -230,9 +234,8 @@ existing migration files to produce the diff SQL.
 ### Adding a New Feature (checklist)
 
 1. Update `lib/db/src/schema.ts` if a new table is needed → run `pnpm db:generate` and commit the migration
-2. Add/update Zod schemas in `lib/api-zod/src/index.ts`
-3. Add route in `artifacts/api-server/src/routes/` and register in `src/app.ts`
-4. Add React Query hook in `lib/api-client-react/src/index.ts`
-5. Use the hook in `artifacts/web` or `artifacts/admin`
+2. Update `lib/api-spec/openapi.yaml` with the new endpoint/schema
+3. Run `pnpm codegen` → auto-generates `lib/api-zod/src/index.ts` + `lib/api-client-react/src/index.ts` → commit generated files
+4. Add route in `artifacts/api-server/src/routes/` and register in `src/app.ts`
+5. Use the generated hook in `artifacts/web` or `artifacts/admin`
 6. Add co-located tests for each changed package
-7. Update `lib/api-spec/openapi.yaml`
