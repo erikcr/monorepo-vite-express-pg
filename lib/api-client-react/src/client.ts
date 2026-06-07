@@ -18,11 +18,11 @@ export interface RequestConfig {
 
 export async function apiFetch<T>(
   { url, method, headers, params, data, signal }: RequestConfig,
-  _options?: unknown,
+  _options?: unknown
 ): Promise<T> {
   const queryString =
     params && Object.keys(params).length > 0
-      ? "?" + new URLSearchParams(params as Record<string, string>).toString()
+      ? `?${new URLSearchParams(params as Record<string, string>).toString()}`
       : "";
 
   const res = await fetch(`${API_BASE}${url}${queryString}`, {

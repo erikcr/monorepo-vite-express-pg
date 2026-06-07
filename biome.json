@@ -6,7 +6,14 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignore": ["**/node_modules/**", "**/dist/**", "**/migrations/**", "**/test-results/**"]
+    "ignore": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/migrations/**",
+      "**/test-results/**",
+      "lib/api-zod/src/index.ts",
+      "lib/api-client-react/src/index.ts"
+    ]
   },
   "formatter": {
     "enabled": true,
