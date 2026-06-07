@@ -126,7 +126,7 @@ export default function App() {
                   )}
                   {examples?.map((item) => (
                     <tr key={item.id} className="border-b border-border-subtle last:border-0">
-                      <td className="px-4 py-2.5 font-mono text-xs text-text-muted truncate max-w-[8rem]">
+                      <td className="px-4 py-2.5 font-mono text-xs text-text-muted truncate max-w-32">
                         {item.id}
                       </td>
                       <td className="px-4 py-2.5">{item.orgId}</td>
