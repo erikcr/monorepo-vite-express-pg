@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Generated from lib/api-spec/openapi.yaml — do not edit by hand.
-// Re-generate with: openapi-zod-client lib/api-spec/openapi.yaml -o lib/api-zod/src/index.ts
+// Re-generate with: pnpm codegen
 
 export const HealthResponseSchema = z.object({
   status: z.literal("ok"),

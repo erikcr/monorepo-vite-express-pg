@@ -5,6 +5,7 @@
   "packageManager": "pnpm@9.15.4",
   "scripts": {
     "build": "pnpm -r --filter='./artifacts/*' build",
+    "codegen": "pnpm --filter @repo/api-spec codegen",
     "dev": "pnpm --parallel --filter='./artifacts/*' dev",
     "typecheck": "pnpm -r typecheck",
     "lint": "biome check .",
