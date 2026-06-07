@@ -1,8 +1,10 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "deploy": {
-    "startCommand": "node dist/index.js",
+    "startCommand": "sh scripts/migrate-and-start.sh",
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 30
+    "healthcheckTimeout": 60,
+    "restartPolicyType": "on_failure",
+    "restartPolicyMaxRetries": 3
   }
 }
