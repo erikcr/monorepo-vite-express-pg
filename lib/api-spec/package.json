@@ -4,5 +4,11 @@
   "private": true,
   "exports": {
     ".": "./openapi.yaml"
+  },
+  "scripts": {
+    "codegen": "orval --config orval.config.ts"
+  },
+  "devDependencies": {
+    "orval": "^7.0.0"
   }
 }
