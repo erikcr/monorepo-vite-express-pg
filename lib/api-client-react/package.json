@@ -11,12 +11,12 @@
   },
   "dependencies": {
     "@repo/api-zod": "workspace:*",
-    "@tanstack/react-query": "^5.64.2"
+    "@tanstack/react-query": "catalog:"
   },
   "devDependencies": {
-    "@types/react": "^19.0.8",
-    "react": "^19.0.0",
-    "typescript": "^5.7.3"
+    "@types/react": "catalog:",
+    "react": "catalog:",
+    "typescript": "catalog:"
   },
   "peerDependencies": {
     "react": "^19.0.0"
