@@ -16,10 +16,15 @@
     "db:check": "pnpm db:generate && git diff --exit-code lib/db/migrations",
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "pnpm --filter @repo/db studio",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "prepare": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-push": "pnpm codegen:check && pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "simple-git-hooks": "^2.11.1",
     "tsx": "catalog:",
     "typescript": "catalog:"
   }

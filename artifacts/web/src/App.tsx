@@ -1,4 +1,4 @@
-import { useHealth } from "@repo/api-client-react";
+import { useGetHealth } from "@repo/api-client-react";
 
 function StatusDot({ ok }: { ok: boolean | undefined }) {
   if (ok === undefined) return <span className="inline-block w-2 h-2 rounded-full bg-border" />;
@@ -18,7 +18,7 @@ const swatches: { label: string; bg: string; text: string }[] = [
 ];
 
 export default function App() {
-  const { data, isLoading, isError } = useHealth();
+  const { data, isLoading, isError } = useGetHealth();
 
   const apiOk = !isLoading && !isError && data?.status === "ok";
   const dbOk = data?.db === "ok";

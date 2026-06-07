@@ -1,4 +1,4 @@
-import { useExamples, useHealth } from "@repo/api-client-react";
+import { useGetHealth, useListExamples } from "@repo/api-client-react";
 
 function StatusBadge({ ok, loading }: { ok: boolean | undefined; loading?: boolean }) {
   if (loading) return <span className="text-xs text-text-muted">checking…</span>;
@@ -36,8 +36,8 @@ const swatches: { label: string; bg: string; fg: string }[] = [
 ];
 
 export default function App() {
-  const { data: health, isLoading: healthLoading, isError: healthError } = useHealth();
-  const { data: examples, isLoading: examplesLoading, error: examplesError } = useExamples();
+  const { data: health, isLoading: healthLoading, isError: healthError } = useGetHealth();
+  const { data: examples, isLoading: examplesLoading, error: examplesError } = useListExamples();
 
   const apiOk = !healthLoading && !healthError && health?.status === "ok";
   const dbOk = health?.db === "ok";
