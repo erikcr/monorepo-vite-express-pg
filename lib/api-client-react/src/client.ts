@@ -6,10 +6,30 @@ const API_BASE =
     ? (viteApiUrl ?? "")
     : (process.env.API_URL ?? "http://localhost:3000");
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...init?.headers },
-    ...init,
+// Orval mutator interface — generated hooks call apiFetch with this shape.
+export interface RequestConfig {
+  url: string;
+  method: string;
+  headers?: Record<string, string>;
+  params?: Record<string, unknown>;
+  data?: unknown;
+  signal?: AbortSignal;
+}
+
+export async function apiFetch<T>(
+  { url, method, headers, params, data, signal }: RequestConfig,
+  _options?: unknown,
+): Promise<T> {
+  const queryString =
+    params && Object.keys(params).length > 0
+      ? "?" + new URLSearchParams(params as Record<string, string>).toString()
+      : "";
+
+  const res = await fetch(`${API_BASE}${url}${queryString}`, {
+    method,
+    headers: { "Content-Type": "application/json", ...headers },
+    body: data !== undefined ? JSON.stringify(data) : undefined,
+    signal,
   });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);

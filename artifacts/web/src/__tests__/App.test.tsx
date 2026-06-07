@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import App from "../App.tsx";
 
 vi.mock("@repo/api-client-react", () => ({
-  useHealth: () => ({ data: undefined, isLoading: true, isError: false }),
+  useGetHealth: () => ({ data: undefined, isLoading: true, isError: false }),
 }));
 
 describe("App", () => {

@@ -65,7 +65,7 @@ components:
   schemas:
     HealthResponse:
       type: object
-      required: [status, ts]
+      required: [status, ts, db]
       properties:
         status:
           type: string
@@ -73,6 +73,9 @@ components:
         ts:
           type: string
           format: date-time
+        db:
+          type: string
+          enum: [ok, error]
 
     Example:
       type: object
@@ -98,5 +101,7 @@ components:
       properties:
         orgId:
           type: string
+          minLength: 1
         name:
           type: string
+          minLength: 1
