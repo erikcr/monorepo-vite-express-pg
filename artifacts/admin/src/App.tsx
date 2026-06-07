@@ -100,7 +100,7 @@ export default function App() {
           </h2>
           <div className="bg-surface-raised border border-border rounded-card overflow-hidden">
             {examplesLoading && <p className="text-sm text-text-muted p-4">Loading…</p>}
-            {examplesError && (
+            {!!examplesError && (
               <p className="text-sm text-destructive p-4">
                 Failed to load: {String(examplesError)}
               </p>
