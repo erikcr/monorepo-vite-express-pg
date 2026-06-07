@@ -1,5 +1,4 @@
 import { build } from "esbuild";
-import { pino } from "esbuild-plugin-pino";
 
 await build({
   entryPoints: ["src/index.ts", "src/worker.ts", "src/migrate.ts"],
@@ -8,9 +7,12 @@ await build({
   target: "node22",
   format: "esm",
   outdir: "dist",
-  plugins: [pino({ transports: ["pino-pretty"] })],
   external: [
     // Native addons — must be present in the runtime image
     "pg-native",
   ],
+  banner: {
+    // pino uses dynamic require() for transports; this shim makes it available in ESM bundles
+    js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+  },
 });
