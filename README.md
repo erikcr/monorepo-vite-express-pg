@@ -46,7 +46,7 @@ The executable 'pnpm' could not be found
 ```
 
 **Start Command must be blank.**
-Any value set in the dashboard overrides `railway.json` and the Dockerfile `CMD`. If something was previously entered here, clear it. `railway.json` already sets `startCommand: "node dist/index.js"`.
+Any value set in the dashboard overrides `railway.toml` and the Dockerfile `CMD`. If something was previously entered here, clear it. `railway.toml` already sets `startCommand = "node dist/index.js"`.
 
 ### Service auto-detection on import
 
@@ -56,15 +56,9 @@ There is no config file that suppresses Railway's detection heuristics during th
 
 ### Migrations
 
-`dist/migrate.js` is a standalone migration runner bundled into the image alongside the server. Set it as the **pre-deploy command** so migrations run before the new instance goes live:
+`dist/migrate.js` is a standalone migration runner bundled into the image alongside the server. It runs automatically as a pre-deploy step — if migrations fail, Railway aborts the deploy and the old instance keeps running.
 
-```
-node dist/migrate.js
-```
-
-Set this at: **Service → Settings → Deploy → Pre-deploy Command**
-
-Running migrations inside the start command is intentionally avoided — if a migration fails it should fail the deploy, not silently kill the running server.
+This is configured in `railway.toml` via `preDeployCommand = "node dist/migrate.js"` — no dashboard setup needed.
 
 ### Environment variables
 

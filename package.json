@@ -6,6 +6,7 @@
   "scripts": {
     "build": "pnpm -r --filter='./artifacts/*' build",
     "codegen": "pnpm --filter @repo/api-spec codegen",
+    "codegen:check": "pnpm codegen && git diff --exit-code lib/api-zod/src/index.ts lib/api-client-react/src/index.ts",
     "dev": "pnpm --parallel --filter='./artifacts/*' dev",
     "typecheck": "pnpm -r typecheck",
     "lint": "biome check .",
