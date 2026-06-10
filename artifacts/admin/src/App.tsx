@@ -1,4 +1,5 @@
 import { useGetHealth, useListExamples } from "@repo/api-client-react";
+import { useState } from "react";
 
 function StatusBadge({ ok, loading }: { ok: boolean | undefined; loading?: boolean }) {
   if (loading) return <span className="text-xs text-text-muted">checking…</span>;
@@ -36,8 +37,13 @@ const swatches: { label: string; bg: string; fg: string }[] = [
 ];
 
 export default function App() {
+  const [orgId, setOrgId] = useState("org_1");
   const { data: health, isLoading: healthLoading, isError: healthError } = useGetHealth();
-  const { data: examples, isLoading: examplesLoading, error: examplesError } = useListExamples();
+  const {
+    data: examples,
+    isLoading: examplesLoading,
+    error: examplesError,
+  } = useListExamples({ orgId });
 
   const apiOk = !healthLoading && !healthError && health?.status === "ok";
   const dbOk = health?.db === "ok";
@@ -89,15 +95,26 @@ export default function App() {
               value={examplesLoading ? "…" : (examples?.length ?? "—")}
               sub="example table"
             />
-            <StatCard label="Org filter" value="none" sub="set orgId to filter" />
+            <StatCard label="Org filter" value={orgId} sub="rows scoped to this org" />
           </div>
         </section>
 
         {/* Example table */}
         <section>
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-text-muted mb-3">
-            Example records
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-text-muted">
+              Example records
+            </h2>
+            <label className="flex items-center gap-2 text-xs text-text-muted">
+              Org
+              <input
+                value={orgId}
+                onChange={(e) => setOrgId(e.target.value)}
+                className="bg-surface border border-border rounded-input px-2 py-1 text-xs text-text font-mono"
+                aria-label="Org filter"
+              />
+            </label>
+          </div>
           <div className="bg-surface-raised border border-border rounded-card overflow-hidden">
             {examplesLoading && <p className="text-sm text-text-muted p-4">Loading…</p>}
             {!!examplesError && (

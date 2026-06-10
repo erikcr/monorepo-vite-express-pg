@@ -9,9 +9,12 @@ export function createExampleRouter(db: Db) {
 
   router.get("/", async (req, res) => {
     const { orgId } = req.query as { orgId?: string };
-    const rows = orgId
-      ? await db.select().from(exampleTable).where(eq(exampleTable.orgId, orgId))
-      : await db.select().from(exampleTable);
+    // Tenant isolation: orgId is mandatory — never return rows across orgs.
+    if (!orgId) {
+      res.status(400).json({ error: "orgId query parameter is required" });
+      return;
+    }
+    const rows = await db.select().from(exampleTable).where(eq(exampleTable.orgId, orgId));
     res.json(rows);
   });
 

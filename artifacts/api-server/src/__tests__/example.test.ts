@@ -10,8 +10,14 @@ describe("/api/example", () => {
     request = supertest(createApp(await createTestDb()));
   });
 
-  it("GET / returns an array", async () => {
+  it("GET / returns 400 without orgId (tenant isolation)", async () => {
     const res = await request.get("/api/example");
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it("GET /?orgId= returns an array", async () => {
+    const res = await request.get("/api/example?orgId=org_empty");
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
@@ -25,9 +31,16 @@ describe("/api/example", () => {
 
   it("GET / returns the created record", async () => {
     await request.post("/api/example").send({ orgId: "org_a", name: "Item A" });
-    const res = await request.get("/api/example");
+    const res = await request.get("/api/example?orgId=org_a");
     expect(res.status).toBe(200);
     expect(res.body.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("GET / never returns rows from another org", async () => {
+    await request.post("/api/example").send({ orgId: "org_b", name: "Item B" });
+    const res = await request.get("/api/example?orgId=org_a");
+    expect(res.status).toBe(200);
+    expect(res.body.every((r: { orgId: string }) => r.orgId === "org_a")).toBe(true);
   });
 
   it("POST / returns 400 when body is invalid", async () => {
