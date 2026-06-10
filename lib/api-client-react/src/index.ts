@@ -59,7 +59,10 @@ export interface CreateExampleInput {
 }
 
 export type ListExamplesParams = {
-orgId?: string;
+/**
+ * @minLength 1
+ */
+orgId: string;
 };
 
 type AwaitedInput<T> = PromiseLike<T> | T;
@@ -144,7 +147,7 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
  * @summary List example records
  */
 export const listExamples = (
-    params?: ListExamplesParams,
+    params: ListExamplesParams,
  options?: SecondParameter<typeof apiFetch>,signal?: AbortSignal
 ) => {
       
@@ -166,7 +169,7 @@ export const getListExamplesQueryKey = (params?: ListExamplesParams,) => {
     }
 
     
-export const getListExamplesQueryOptions = <TData = Awaited<ReturnType<typeof listExamples>>, TError = unknown>(params?: ListExamplesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>, request?: SecondParameter<typeof apiFetch>}
+export const getListExamplesQueryOptions = <TData = Awaited<ReturnType<typeof listExamples>>, TError = unknown>(params: ListExamplesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -193,7 +196,7 @@ export type ListExamplesQueryError = unknown
  */
 
 export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = unknown>(
- params?: ListExamplesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>, request?: SecondParameter<typeof apiFetch>}
+ params: ListExamplesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>, request?: SecondParameter<typeof apiFetch>}
   
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 

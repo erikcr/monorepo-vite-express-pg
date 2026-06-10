@@ -20,8 +20,11 @@ export const getHealthResponse = zod.object({
 /**
  * @summary List example records
  */
+
+
+
 export const listExamplesQueryParams = zod.object({
-  "orgId": zod.string().optional()
+  "orgId": zod.string().min(1)
 })
 
 export const listExamplesResponseItem = zod.object({
