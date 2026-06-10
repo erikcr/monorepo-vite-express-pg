@@ -14,10 +14,17 @@ Production-ready pnpm monorepo: Express 5 API + React 19 web/admin apps + Postgr
 
 ## Local development
 
+Requires Node 22, pnpm 9, and Docker (for local Postgres).
+
 ```bash
 pnpm install
-pnpm dev          # starts api-server, web, and admin in parallel
+cp .env.example .env              # local config (DATABASE_URL etc.)
+docker compose up -d postgres     # start local Postgres
+pnpm db:migrate                   # apply migrations
+pnpm dev                          # starts api-server, web, and admin in parallel
 ```
+
+Optionally run `pnpm db:seed` to add sample data.
 
 See `CLAUDE.md` for the full command reference.
 

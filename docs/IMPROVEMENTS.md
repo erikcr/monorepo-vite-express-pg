@@ -42,7 +42,7 @@ gets an orgId filter input (default `org_1`). Update tests.
 **Accept:** Request without orgId → 400. Tests prove org isolation.
 **Note:** Item 1.1 (auth) later moves orgId from query param to authenticated context.
 
-### 0.2 `[ ]` Fix out-of-box onboarding
+### 0.2 `[x]` Fix out-of-box onboarding
 **Problem:** Fresh clone + `pnpm dev` crashes — `@repo/db` reads `DATABASE_URL` at import,
 no `.env` exists, README quickstart omits Postgres/migrate steps.
 **Change:** README quickstart becomes: `pnpm install` → `cp .env.example .env` →
@@ -193,4 +193,4 @@ template stabilizes after Phases 0–2.
 
 | Date | Items completed | Notes |
 |------|-----------------|-------|
-| 2026-06-10 | Plan created; 0.1 | orgId now required on list endpoint; admin has org filter input |
+| 2026-06-10 | Plan created; 0.1, 0.2 | orgId required on list endpoint; README quickstart + actionable env error |

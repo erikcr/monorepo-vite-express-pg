@@ -6,7 +6,10 @@ config({ path: resolve(process.cwd(), ".env") });
 
 function require(key: string): string {
   const val = process.env[key];
-  if (!val) throw new Error(`Missing required env var: ${key}`);
+  if (!val)
+    throw new Error(
+      `Missing required env var: ${key}. Copy .env.example to .env at the repo root (cp .env.example .env) and adjust as needed.`
+    );
   return val;
 }
 
