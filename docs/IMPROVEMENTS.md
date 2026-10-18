@@ -104,7 +104,7 @@ nothing stops a commit or push to `main`.
 **Files:** `.githooks/pre-commit`, `.githooks/pre-push`, root `package.json`, README.
 **Accept:** Commit on `main` → blocked; badly formatted staged file → blocked; feature branch → passes.
 
-### P.2 `[ ]` CI hardening
+### P.2 `[x]` CI hardening
 **Change:** Run on push/PR for `main` and `staging`. One gate job (`CI passed`) that needs every
 other job, including e2e, runs with `if: always()` and fails unless every needed job succeeded
 (a *skipped* required check counts as passing). `concurrency` cancels superseded PR runs, never
