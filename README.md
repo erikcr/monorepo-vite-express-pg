@@ -26,6 +26,16 @@ pnpm dev                          # starts api-server, web, and admin in paralle
 
 Optionally run `pnpm db:seed` to add sample data.
 
+### Git hooks
+
+`pnpm install` points git at `.githooks/`:
+
+- **pre-commit** blocks commits on `main` and `staging`, then runs Biome on the staged files
+  (fix with `pnpm exec biome check --write --staged`).
+- **pre-push** blocks pushes to `main` and `staging`.
+
+Work on a feature branch and open a PR; CI runs the full check suite.
+
 See `CLAUDE.md` for the full command reference.
 
 ---
