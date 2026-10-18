@@ -1,10 +1,9 @@
 // Browser: use VITE_API_URL if set (production), else "" (dev proxy handles routing)
 // Node (tests/SSR): use API_URL env var
 const viteApiUrl = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
+const nodeApiUrl = (globalThis as { process?: { env: { API_URL?: string } } }).process?.env.API_URL;
 const API_BASE =
-  typeof window !== "undefined"
-    ? (viteApiUrl ?? "")
-    : (process.env.API_URL ?? "http://localhost:3000");
+  typeof window !== "undefined" ? (viteApiUrl ?? "") : (nodeApiUrl ?? "http://localhost:3000");
 
 // Orval mutator interface — generated hooks call apiFetch with this shape.
 export interface RequestConfig {
