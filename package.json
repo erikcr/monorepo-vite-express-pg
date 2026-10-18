@@ -24,6 +24,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@repo/db": "workspace:*",
+    "drizzle-orm": "catalog:",
     "simple-git-hooks": "^2.11.1",
     "tsx": "catalog:",
     "typescript": "catalog:"
