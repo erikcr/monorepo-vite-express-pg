@@ -1,0 +1,16 @@
+#!/bin/sh
+# Block direct commits to main and staging. Use a feature branch + PR instead.
+# Bypass (discouraged): git commit --no-verify
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+if [ "$branch" = "main" ] || [ "$branch" = "staging" ]; then
+  echo "✗ Direct commits to '$branch' are blocked."
+  echo "  Create a feature branch and open a PR:  git switch -c my-change"
+  exit 1
+fi
+
+# Lint + format the staged files with Biome (the same check CI runs).
+if ! pnpm exec biome check --staged --no-errors-on-unmatched; then
+  echo "✗ Biome found issues in the staged files."
+  echo "  Fix them with:  pnpm exec biome check --write --staged   (then re-stage)"
+  exit 1
+fi

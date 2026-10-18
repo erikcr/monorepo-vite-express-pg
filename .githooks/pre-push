@@ -1,0 +1,11 @@
+#!/bin/sh
+# Block direct pushes to main and staging — changes land via pull requests.
+# The full check suite runs in CI, not here.
+# Bypass (discouraged): git push --no-verify
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ] || [ "$remote_ref" = "refs/heads/staging" ]; then
+    echo "✗ Pushing directly to '${remote_ref#refs/heads/}' is blocked."
+    echo "  Push a feature branch and open a PR instead."
+    exit 1
+  fi
+done

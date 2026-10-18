@@ -17,16 +17,12 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "pnpm --filter @repo/db studio",
     "test": "pnpm -r test",
-    "prepare": "simple-git-hooks"
-  },
-  "simple-git-hooks": {
-    "pre-push": "pnpm codegen:check && pnpm lint && pnpm typecheck && pnpm test"
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@repo/db": "workspace:*",
     "drizzle-orm": "catalog:",
-    "simple-git-hooks": "^2.11.1",
     "tsx": "catalog:",
     "typescript": "catalog:"
   }

@@ -93,7 +93,7 @@ codegen, tests.
 Lands first: every later item then goes through it. P.1–P.3 merge straight into `main` (the
 `staging` branch is created in P.3).
 
-### P.1 `[ ]` Git hooks
+### P.1 `[x]` Git hooks
 **Problem:** `simple-git-hooks` runs the full suite on every push (slow, duplicates CI) and
 nothing stops a commit or push to `main`.
 **Change:** Replace `simple-git-hooks` with a committed `.githooks/` directory
