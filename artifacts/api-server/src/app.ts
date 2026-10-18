@@ -1,7 +1,7 @@
 import type { Db } from "@repo/db";
 import { env } from "@repo/env";
 import cors from "cors";
-import express, { type Express, type Request, type Response, type NextFunction } from "express";
+import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import { logger } from "./logger.js";
 import { createExampleRouter } from "./routes/example.js";
 import { createHealthRouter } from "./routes/health.js";
