@@ -136,10 +136,26 @@ jobs:
         env:
           CI: "true"
 
+  promotion-source:
+    name: Promotion source
+    runs-on: ubuntu-latest
+    steps:
+      # main only receives promotions from staging (hotfixes go through staging too).
+      # Always runs and passes outside PRs into main, so CI passed never sees it skipped.
+      - name: PRs into main come from staging
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+        run: |
+          if [ "$BASE" = main ] && [ "$HEAD" != staging ]; then
+            echo "::error::PRs into main must come from staging (got '$HEAD'). Target staging instead."
+            exit 1
+          fi
+
   ci-passed:
     name: CI passed
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, db-check, codegen-check, test, build, e2e]
+    needs: [lint, typecheck, db-check, codegen-check, test, build, e2e, promotion-source]
     # The one check branch rulesets require. It must run even when a job it
     # needs fails or is skipped: a *skipped* required check counts as passing.
     # So it always runs, and fails unless every needed job succeeded.
