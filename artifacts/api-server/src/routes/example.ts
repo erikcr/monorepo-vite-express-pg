@@ -4,7 +4,7 @@ import { exampleTable } from "@repo/db/schema";
 import { eq } from "drizzle-orm";
 import { Router } from "express";
 
-export function createExampleRouter(db: Db) {
+export function createExampleRouter(db: Db): Router {
   const router = Router();
 
   router.get("/", async (req, res) => {

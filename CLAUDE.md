@@ -92,7 +92,7 @@ docs/
 | Admin app | React 19 + Vite 6 + Tailwind CSS 4, deployed to Vercel |
 | Database | PostgreSQL + Drizzle ORM (`drizzle-orm/postgres-js`) |
 | Background jobs | pg-boss (worker at `artifacts/api-server/src/worker.ts`) |
-| Package manager | pnpm 9 workspace monorepo |
+| Package manager | pnpm 12 workspace monorepo |
 
 ### Workspace Layout
 

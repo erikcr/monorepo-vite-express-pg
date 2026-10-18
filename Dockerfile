@@ -1,5 +1,7 @@
-FROM node:22-alpine AS base
-RUN npm install -g pnpm@9.15.4
+FROM node:24-alpine AS base
+# Install the pnpm version pinned in package.json's packageManager field.
+COPY package.json /tmp/package.json
+RUN npm install -g "$(node -p "require('/tmp/package.json').packageManager")"
 
 # ── Install dependencies ──────────────────────────────────────────────────────
 FROM base AS deps
@@ -14,7 +16,7 @@ FROM deps AS build
 RUN pnpm --filter @repo/api-server build
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
-FROM node:22-alpine AS runtime
+FROM node:24-alpine AS runtime
 WORKDIR /app
 COPY --from=build /app/artifacts/api-server/dist ./dist
 COPY --from=build /app/lib/db/migrations ./migrations

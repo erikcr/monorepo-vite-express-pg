@@ -10,11 +10,11 @@ Production-ready pnpm monorepo: Express 5 API + React 19 web/admin apps + Postgr
 | Web / Admin | React 19 + Vite 6 + Tailwind CSS 4, deployed to Vercel |
 | Database | PostgreSQL + Drizzle ORM |
 | Background jobs | pg-boss |
-| Package manager | pnpm 9 workspace monorepo |
+| Package manager | pnpm 12 workspace monorepo |
 
 ## Local development
 
-Requires Node 22, pnpm 9, and Docker (for local Postgres).
+Requires Node 24 (`nvm use` reads `.nvmrc`), pnpm 12 (`npm install -g pnpm@12`), and Docker (for local Postgres).
 
 ```bash
 pnpm install

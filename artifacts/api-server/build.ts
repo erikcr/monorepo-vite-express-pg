@@ -4,7 +4,7 @@ await build({
   entryPoints: ["src/index.ts", "src/worker.ts", "src/migrate.ts"],
   bundle: true,
   platform: "node",
-  target: "node22",
+  target: "node24",
   format: "esm",
   outdir: "dist",
   external: [

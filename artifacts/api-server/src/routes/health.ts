@@ -2,7 +2,7 @@ import type { Db } from "@repo/db";
 import { sql } from "drizzle-orm";
 import { Router } from "express";
 
-export function createHealthRouter(db: Db) {
+export function createHealthRouter(db: Db): Router {
   const router = Router();
 
   router.get("/", async (_req, res) => {
