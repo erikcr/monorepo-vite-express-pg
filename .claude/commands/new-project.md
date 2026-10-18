@@ -104,13 +104,21 @@ After collecting all six sections, create `docs/PROJECT.md` with this exact stru
 <Section 6 answer as a bulleted list>
 ```
 
-Then commit:
+Then commit on a branch (the git hooks block commits on `main` and `staging`):
 ```bash
+git switch -c docs/project-definition   # skip if already on a feature branch
 git add docs/PROJECT.md
 git commit -m "docs: define project scope and V1 objectives for <Product Name>"
 ```
 
+If the `staging` branch exists on GitHub (`/provision-github` has run), push and open a PR into it:
+```bash
+git push -u origin docs/project-definition
+gh pr create --base staging --fill
+```
+Otherwise tell the user to run `/provision-github` first, then push the branch and open the PR into `staging`.
+
 Confirm to the user:
-> "PROJECT.md committed. You now have a clear scope document at docs/PROJECT.md.
+> "PROJECT.md committed on a branch. You now have a clear scope document at docs/PROJECT.md.
 >
 > When you're ready to start building, describe the first feature you want to implement and I'll write a plan before touching any code."

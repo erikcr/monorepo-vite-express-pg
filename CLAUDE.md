@@ -80,6 +80,7 @@ All project-level documentation lives in `docs/` — not at the root.
 docs/
   PROJECT.md       # scope, objectives, V1 features, success criteria (created by /new-project)
   ARCHITECTURE.md  # stack decisions and key patterns
+  DEPLOYMENTS.md   # branch model, promotion process, deploy gates, migration rules
 ```
 
 ### Stack
@@ -199,18 +200,25 @@ pnpm build                    # all artifacts
 - **E2E** — Playwright health-page smoke test in `artifacts/web/e2e/`
 - **CI** — GitHub Actions: lint → typecheck → db-check → codegen-check → test → build → e2e on every push/PR
 
+### Git workflow
+
+Never commit to `main` or `staging`, and never use `--no-verify`: the hooks in `.githooks/`
+refuse both branches. Work on a feature branch off `staging` and open a PR into `staging`;
+releases are promotion PRs from `staging` into `main`, merged with a merge commit. Keep
+migrations additive and the API compatible with the previous frontend for one release.
+See `docs/DEPLOYMENTS.md`.
+
 ### Deployment
 
-**Railway (API):**
-```bash
-railway login
-/provision-railway   # Claude skill: creates project, attaches Postgres, sets env vars
-```
+Run once per new project, in order:
 
-**Vercel (web + admin):**
 ```bash
+gh auth login
+/provision-github    # Claude skill: staging branch + rulesets protecting staging and main
+railway login
+/provision-railway   # Claude skill: production + staging environments, Postgres, API service
 vercel login
-/provision-vercel    # Claude skill: creates both Vercel projects, sets env vars
+/provision-vercel    # Claude skill: both Vercel projects, per-environment API URL, CORS
 ```
 
 ### Schema change workflow

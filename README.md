@@ -34,9 +34,19 @@ Optionally run `pnpm db:seed` to add sample data.
   (fix with `pnpm exec biome check --write --staged`).
 - **pre-push** blocks pushes to `main` and `staging`.
 
-Work on a feature branch and open a PR; CI runs the full check suite.
+Work on a feature branch and open a PR into `staging`; CI runs the full check suite.
 
 See `CLAUDE.md` for the full command reference.
+
+---
+
+## Deploying
+
+Changes flow `feature branch → PR → staging → promotion PR → main`, with staging and
+production environments on Railway and Vercel. For a new project run `/provision-github`,
+`/provision-railway`, then `/provision-vercel`. The full process, its gates and the
+migration rules are in [`docs/DEPLOYMENTS.md`](docs/DEPLOYMENTS.md). The sections below
+are the provider gotchas behind those commands.
 
 ---
 

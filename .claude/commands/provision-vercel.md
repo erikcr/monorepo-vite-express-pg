@@ -1,4 +1,4 @@
-Provision two Vercel projects for this monorepo — one for `artifacts/web` and one for `artifacts/admin`. Work through the steps below in order, stopping and reporting clearly if any step fails.
+Provision two Vercel projects for this monorepo — one for `artifacts/web` and one for `artifacts/admin` — each with production deploying `main` against the production API and the `staging` branch deploying against the staging API (see `docs/DEPLOYMENTS.md`). Work through the steps below in order, stopping and reporting clearly if any step fails. Run `/provision-railway` first.
 
 ## Pre-flight Checks
 
@@ -10,74 +10,71 @@ Provision two Vercel projects for this monorepo — one for `artifacts/web` and 
    > "Not authenticated. Run 'vercel login' first, then re-run /provision-vercel."
    Then stop.
 
-3. Read the DATABASE_URL from the local `.env` file. If it is not set, ask the user:
-   > "Enter your DATABASE_URL (get this from /provision-railway or your database provider):"
+3. Get both Railway API URLs. If `/provision-railway` ran earlier in this conversation, reuse `<prod-api-url>` and `<staging-api-url>` from its summary; otherwise ask:
+   > "What are your Railway API URLs for production and staging? (Railway dashboard → api service → Settings → Networking, in each environment)"
    Wait for their input.
 
-4. Ask the user for the Railway API base URL:
-   > "What is your Railway API URL? (e.g. https://myapp-api.railway.app — get this from the Railway dashboard)"
-   This value will be set as VITE_API_URL on both Vercel projects. Wait for their input.
+4. Derive the base project name by running `basename $(git rev-parse --show-toplevel)`.
 
-5. Derive the base project name by running `basename $(git rev-parse --show-toplevel)`.
+## Provision Each App
 
-## Provision Web App
+Do steps 5–9 for `web`, then repeat them for `admin`. `<app>` is `web` or `admin`.
 
-6. Change to the `artifacts/web` directory.
-
-7. Link to a new Vercel project:
+5. Create and link the project from the app directory:
    ```
-   vercel link --yes
+   vercel project add <base-name>-<app>
+   cd artifacts/<app> && vercel link --yes --project <base-name>-<app>
    ```
-   When prompted, choose to create a new project and name it `<base-name>-web`.
-   Set the root directory to `artifacts/web` and accept other defaults.
 
-8. Add environment variables to the web project (production scope):
-   ```
-   vercel env add VITE_API_URL production
-   ```
-   Provide the Railway URL from step 4 as the value.
+6. Connect the GitHub repo so pushes deploy: `vercel git connect` (from `artifacts/<app>`; it uses the repo's `origin` remote).
 
-9. Trigger the first production deployment:
+7. Set `VITE_API_URL` per environment. Vite bakes it into the bundle at build time:
+   ```
+   vercel env add VITE_API_URL production --value <prod-api-url> --yes
+   vercel env add VITE_API_URL preview staging --value <staging-api-url> --yes
+   ```
+   The second is scoped to the `staging` branch, so the staging site calls the staging API. PR previews get no API URL; their API calls fail until a project adds a CORS rule for preview origins.
+
+8. Trigger the first production deployment and record its URL as `<prod-<app>-url>`:
    ```
    vercel deploy --prod
    ```
-   Capture and save the deployment URL.
 
-## Provision Admin App
+9. Return to the repo root (`cd ../..`).
 
-10. Change to the `artifacts/admin` directory.
+## Dashboard Settings (manual)
 
-11. Link to a new Vercel project:
-    ```
-    vercel link --yes
-    ```
-    When prompted, create a new project named `<base-name>-admin`.
-    Set the root directory to `artifacts/admin` and accept other defaults.
+10. Tell the user to check, for **both** projects in the Vercel dashboard:
+    - **Settings → General → Root Directory:** `artifacts/web` / `artifacts/admin`. Build, install and output settings stay blank; `vercel.json` sets them.
+    - **Settings → Git → Production Branch:** `main`.
+    Wait for them to confirm.
 
-12. Add environment variables to the admin project (production scope):
-    ```
-    vercel env add VITE_API_URL production
-    ```
-    Provide the same Railway URL from step 4.
+## Staging Sites
 
-13. Trigger the first production deployment:
+11. The staging sites deploy from the `staging` branch's next push. Trigger one now: open the most recent deployment of each project in the dashboard and **Redeploy** it on the `staging` branch, or push any change to `staging` through a PR. Then find each project's stable staging URL (`<base-name>-<app>-git-staging-<team>.vercel.app`, shown under the staging deployment's Domains), and record them as `<staging-<app>-url>`.
+
+## CORS on Railway
+
+12. Allow each environment's sites to call its API (from the repo root, which `/provision-railway` linked to the Railway project):
     ```
-    vercel deploy --prod
+    railway variable set --service api --environment production 'CORS_ORIGIN=<prod-web-url>,<prod-admin-url>'
+    railway variable set --service api --environment staging 'CORS_ORIGIN=<staging-web-url>,<staging-admin-url>'
     ```
-    Capture and save the deployment URL.
+    Use full origins (`https://…`, no trailing slash). Setting a variable redeploys that environment's API.
 
 ## Summary
 
-14. Print a success summary in this format:
+13. Print a success summary in this format:
     ```
     ✓ Vercel project created: <base-name>-web
-      → <web deployment URL>
+      production → <prod-web-url>      staging → <staging-web-url>
     ✓ Vercel project created: <base-name>-admin
-      → <admin deployment URL>
-    ✓ VITE_API_URL set on both projects → <Railway URL>
+      production → <prod-admin-url>    staging → <staging-admin-url>
+    ✓ VITE_API_URL: production → <prod-api-url>, staging branch → <staging-api-url>
+    ✓ CORS_ORIGIN set on both Railway environments
 
     Next steps:
-    - Add custom domains in the Vercel dashboard if needed.
-    - Ensure CORS is configured in the API server for your Vercel domains.
-    - Push to your main branch to trigger future auto-deploys.
+    - Add custom domains in Vercel (and update CORS_ORIGIN) if needed.
+    - Feature work goes through PRs into staging; promote staging → main to release.
+      See docs/DEPLOYMENTS.md.
     ```

@@ -113,28 +113,36 @@ comment.
 **Files:** `.github/workflows/ci.yml`.
 **Accept:** A failing job makes the gate fail; the gate is the only check rulesets need.
 
-### P.3 `[ ]` Branch protection + `staging` branch
-**Change:** New `/provision-github` command: creates `staging` from `main`, sets it as the default
-PR base, and creates rulesets via `gh api` — both branches require a PR and the `CI passed`
-check, no bypass (admins included), no force-push or deletion. `main` allows only merge commits
-(promotions keep `staging` and `main` history identical); `staging` allows squash.
-**Files:** `.claude/commands/provision-github.md` (new), README.
-**Accept:** Run against this repo; a direct push and an unchecked PR are both refused.
+### P.3 `[x]` Branch protection + `staging` branch
+**Change:** New `/provision-github` command: creates `staging` from `main` (via the API, since the
+pre-push hook blocks pushing it), sets merge settings, and creates rulesets via `gh api` — both
+branches require a PR and the `CI passed` check, no bypass (admins included), no force-push or
+deletion. `main` allows only merge commits; `staging` only squash. The default branch stays
+`main` (Railway and Vercel treat it as production); instead a `Promotion source` CI job, part of
+`CI passed`, fails any PR into `main` whose head isn't `staging`.
+**Files:** `.claude/commands/provision-github.md` (new), `.github/workflows/ci.yml`, README.
+**Accept:** Run against a scratch repo (not this one: the template repo doesn't use its own
+process); a direct push and a feature PR into `main` are both refused.
+**Verified 2026-10-18** on a private scratch repo: direct push to `main` rejected (GH013); feature
+PR into `main` blocked by Promotion source → CI passed; merge commit refused on `staging`, squash
+accepted; squash refused on the promotion PR, merge commit accepted; re-run updates in place.
 
-### P.4 `[ ]` Staging environment in the provisioning commands
-**Change:** `/provision-railway` creates `production` (deploys `main`) and `staging` (deploys
-`staging`) environments, each with its own Postgres, and turns on **Wait for CI** so a commit
-with failing CI never deploys. `/provision-vercel` maps the `staging` branch to a staging
-environment with its own `VITE_API_URL`; `CORS_ORIGIN` per environment on Railway.
-**Files:** `.claude/commands/provision-railway.md`, `.claude/commands/provision-vercel.md`, README.
-**Accept:** A merge to `staging` deploys only staging; a promotion deploys only production.
+### P.4 `[x]` Staging environment in the provisioning commands
+**Change:** `/provision-railway` creates the API service from the repo and a `staging`
+environment duplicated from `production` (own Postgres, deploys `staging`); Wait for CI is a
+dashboard step. It no longer writes the production `DATABASE_URL` into the local `.env`.
+`/provision-vercel` sets `VITE_API_URL` for production and for the `staging` branch (preview
+scope), then `CORS_ORIGIN` per Railway environment. `/new-project` commits on a branch.
+**Files:** `.claude/commands/provision-railway.md`, `.claude/commands/provision-vercel.md`,
+`.claude/commands/new-project.md`.
+**Not verified live:** no Railway/Vercel projects were created; CLI flags checked against
+Railway CLI 5.70 / Vercel CLI 54.10 help and Railway's docs. Verify on the first real project.
 
-### P.5 `[ ]` Document the process
-**Change:** `docs/DEPLOYMENTS.md`: the branch model, what a promotion carries (one or two
-features, listed in the PR), switched-off features instead of parking work on `staging`, hotfix
-path (branch off `staging` → PR → immediate promotion), rollback (Railway/Vercel), and the rules
-that make it safe: **migrations are additive** (expand, deploy, contract later) and **the API
-stays compatible with the previous frontend for one release**. Link from CLAUDE.md and README.
+### P.5 `[x]` Document the process
+**Change:** `docs/DEPLOYMENTS.md`: new-project setup order, branch model, promotion rules, gates,
+hotfix path, rollback, and the rules that make it safe: **migrations are additive** and **the
+API stays compatible with the previous frontend for one release**. Linked from CLAUDE.md (new
+Git workflow section) and README.
 **Files:** `docs/DEPLOYMENTS.md` (new), `CLAUDE.md`, `README.md`.
 
 ### P.6 `[ ]` (Decide later) Deploy sequencing
@@ -184,7 +192,8 @@ orgs are in the template.
 setup (`/` + a placeholder) and a 404 page; one route shows a loader using the Query cache and
 a Zod-validated search param. SPA rewrites in both `vercel.json` files:
 `{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }`. Catalog entry.
-**Files:** both apps' `package.json`, `main.tsx`, `router.tsx`, pages, `vercel.json`, tests.
+**Note:** both `vercel.json` files already have SPA rewrites (excluding `/api/`).
+**Files:** both apps' `package.json`, `main.tsx`, `router.tsx`, pages, tests.
 **Accept:** Tests render routes; unknown path shows 404; a typo'd link fails typecheck.
 
 ### 1.3 `[ ]` Complete CRUD example + pagination convention
@@ -303,3 +312,4 @@ a `docs/plans/` + status-board layout that `/new-project` sets up.
 |------|-----------------|-------|
 | 2026-06-10 | Plan created; 0.1, 0.2, 0.3 | orgId required on list; README quickstart; seed was entirely broken (CJS top-level await + missing root deps) — now fixed and idempotent |
 | 2026-10-18 | Plan revised | Added Phase P (merge/promotion) and Phase U (upgrades) from the reference-app comparison; routing → TanStack Router; folded its patterns into 0.4, 1.1, 1.4, 2.2–2.9 |
+| 2026-10-18 | P.1–P.5 | Hooks, CI gate + Promotion source, `/provision-github` (verified on a scratch repo), staging in provisioning commands (not verified live), `docs/DEPLOYMENTS.md`. Template repo itself doesn't use the process |
