@@ -9,6 +9,6 @@
     "codegen": "orval --config orval.config.ts"
   },
   "devDependencies": {
-    "orval": "^7.0.0"
+    "orval": "^8.43.0"
   }
 }

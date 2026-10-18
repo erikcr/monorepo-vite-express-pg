@@ -7,15 +7,17 @@ export default defineConfig({
     output: {
       mode: "single",
       target: "../../lib/api-client-react/src/index.ts",
+      // Orval reads the react-query version from here to pick v5 hook types.
+      packageJson: "../../lib/api-client-react/package.json",
       client: "react-query",
       override: {
         mutator: {
           path: "../../lib/api-client-react/src/client.ts",
           name: "apiFetch",
         },
-        query: {
-          useQuery: true,
-          useMutation: true,
+        // Hooks return the response body, not { data, status, headers }.
+        fetch: {
+          includeHttpResponseReturnType: false,
         },
       },
     },
@@ -26,6 +28,8 @@ export default defineConfig({
     output: {
       mode: "single",
       target: "../../lib/api-zod/src/index.ts",
+      // Orval reads the zod version from here to pick Zod 4 syntax.
+      packageJson: "../../lib/api-zod/package.json",
       client: "zod",
     },
   },

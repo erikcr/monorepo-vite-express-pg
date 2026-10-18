@@ -1,4 +1,4 @@
-import { createExampleBody } from "@repo/api-zod";
+import { CreateExampleBody } from "@repo/api-zod";
 import type { Db } from "@repo/db";
 import { exampleTable } from "@repo/db/schema";
 import { eq } from "drizzle-orm";
@@ -19,7 +19,7 @@ export function createExampleRouter(db: Db): Router {
   });
 
   router.post("/", async (req, res) => {
-    const parsed = createExampleBody.safeParse(req.body);
+    const parsed = CreateExampleBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.flatten() });
       return;
