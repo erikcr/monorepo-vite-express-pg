@@ -306,7 +306,7 @@ server-only column. Example routes use it.
 **Change:** `noUncheckedIndexedAccess`, `noUnusedLocals`, `noUnusedParameters`,
 `noImplicitReturns` in the base tsconfig; fix what they flag.
 
-### 2.8 `[ ]` knip + coverage thresholds
+### 2.8 `[x]` knip + coverage thresholds
 **Change:** `knip.json` + `pnpm knip` CI job (unused files, exports, deps, catalog entries);
 coverage thresholds in each package's vitest config, enforced in CI.
 

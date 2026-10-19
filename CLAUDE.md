@@ -229,6 +229,8 @@ pnpm format                   # Biome format --write (all packages)
 # Type checking & tests
 pnpm typecheck                # all packages
 pnpm test                     # all packages (vitest)
+pnpm test:coverage            # same, enforcing each package's coverage floor (what CI runs)
+pnpm knip                     # unused files, exports and dependencies (config: knip.json)
 pnpm --filter @repo/web e2e   # Playwright E2E (health smoke test)
 
 # Build
@@ -241,7 +243,8 @@ pnpm build                    # all artifacts
 - **API tests** — supertest against `createApp(testDb, createFakeQueue())`, db backed by PGlite which runs the actual migration SQL files — schema changes without committed migrations will cause test failures
 - **Component tests** — `@testing-library/react` + jsdom environment
 - **E2E** — Playwright health-page smoke test in `artifacts/web/e2e/`
-- **CI** — GitHub Actions: lint → typecheck → db-check → codegen-check → test → build → e2e on every push/PR
+- **CI** — GitHub Actions: lint, typecheck, db-check, codegen-check, test (with coverage floors), knip, build, e2e, promotion source; the `CI passed` gate needs all of them
+- **Coverage floors** — in each package's `vitest.config.ts`, just below current coverage; raise them when you add tests
 
 ### Git workflow
 

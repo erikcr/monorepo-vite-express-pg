@@ -4,7 +4,7 @@ import { count } from "drizzle-orm";
 import type { QueueOptions } from "pg-boss";
 import { logger } from "../logger.js";
 
-export interface JobContext {
+interface JobContext {
   db: Db;
   jobId: string;
 }

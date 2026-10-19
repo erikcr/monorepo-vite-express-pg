@@ -36,11 +36,11 @@ catalog:
   "@types/node": ^24.0.0
   # Testing
   vitest: ^5.0.0
+  "@vitest/coverage-v8": ^5.0.0
   jsdom: ^30.1.0
   "@testing-library/dom": ^10.4.1
   "@testing-library/jest-dom": ^7.0.1
   "@testing-library/react": ^16.3.3
-  "@testing-library/user-event": ^14.6.8
 
 overrides:
   # Security: drizzle-kit's deprecated @esbuild-kit loader pins a vulnerable esbuild (<=0.24).

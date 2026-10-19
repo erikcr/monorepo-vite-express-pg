@@ -20,12 +20,15 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:studio": "pnpm --filter @repo/db studio",
     "test": "pnpm -r test",
-    "prepare": "git config core.hooksPath .githooks || true"
+    "prepare": "git config core.hooksPath .githooks || true",
+    "test:coverage": "pnpm -r test:coverage",
+    "knip": "knip"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "@repo/db": "workspace:*",
     "drizzle-orm": "catalog:",
+    "knip": "~6.41.0",
     "railway": "^3.16.0",
     "tsx": "catalog:",
     "typescript": "catalog:"

@@ -12,7 +12,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@repo/api-zod": "workspace:*",
     "@tanstack/react-query": "catalog:"
   },
   "devDependencies": {

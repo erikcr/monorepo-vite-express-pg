@@ -9,5 +9,20 @@ export default defineConfig({
     // vitest's 5s default, failing whichever test triggers it first.
     testTimeout: 20_000,
     hookTimeout: 20_000,
+    coverage: {
+      provider: "v8",
+      // Count every source file, not just the ones a test happened to import.
+      include: ["src/**"],
+      exclude: [
+        "src/__tests__/**",
+        "src/test-helpers/**",
+        "src/index.ts",
+        "src/worker.ts",
+        "src/migrate.ts",
+        "src/validate-env.ts",
+      ],
+      // Floors just below current coverage: CI fails if it drops. Raise them as tests improve.
+      thresholds: { statements: 80, branches: 80, functions: 75, lines: 80 },
+    },
   },
 });

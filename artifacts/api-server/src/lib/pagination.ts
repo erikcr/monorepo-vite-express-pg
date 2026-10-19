@@ -6,7 +6,7 @@ export interface Cursor {
   id: string;
 }
 
-export function encodeCursor({ createdAt, id }: Cursor): string {
+function encodeCursor({ createdAt, id }: Cursor): string {
   return Buffer.from(JSON.stringify([createdAt.toISOString(), id])).toString("base64url");
 }
 
