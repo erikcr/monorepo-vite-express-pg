@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { CreateExampleBody, GetHealthResponse, ListExamplesResponseItem } from "../index.js";
+import {
+  CreateExampleBody,
+  GetExampleResponse,
+  GetHealthResponse,
+  ListExamplesQueryParams,
+  ListExamplesResponse,
+} from "../index.js";
 
 const validUuid = "123e4567-e89b-12d3-a456-426614174000";
 const validTs = new Date().toISOString();
@@ -27,26 +33,51 @@ describe("GetHealthResponse", () => {
   });
 });
 
-describe("ListExamplesResponseItem", () => {
-  const valid = {
-    id: validUuid,
-    orgId: "org_1",
-    name: "Test",
-    createdAt: validTs,
-    updatedAt: validTs,
-  };
+const validExample = {
+  id: validUuid,
+  orgId: "org_1",
+  name: "Test",
+  createdAt: validTs,
+  updatedAt: validTs,
+};
 
+describe("GetExampleResponse", () => {
   it("accepts a valid example", () => {
-    expect(ListExamplesResponseItem.safeParse(valid).success).toBe(true);
+    expect(GetExampleResponse.safeParse(validExample).success).toBe(true);
   });
 
   it("rejects an invalid UUID", () => {
-    expect(ListExamplesResponseItem.safeParse({ ...valid, id: "not-a-uuid" }).success).toBe(false);
+    expect(GetExampleResponse.safeParse({ ...validExample, id: "not-a-uuid" }).success).toBe(false);
   });
 
   it("rejects missing orgId", () => {
-    const { orgId: _, ...rest } = valid;
-    expect(ListExamplesResponseItem.safeParse(rest).success).toBe(false);
+    const { orgId: _, ...rest } = validExample;
+    expect(GetExampleResponse.safeParse(rest).success).toBe(false);
+  });
+});
+
+describe("ListExamplesResponse (a page)", () => {
+  it("accepts items with a next cursor, or null on the last page", () => {
+    expect(ListExamplesResponse.safeParse({ items: [validExample], nextCursor: "c" }).success).toBe(
+      true
+    );
+    expect(ListExamplesResponse.safeParse({ items: [], nextCursor: null }).success).toBe(true);
+  });
+
+  it("rejects a bare array (the pre-pagination shape)", () => {
+    expect(ListExamplesResponse.safeParse([validExample]).success).toBe(false);
+  });
+});
+
+describe("ListExamplesQueryParams", () => {
+  it("coerces limit from the query string and defaults it to 20", () => {
+    expect(ListExamplesQueryParams.parse({ orgId: "org_1", limit: "5" }).limit).toBe(5);
+    expect(ListExamplesQueryParams.parse({ orgId: "org_1" }).limit).toBe(20);
+  });
+
+  it("rejects limits outside 1–100", () => {
+    expect(ListExamplesQueryParams.safeParse({ orgId: "org_1", limit: "0" }).success).toBe(false);
+    expect(ListExamplesQueryParams.safeParse({ orgId: "org_1", limit: "101" }).success).toBe(false);
   });
 });
 

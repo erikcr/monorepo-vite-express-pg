@@ -19,6 +19,12 @@ export default defineConfig({
         fetch: {
           includeHttpResponseReturnType: false,
         },
+        // Paginated lists also get a use…Infinite hook that pages by cursor.
+        operations: {
+          listExamples: {
+            query: { useInfinite: true, useInfiniteQueryParam: "cursor" },
+          },
+        },
       },
     },
   },
@@ -31,6 +37,10 @@ export default defineConfig({
       // Orval reads the zod version from here to pick Zod 4 syntax.
       packageJson: "../../lib/api-zod/package.json",
       client: "zod",
+      // Query strings arrive as text: coerce numbers (e.g. limit=20) before validating.
+      override: {
+        zod: { coerce: { query: ["number"] } },
+      },
     },
   },
 });

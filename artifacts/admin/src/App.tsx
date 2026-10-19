@@ -1,4 +1,4 @@
-import { useGetHealth, useListExamples } from "@repo/api-client-react";
+import { useGetHealth, useListExamplesInfinite } from "@repo/api-client-react";
 import { useState } from "react";
 
 function StatusBadge({ ok, loading }: { ok: boolean | undefined; loading?: boolean }) {
@@ -40,10 +40,17 @@ export default function App() {
   const [orgId, setOrgId] = useState("org_1");
   const { data: health, isLoading: healthLoading, isError: healthError } = useGetHealth();
   const {
-    data: examples,
+    data: examplePages,
     isLoading: examplesLoading,
     error: examplesError,
-  } = useListExamples({ orgId });
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useListExamplesInfinite(
+    { orgId },
+    { query: { getNextPageParam: (page) => page.nextCursor ?? undefined } }
+  );
+  const examples = examplePages?.pages.flatMap((page) => page.items);
 
   const apiOk = !healthLoading && !healthError && health?.status === "ok";
   const dbOk = health?.db === "ok";
@@ -92,8 +99,14 @@ export default function App() {
             />
             <StatCard
               label="Records"
-              value={examplesLoading ? "…" : (examples?.length ?? "—")}
-              sub="example table"
+              value={
+                examplesLoading
+                  ? "…"
+                  : examples
+                    ? `${examples.length}${hasNextPage ? "+" : ""}`
+                    : "—"
+              }
+              sub="loaded from example table"
             />
             <StatCard label="Org filter" value={orgId} sub="rows scoped to this org" />
           </div>
@@ -157,6 +170,16 @@ export default function App() {
               </table>
             )}
           </div>
+          {hasNextPage && (
+            <button
+              type="button"
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="mt-3 bg-brand text-brand-fg rounded-button px-3 py-1.5 text-xs disabled:opacity-50"
+            >
+              {isFetchingNextPage ? "Loading…" : "Load more"}
+            </button>
+          )}
         </section>
 
         {/* Theme tokens */}

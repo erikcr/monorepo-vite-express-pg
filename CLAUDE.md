@@ -137,6 +137,15 @@ await db.select().from(exampleTable).where(eq(exampleTable.orgId, orgId));
 // tests:      createApp(testDb, createFakeQueue()) with a PGlite-backed db
 ```
 
+**Lists are paginated** — list endpoints take `limit` (default 20, max 100) and an opaque `cursor`,
+and return `{ items, nextCursor }` ordered newest first. Use `toPage()`/`decodeCursor()` from
+`src/lib/pagination.ts` (keyset on `createdAt desc, id desc`; see `routes/example.ts`), and store
+timestamps with `precision: 3` so cursors round-trip exactly. In React, page with the generated
+`use…Infinite` hook (enable it per operation in `orval.config.ts`).
+
+**Record routes return 404 across orgs** — single-record queries match both `id` and `orgId`, so
+another org's record is indistinguishable from a missing one.
+
 **Background jobs** — define each job in `src/jobs/registry.ts` (name, handler, optional cron
 `schedule` and retry options) and add it to `jobs`. Routes enqueue through the injected queue,
 never a pg-boss instance, so tests can use `createFakeQueue()`:

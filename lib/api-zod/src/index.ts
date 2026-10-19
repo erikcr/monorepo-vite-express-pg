@@ -30,23 +30,30 @@ export const GetReadyResponse = zod.object({
 
 
 /**
- * @summary List example records
+ * @summary List example records, newest first, one page at a time
  */
+
+export const listExamplesQueryLimitDefault = 20;
+export const listExamplesQueryLimitMax = 100;
 
 
 
 export const ListExamplesQueryParams = zod.object({
-  "orgId": zod.string().min(1)
+  "orgId": zod.string().min(1).describe('Tenant the records belong to (moves to the authenticated session with auth)'),
+  "limit": zod.coerce.number().int().min(1).max(listExamplesQueryLimitMax).default(listExamplesQueryLimitDefault),
+  "cursor": zod.string().optional().describe('The nextCursor from the previous page; omit for the first page')
 })
 
-export const ListExamplesResponseItem = zod.object({
+export const ListExamplesResponse = zod.object({
+  "items": zod.array(zod.object({
   "id": zod.uuid(),
   "orgId": zod.string(),
   "name": zod.string(),
   "createdAt": zod.iso.datetime({"offset":true}),
   "updatedAt": zod.iso.datetime({"offset":true})
+})),
+  "nextCursor": zod.string().nullable().describe('Pass as cursor to get the next page; null on the last page')
 })
-export const ListExamplesResponse = zod.array(ListExamplesResponseItem)
 
 
 /**
@@ -68,3 +75,73 @@ export const CreateExampleResponse = zod.object({
   "createdAt": zod.iso.datetime({"offset":true}),
   "updatedAt": zod.iso.datetime({"offset":true})
 })
+
+
+/**
+ * @summary Get one example record
+ */
+export const GetExampleParams = zod.object({
+  "id": zod.uuid()
+})
+
+
+
+
+export const GetExampleQueryParams = zod.object({
+  "orgId": zod.string().min(1).describe('Tenant the records belong to (moves to the authenticated session with auth)')
+})
+
+export const GetExampleResponse = zod.object({
+  "id": zod.uuid(),
+  "orgId": zod.string(),
+  "name": zod.string(),
+  "createdAt": zod.iso.datetime({"offset":true}),
+  "updatedAt": zod.iso.datetime({"offset":true})
+})
+
+
+/**
+ * @summary Update an example record
+ */
+export const UpdateExampleParams = zod.object({
+  "id": zod.uuid()
+})
+
+
+
+
+export const UpdateExampleQueryParams = zod.object({
+  "orgId": zod.string().min(1).describe('Tenant the records belong to (moves to the authenticated session with auth)')
+})
+
+
+
+
+export const UpdateExampleBody = zod.object({
+  "name": zod.string().min(1)
+})
+
+export const UpdateExampleResponse = zod.object({
+  "id": zod.uuid(),
+  "orgId": zod.string(),
+  "name": zod.string(),
+  "createdAt": zod.iso.datetime({"offset":true}),
+  "updatedAt": zod.iso.datetime({"offset":true})
+})
+
+
+/**
+ * @summary Delete an example record
+ */
+export const DeleteExampleParams = zod.object({
+  "id": zod.uuid()
+})
+
+
+
+
+export const DeleteExampleQueryParams = zod.object({
+  "orgId": zod.string().min(1).describe('Tenant the records belong to (moves to the authenticated session with auth)')
+})
+
+export const DeleteExampleResponse = zod.void()

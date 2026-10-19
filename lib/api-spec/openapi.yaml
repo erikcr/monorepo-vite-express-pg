@@ -44,24 +44,33 @@ paths:
   /api/example:
     get:
       operationId: listExamples
-      summary: List example records
+      summary: List example records, newest first, one page at a time
       tags: [example]
       parameters:
-        - name: orgId
+        - $ref: "#/components/parameters/OrgId"
+        - name: limit
           in: query
-          required: true
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          description: The nextCursor from the previous page; omit for the first page
           schema:
             type: string
-            minLength: 1
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Example"
+                $ref: "#/components/schemas/ExamplePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
     post:
       operationId: createExample
@@ -80,9 +89,115 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Example"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/example/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ExampleId"
+      - $ref: "#/components/parameters/OrgId"
+    get:
+      operationId: getExample
+      summary: Get one example record
+      tags: [example]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Example"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    patch:
+      operationId: updateExample
+      summary: Update an example record
+      tags: [example]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateExampleInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Example"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      operationId: deleteExample
+      summary: Delete an example record
+      tags: [example]
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
 components:
+  parameters:
+    OrgId:
+      name: orgId
+      in: query
+      required: true
+      description: Tenant the records belong to (moves to the authenticated session with auth)
+      schema:
+        type: string
+        minLength: 1
+    ExampleId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: No such record in this org
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
   schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          description: A message, or field-level validation errors
+
+    ExamplePage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Example"
+        nextCursor:
+          description: Pass as cursor to get the next page; null on the last page
+          type: [string, "null"]
+
     HealthResponse:
       type: object
       required: [status, ts, db, sha]
@@ -140,6 +255,14 @@ components:
         orgId:
           type: string
           minLength: 1
+        name:
+          type: string
+          minLength: 1
+
+    UpdateExampleInput:
+      type: object
+      required: [name]
+      properties:
         name:
           type: string
           minLength: 1

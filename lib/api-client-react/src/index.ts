@@ -6,18 +6,23 @@
  * OpenAPI spec version: 1.0.0
  */
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
+  DefinedUseInfiniteQueryResult,
   DefinedUseQueryResult,
+  InfiniteData,
   MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseInfiniteQueryOptions,
+  UseInfiniteQueryResult,
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
@@ -25,6 +30,28 @@ import type {
 } from '@tanstack/react-query';
 
 import { apiFetch } from './client';
+export interface ErrorResponse {
+  /** A message, or field-level validation errors */
+  error: unknown;
+}
+
+export interface Example {
+  id: string;
+  orgId: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExamplePage {
+  items: Example[];
+  /**
+     * Pass as cursor to get the next page; null on the last page
+     * @nullable
+     */
+  nextCursor: string | null;
+}
+
 export type HealthResponseStatus = typeof HealthResponseStatus[keyof typeof HealthResponseStatus];
 
 
@@ -76,14 +103,6 @@ export interface ReadyResponse {
   checks: ReadyResponseChecks;
 }
 
-export interface Example {
-  id: string;
-  orgId: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface CreateExampleInput {
   /** @minLength 1 */
   orgId: string;
@@ -91,11 +110,65 @@ export interface CreateExampleInput {
   name: string;
 }
 
+export interface UpdateExampleInput {
+  /** @minLength 1 */
+  name: string;
+}
+
+/**
+ * Invalid input
+ */
+export type BadRequestResponse = ErrorResponse;
+
+/**
+ * No such record in this org
+ */
+export type NotFoundResponse = ErrorResponse;
+
+/**
+ * Tenant the records belong to (moves to the authenticated session with auth)
+ */
+export type OrgIdParameter = string;
+
 export type ListExamplesParams = {
 /**
+ * Tenant the records belong to (moves to the authenticated session with auth)
  * @minLength 1
  */
-orgId: string;
+orgId: OrgIdParameter;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * The nextCursor from the previous page; omit for the first page
+ */
+cursor?: string;
+};
+
+export type GetExampleParams = {
+/**
+ * Tenant the records belong to (moves to the authenticated session with auth)
+ * @minLength 1
+ */
+orgId: OrgIdParameter;
+};
+
+export type UpdateExampleParams = {
+/**
+ * Tenant the records belong to (moves to the authenticated session with auth)
+ * @minLength 1
+ */
+orgId: OrgIdParameter;
+};
+
+export type DeleteExampleParams = {
+/**
+ * Tenant the records belong to (moves to the authenticated session with auth)
+ * @minLength 1
+ */
+orgId: OrgIdParameter;
 };
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -335,11 +408,11 @@ export const getListExamplesUrl = (params: ListExamplesParams,) => {
 }
 
 /**
- * @summary List example records
+ * @summary List example records, newest first, one page at a time
  */
-export const listExamples = async (params: ListExamplesParams, options?: Parameters<typeof apiFetch>[1]): Promise<Example[]> => {
+export const listExamples = async (params: ListExamplesParams, options?: Parameters<typeof apiFetch>[1]): Promise<ExamplePage> => {
 
-  return apiFetch<Example[]>(getListExamplesUrl(params),
+  return apiFetch<ExamplePage>(getListExamplesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -352,6 +425,12 @@ export const listExamples = async (params: ListExamplesParams, options?: Paramet
 
 
 
+export const getListExamplesInfiniteQueryKey = (params?: ListExamplesParams,) => {
+    return [
+    'infinite', `/api/example`, ...(params ? [params] : [])
+    ] as const;
+    }
+
 export const getListExamplesQueryKey = (params?: ListExamplesParams,) => {
     return [
     `/api/example`, ...(params ? [params] : [])
@@ -359,7 +438,74 @@ export const getListExamplesQueryKey = (params?: ListExamplesParams,) => {
     }
 
 
-export const getListExamplesQueryOptions = <TData = Awaited<ReturnType<typeof listExamples>>, TError = unknown>(params: ListExamplesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListExamplesInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = BadRequestResponse>(params: ListExamplesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData, QueryKey, ListExamplesParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListExamplesInfiniteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listExamples>>, QueryKey, ListExamplesParams['cursor']> = ({ signal, pageParam }) => listExamples({...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData, QueryKey, ListExamplesParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListExamplesInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listExamples>>>
+export type ListExamplesInfiniteQueryError = BadRequestResponse
+
+
+export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = BadRequestResponse>(
+ params: ListExamplesParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData, QueryKey, ListExamplesParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listExamples>>,
+          TError,
+          Awaited<ReturnType<typeof listExamples>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = BadRequestResponse>(
+ params: ListExamplesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData, QueryKey, ListExamplesParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listExamples>>,
+          TError,
+          Awaited<ReturnType<typeof listExamples>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = BadRequestResponse>(
+ params: ListExamplesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData, QueryKey, ListExamplesParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List example records, newest first, one page at a time
+ */
+
+export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = BadRequestResponse>(
+ params: ListExamplesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData, QueryKey, ListExamplesParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListExamplesInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getListExamplesQueryOptions = <TData = Awaited<ReturnType<typeof listExamples>>, TError = BadRequestResponse>(params: ListExamplesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -378,10 +524,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListExamplesQueryResult = NonNullable<Awaited<ReturnType<typeof listExamples>>>
-export type ListExamplesQueryError = unknown
+export type ListExamplesQueryError = BadRequestResponse
 
 
-export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = unknown>(
+export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = BadRequestResponse>(
  params: ListExamplesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listExamples>>,
@@ -391,7 +537,7 @@ export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = unknown>(
+export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = BadRequestResponse>(
  params: ListExamplesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listExamples>>,
@@ -401,15 +547,15 @@ export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = unknown>(
+export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = BadRequestResponse>(
  params: ListExamplesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary List example records
+ * @summary List example records, newest first, one page at a time
  */
 
-export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = unknown>(
+export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = BadRequestResponse>(
  params: ListExamplesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -469,7 +615,7 @@ return apiFetch<Example>(getCreateExampleUrl(),
 
 export const getCreateExampleMutationKey = () => ['createExample'] as const;
 
-export const getCreateExampleMutationOptions = <TError = unknown,
+export const getCreateExampleMutationOptions = <TError = BadRequestResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createExample>>, TError,CreateExampleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createExample>>, TError,CreateExampleMutationVariables, TContext> => {
 
@@ -498,13 +644,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateExampleMutationResult = NonNullable<Awaited<ReturnType<typeof createExample>>>
     export type CreateExampleMutationBody = CreateExampleInput
-    export type CreateExampleMutationError = unknown
+    export type CreateExampleMutationError = BadRequestResponse
     export type CreateExampleMutationVariables = {data: CreateExampleInput}
 
     /**
  * @summary Create an example record
  */
-export const useCreateExample = <TError = unknown,
+export const useCreateExample = <TError = BadRequestResponse,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createExample>>, TError,CreateExampleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createExample>>,
@@ -513,4 +659,301 @@ export const useCreateExample = <TError = unknown,
         TContext
       > => {
       return useMutation(getCreateExampleMutationOptions(options), queryClient);
+    }
+
+export const getGetExampleUrl = (id: string,
+    params: GetExampleParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/example/${id}?${stringifiedParams}` : `/api/example/${id}`
+}
+
+/**
+ * @summary Get one example record
+ */
+export const getExample = async (id: string,
+    params: GetExampleParams, options?: Parameters<typeof apiFetch>[1]): Promise<Example> => {
+
+  return apiFetch<Example>(getGetExampleUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetExampleQueryKey = (id: string,
+    params?: GetExampleParams,) => {
+    return [
+    `/api/example/${id}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetExampleQueryOptions = <TData = Awaited<ReturnType<typeof getExample>>, TError = BadRequestResponse | NotFoundResponse>(id: string,
+    params: GetExampleParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getExample>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetExampleQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getExample>>> = ({ signal }) => getExample(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getExample>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetExampleQueryResult = NonNullable<Awaited<ReturnType<typeof getExample>>>
+export type GetExampleQueryError = BadRequestResponse | NotFoundResponse
+
+
+export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TError = BadRequestResponse | NotFoundResponse>(
+ id: string,
+    params: GetExampleParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getExample>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getExample>>,
+          TError,
+          Awaited<ReturnType<typeof getExample>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TError = BadRequestResponse | NotFoundResponse>(
+ id: string,
+    params: GetExampleParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getExample>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getExample>>,
+          TError,
+          Awaited<ReturnType<typeof getExample>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TError = BadRequestResponse | NotFoundResponse>(
+ id: string,
+    params: GetExampleParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getExample>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get one example record
+ */
+
+export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TError = BadRequestResponse | NotFoundResponse>(
+ id: string,
+    params: GetExampleParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getExample>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetExampleQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateExampleUrl = (id: string,
+    params: UpdateExampleParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/example/${id}?${stringifiedParams}` : `/api/example/${id}`
+}
+
+/**
+ * @summary Update an example record
+ */
+export const updateExample = async (id: string,
+    updateExampleInput: UpdateExampleInput,
+    params: UpdateExampleParams, options?: Parameters<typeof apiFetch>[1]): Promise<Example> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetch<Example>(getUpdateExampleUrl(id,params),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateExampleInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateExampleMutationKey = () => ['updateExample'] as const;
+
+export const getUpdateExampleMutationOptions = <TError = BadRequestResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateExample>>, TError,UpdateExampleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateExample>>, TError,UpdateExampleMutationVariables, TContext> => {
+
+const mutationKey = getUpdateExampleMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateExample>>, UpdateExampleMutationVariables> = (props) => {
+          const {id,data,params} = props ?? {};
+
+          return  updateExample(id,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateExampleMutationResult = NonNullable<Awaited<ReturnType<typeof updateExample>>>
+    export type UpdateExampleMutationBody = UpdateExampleInput
+    export type UpdateExampleMutationError = BadRequestResponse | NotFoundResponse
+    export type UpdateExampleMutationVariables = {id: string;data: UpdateExampleInput;params: UpdateExampleParams}
+
+    /**
+ * @summary Update an example record
+ */
+export const useUpdateExample = <TError = BadRequestResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateExample>>, TError,UpdateExampleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateExample>>,
+        TError,
+        UpdateExampleMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateExampleMutationOptions(options), queryClient);
+    }
+
+export const getDeleteExampleUrl = (id: string,
+    params: DeleteExampleParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/example/${id}?${stringifiedParams}` : `/api/example/${id}`
+}
+
+/**
+ * @summary Delete an example record
+ */
+export const deleteExample = async (id: string,
+    params: DeleteExampleParams, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+
+  return apiFetch<void>(getDeleteExampleUrl(id,params),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteExampleMutationKey = () => ['deleteExample'] as const;
+
+export const getDeleteExampleMutationOptions = <TError = BadRequestResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteExample>>, TError,DeleteExampleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteExample>>, TError,DeleteExampleMutationVariables, TContext> => {
+
+const mutationKey = getDeleteExampleMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteExample>>, DeleteExampleMutationVariables> = (props) => {
+          const {id,params} = props ?? {};
+
+          return  deleteExample(id,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteExampleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteExample>>>
+
+    export type DeleteExampleMutationError = BadRequestResponse | NotFoundResponse
+    export type DeleteExampleMutationVariables = {id: string;params: DeleteExampleParams}
+
+    /**
+ * @summary Delete an example record
+ */
+export const useDeleteExample = <TError = BadRequestResponse | NotFoundResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteExample>>, TError,DeleteExampleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteExample>>,
+        TError,
+        DeleteExampleMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteExampleMutationOptions(options), queryClient);
     }

@@ -219,14 +219,15 @@ a Zod-validated search param. SPA rewrites in both `vercel.json` files:
 **Files:** both apps' `package.json`, `main.tsx`, `router.tsx`, pages, tests.
 **Accept:** Tests render routes; unknown path shows 404; a typo'd link fails typecheck.
 
-### 1.3 `[ ]` Complete CRUD example + pagination convention
-**Problem:** Template only demonstrates list + create; no path params, 404 handling, update,
-delete, or pagination pattern.
-**Change:** Add `GET /api/example/:id` (404 when missing/wrong org), `PATCH /api/example/:id`,
-`DELETE /api/example/:id`, and `limit`/`cursor` pagination on the list endpoint
-(`{ items, nextCursor }` envelope). Spec-first → codegen → routes → tests. Touched updatedAt on PATCH.
-**Files:** `lib/api-spec/openapi.yaml`, codegen, `routes/example.ts`, tests, admin table.
-**Accept:** Tests for 404, cross-org 404, update, delete, pagination ordering.
+### 1.3 `[x]` Complete CRUD example + pagination convention
+**Done:** `GET/PATCH/DELETE /api/example/{id}` (404 when missing or another org's; 400 for a bad id
+or body) and a paginated list: `limit` (1–100, default 20) + opaque `cursor` →
+`{ items, nextCursor }`, newest first, keyset on `(createdAt, id)` via `src/lib/pagination.ts`.
+Timestamps moved to millisecond precision (migration 0001) so cursors round-trip exactly through
+JS Dates. Shared `OrgId`/`ExampleId` parameters and `BadRequest`/`NotFound` responses in the spec;
+Orval coerces numeric query params and generates `useListExamplesInfinite`; `apiFetch` handles
+204. Admin table pages with it ("Load more"). Tests cover ordering, ties, every row visited once
+(mutation-checked: dropping the id tiebreak fails it), bounds, cross-org 404s.
 
 ### 1.4 `[x]` Make the worker real
 **Done:** `src/jobs/` — a registry of job definitions (name, handler, optional cron schedule,
