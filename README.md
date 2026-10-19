@@ -7,7 +7,7 @@ Production-ready pnpm monorepo: Express 5 API + React 19 web/admin apps + Postgr
 | Layer | Technology |
 |-------|-----------|
 | API server | Express 5 + TypeScript, deployed to Railway via Dockerfile |
-| Web / Admin | React 19 + Vite 6 + Tailwind CSS 4, deployed to Vercel |
+| Web / Admin | React 19 + Vite 8 + Tailwind CSS 4, deployed to Vercel |
 | Database | PostgreSQL + Drizzle ORM |
 | Background jobs | pg-boss |
 | Package manager | pnpm 12 workspace monorepo |

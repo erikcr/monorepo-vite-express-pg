@@ -11,6 +11,7 @@ Run these once, in order, after creating the GitHub repo from this template:
 3. `/provision-railway` — API + Postgres in `production` (deploys `main`) and `staging` (deploys `staging`).
 4. `/provision-vercel` — web + admin, production on `main`, staging on the `staging` branch; sets `CORS_ORIGIN` on Railway.
 5. `/new-project` — defines the project scope on a branch; its PR into `staging` is the first one through the process.
+6. Install the [Renovate GitHub app](https://github.com/apps/renovate) on the repo — `renovate.json` opens weekly dependency PRs into `staging`.
 
 ## How changes reach production
 

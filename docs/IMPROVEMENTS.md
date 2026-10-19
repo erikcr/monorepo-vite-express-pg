@@ -157,20 +157,36 @@ a lot of machinery for a new project. Revisit once P.1–P.5 have been used for 
 
 Before porting the reference app's patterns, which assume current versions (e.g. pg-boss v12's `createQueue`).
 
-### U.1 `[ ]` Upgrade the toolchain
-**Change:** pnpm 9 → 10, Biome 1.9 → 2, Vite 6 → 7, Vitest 2 → current, pg-boss 10 → 12, plus any
-other majors that are behind (check each at implementation time). Pin React exactly in the
-catalog. Add a `pnpm.overrides` entry for any vulnerable transitive dependency `pnpm audit` flags.
-One PR per tool where the migration is non-trivial (Biome config, pg-boss API).
-**Files:** `package.json`s, `pnpm-workspace.yaml`, `biome.json`, CI `PNPM_VERSION`, `Dockerfile`,
-`worker.ts`.
+### U.1 `[x]` Upgrade the toolchain
+**Done (2026-10-18), each layer verified locally + CI + Vercel previews:**
+- **Node 24 + pnpm 12.** CI reads pnpm from `packageManager` and Node from `.nvmrc`; Dockerfile
+  installs the pinned pnpm. `onlyBuiltDependencies` → `allowBuilds`. Removed `.npmrc`
+  (`node-linker=hoisted`, ignored since pnpm 11): the repo now uses pnpm's isolated layout, which
+  exposed two undeclared-dependency bugs (fixed).
+- **Biome 2** (`biome migrate`; CSS now checked, Tailwind directives enabled).
+- **Vite 8, plugin-react 6, Vitest 5, jsdom 30**, Testing Library (+ `@testing-library/dom`, a
+  jest-dom 7 peer), Playwright 1.64.
+- **Zod 4 + Orval 8.** PascalCase schema names; fetch-style `apiFetch(url, init)` mutator; hooks
+  return the body (`includeHttpResponseReturnType: false`). Also fixed web/admin `typecheck`, which
+  was a no-op (`tsc --noEmit` on a references-only tsconfig → `tsc -b`).
+- **TypeScript 7** (native; full typecheck < 1s). `lib/api-spec` keeps TypeScript 6 for orval's
+  typedoc (needs the JS API, due in 7.1); Renovate holds it below 7. TS 7 no longer auto-includes
+  `@types/*`, so Node packages list `types: ["node"]`.
+- **Server:** express 5.3, pino 10, pg-boss 12 (`createQueue` before `work`), drizzle-orm 0.45 /
+  drizzle-kit 0.31, PGlite 0.5. dotenv replaced by Node's `process.loadEnvFile()`.
+- **React 19.3.1** pinned exactly; `pnpm audit` clean (lockfile updates + one scoped esbuild
+  override for drizzle-kit's `@esbuild-kit` loader); docker-compose Postgres 16 → 18 (an existing
+  local pg16 volume won't start under 18: `docker compose down -v` to reset).
+- **Found while verifying:** bundled `dist/*.js` crashed outside production (in-process pino-pretty
+  transport); dev now pipes through the pino-pretty CLI.
 
-### U.2 `[ ]` Pin Node for local dev (was 2.6)
-**Change:** `"engines": { "node": ">=22" }` in root package.json + `.nvmrc` with `22`.
+### U.2 `[x]` Pin Node for local dev (was 2.6)
+`"engines": { "node": ">=24" }` + `.nvmrc` (`24`, the active LTS).
 
-### U.3 `[ ]` Renovate config (was 2.5)
-**Change:** `renovate.json` — pnpm catalog support, group minor/patch, weekly schedule,
-separate major PRs, `minimumReleaseAge` matching `pnpm-workspace.yaml`. PRs target `staging`.
+### U.3 `[x]` Renovate config (was 2.5)
+`renovate.json`: weekly, non-major grouped, majors separate, React grouped, 1-day release age,
+GitHub Action digests pinned, PRs target `staging`. Validated with `renovate-config-validator`.
+Projects install the Renovate GitHub app themselves.
 
 ---
 
@@ -313,3 +329,4 @@ a `docs/plans/` + status-board layout that `/new-project` sets up.
 | 2026-06-10 | Plan created; 0.1, 0.2, 0.3 | orgId required on list; README quickstart; seed was entirely broken (CJS top-level await + missing root deps) — now fixed and idempotent |
 | 2026-10-18 | Plan revised | Added Phase P (merge/promotion) and Phase U (upgrades) from the reference-app comparison; routing → TanStack Router; folded its patterns into 0.4, 1.1, 1.4, 2.2–2.9 |
 | 2026-10-18 | P.1–P.5 | Hooks, CI gate + Promotion source, `/provision-github` (verified on a scratch repo), staging in provisioning commands (not verified live), `docs/DEPLOYMENTS.md`. Template repo itself doesn't use the process |
+| 2026-10-18 | U.1–U.3 | Full toolchain upgrade (see U.1); Renovate. The flaky api-server test seen once under Orval 8 didn't recur in later runs |

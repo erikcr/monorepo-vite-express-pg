@@ -88,8 +88,8 @@ docs/
 | Layer | Technology |
 |-------|-----------|
 | API server | Express 5 + TypeScript, deployed to Railway via Dockerfile |
-| Web app | React 19 + Vite 6 + Tailwind CSS 4, deployed to Vercel |
-| Admin app | React 19 + Vite 6 + Tailwind CSS 4, deployed to Vercel |
+| Web app | React 19 + Vite 8 + Tailwind CSS 4, deployed to Vercel |
+| Admin app | React 19 + Vite 8 + Tailwind CSS 4, deployed to Vercel |
 | Database | PostgreSQL + Drizzle ORM (`drizzle-orm/postgres-js`) |
 | Background jobs | pg-boss (worker at `artifacts/api-server/src/worker.ts`) |
 | Package manager | pnpm 12 workspace monorepo |
@@ -134,7 +134,7 @@ await db.select().from(exampleTable).where(eq(exampleTable.orgId, orgId));
 **App factory** — Express app is created via `createApp(db)` in `src/app.ts` to support db injection in tests:
 ```typescript
 // production: createApp(db) with real postgres-js driver
-// tests:      createApp(testDb) with pg-mem-backed db
+// tests:      createApp(testDb) with PGlite-backed db
 ```
 
 **API client** — consume the API via `@repo/api-client-react` hooks in React apps, not raw fetch.
