@@ -20,7 +20,7 @@ re-evaluated for a template, and adopted only where it is the best default for a
 | Routing | **TanStack Router** (code-based routes) | Type-checked links, params and search params, so a broken link fails `pnpm typecheck` like every other contract in this repo. Search params validate with Zod, and route loaders integrate with the TanStack Query cache the apps already use. Code-based routes avoid a second generated file. Wouter is lighter but has no typed links, loaders or search-param handling. |
 | Branching | `feature → PR → staging → promotion PR (merge commit) → main` | A proven model. `staging` holds release candidates only; `main` is production. No `develop` branch. |
 | Gates | Git hooks block commits/pushes to `main` and `staging`; GitHub rulesets require a PR and the CI gate check on both, no bypass. | The hooks catch mistakes locally; the rulesets enforce it. CI, not the pre-push hook, runs the full suite. |
-| Auth | Last. Port the reference app's authorization design once its access work settles; identity provider still to decide. | Its design is still changing. |
+| Auth (2026-10-19) | Clerk for identity; our own tables for access (users, orgs, org grants, staff grants), one permission policy, server-side org resolution; staff on the same Clerk application with their own grants and a required second factor; invitations later. | Reviewed the reference app's access design and kept only its general core: the access layer is ~250 lines and closes the client-supplied `orgId` gap for any multi-tenant app. Its product-specific rules stay out. A separate staff Clerk application doubles setup for every project; the same `requireStaff()` can move to one later. |
 | Test DB | Keep PGlite and `createApp(db)`. | Better for a template than a global db + Docker Postgres. |
 
 ---
@@ -214,15 +214,56 @@ Projects install the Renovate GitHub app themselves.
 
 ## Phase 1 — Tier 1 (every project needs these on day one)
 
-### 1.1 `[ ]` Auth + authorization (last — waits for the reference app's access work to settle)
+### 1.1 `[ ]` Auth + authorization
 **Problem:** No identity layer; `orgId` is client-supplied (honor-system tenancy).
-**Direction (from the reference app):** org membership lives in our own tables and is never trusted from
-the client; routes ask for a *permission*, never a role, through one policy module; a test fails
-any route that has no access rule; only one file knows the identity provider. A dev-mode token
-keeps local work and tests provider-free. Example route reads orgId from `req.auth`.
-**Decide at implementation:** identity provider (Clerk, Better Auth, …), and whether multi-user
-orgs are in the template.
-**Accept:** Unauthenticated → 401; org A cannot read org B; a route without an access rule fails CI.
+**Decided (2026-10-19, after reviewing the reference app's access design):** Clerk proves identity; our database
+alone grants access; staff use the same Clerk application with their own grants; invitations wait
+for an email provider (1.6). Not taken: the reference app's product-specific rules; a separate staff Clerk app.
+
+**Design**
+- **Tables:** `users` (uuid id, `clerk_user_id` unique, primary verified email, name), `orgs`
+  (uuid id, name), `org_users` (org, user, role; PK org+user), `platform_staff` (email unique
+  case-insensitive, `clerk_user_id` linked on first sign-in, role, status). `example.org_id` becomes
+  a uuid FK to `orgs` (migration drops the demo `org_1`-style rows).
+- **One identity module** (`src/lib/identity.ts`) verifies the Clerk session token
+  (`authorizedParties` = the allowed origins) and returns `{ clerkUserId, factorAge }`. Under
+  `NODE_ENV=test` it also accepts `test:<json claims>` tokens, so API tests stay provider-free.
+  Nothing else imports Clerk on the server.
+- **Policy** (`src/lib/authz/policy.ts`): org roles `org_admin` / `org_member`; staff roles
+  `staff_admin` / `staff_support`; each maps to permissions (`example.read`, `example.write`,
+  `org.settings.write`, `platform.orgs.read`, …). Routes declare a permission, never a role.
+- **Pipeline:** `authenticate` (any `/api` route; 401 without a valid session) → `requireOrg(permission)`:
+  load grants (one query), resolve the org from `X-Org-Id` **checked against the grants** (one org:
+  header optional; several: required, else 400 `org_required`), check the permission (403), hand
+  the handler `req.ctx = { user, org, role, permissions }`. `signedIn` for person-level routes
+  (`/api/me`, creating an org). `requireStaff(permission)` for `/api/admin/*`: an active
+  `platform_staff` grant plus a completed second factor (`fva` claim; `MFA_REQUIRED=false` only
+  for local/test).
+- **Route coverage test:** walks the routers; every route under `/api` must declare
+  `requireOrg`/`signedIn`/`requireStaff`, and the expected permission per route is one table.
+- **Self-serve:** `GET /api/me` (user + their orgs and roles), `POST /api/orgs` (create an org;
+  the creator becomes `org_admin`). First staff grant via `pnpm staff:grant <email> <role>`.
+- **Example routes** drop the `orgId` query/body param and read `req.ctx.org`. Spec: bearer
+  security scheme + an `X-Org-Id` header parameter; codegen.
+- **Frontends:** Clerk React in both apps; `apiFetch` attaches the session token and the selected
+  org (`X-Org-Id`); web gets sign-in, an org picker/creator and a sign-out; admin requires a staff
+  grant (403 screen otherwise). Env: `CLERK_SECRET_KEY` (server, required in production),
+  `VITE_CLERK_PUBLISHABLE_KEY` (apps); IaC `preserve()`s the secret; provisioning gains a Clerk step
+  (dev instance for local/staging, production instance for production).
+
+**Tasks** (one PR each)
+1. Schema + migration: users, orgs, org_users, platform_staff; example.org_id → uuid FK.
+2. Identity module + `authenticate` + test tokens; env vars.
+3. Policy, grants loader, `resolveTenant`, `requireOrg` / `signedIn` / `requireStaff`, route
+   coverage test; example routes on `req.ctx`; spec + codegen.
+4. `/api/me`, `POST /api/orgs`, `staff:grant` script; admin API stub (`GET /api/admin/orgs`).
+5. Frontends: Clerk providers, token + org header in `apiFetch`, sign-in, org picker, admin gate.
+6. E2E + provisioning: decide how E2E signs in (Clerk testing tokens vs a test-mode identity),
+   add Clerk to `/provision-*` and DEPLOYMENTS, update AGENTS.md and the new-feature skill.
+
+**Accept:** unauthenticated → 401; a user without a grant in org B gets 403 there; another org's
+record is 404; a route without an access rule fails CI; staff routes refuse non-staff and staff
+without a second factor; a client-supplied org id is only ever checked, never trusted.
 
 ### 1.2 `[x]` Client-side routing + SPA rewrites
 **Done:** TanStack Router (code-based) in both apps: `src/router.tsx` with a root layout + nav,
@@ -262,6 +303,12 @@ draining time is 0 (immediate SIGKILL), so `railway.toml` sets `drainingSeconds 
 `docker stop` → exit code 0 after "shutdown complete".
 
 ---
+
+### 1.6 `[ ]` Invitations + email provider (after 1.1)
+Several users per org needs invitations: single-use, stored hashed, expiring (7 days), accepted
+only by a signed-in user whose **primary verified** email matches; an org users page (list,
+change role, remove; never remove the last `org_admin`). Needs an email provider in the template
+(decide: e.g. Resend) and its provisioning step.
 
 ## Phase 2 — Tier 2 (strongly recommended defaults)
 
