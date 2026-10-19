@@ -72,13 +72,19 @@ describe("request log lines", () => {
         id: "r1",
         method: "GET",
         url: "/api/example?orgId=org_1&token=abc",
-        headers: { authorization: "Bearer secret", cookie: "session=secret", accept: "*/*" },
+        headers: {
+          authorization: "Bearer secret",
+          cookie: "session=secret",
+          referer: "https://app.example/orders?token=secret#x",
+          accept: "*/*",
+        },
       },
     });
     const entry = JSON.parse(lines[0] ?? "{}");
     expect(entry.req.url).toBe("/api/example");
     expect(entry.req.headers.authorization).toBe("[redacted]");
     expect(entry.req.headers.cookie).toBe("[redacted]");
+    expect(entry.req.headers.referer).toBe("https://app.example/orders");
     expect(entry.req.headers.accept).toBe("*/*");
     expect(lines[0]).not.toContain("secret");
     expect(lines[0]).not.toContain("token=abc");

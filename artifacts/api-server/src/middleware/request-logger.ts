@@ -3,6 +3,8 @@ import type { IncomingMessage } from "node:http";
 import { type Options, pinoHttp } from "pino-http";
 import { logger } from "../logger.js";
 
+const withoutQuery = (url: string | undefined) => (url ?? "").split(/[?#]/)[0];
+
 // Accept an inbound x-request-id (e.g. from a proxy) only if it's short and plain; else mint one.
 const INBOUND_ID = /^[\w.-]{1,128}$/;
 
@@ -23,11 +25,13 @@ export const requestLogOptions = {
     err || res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info",
   serializers: {
     req(req: IncomingMessage & { id?: string }) {
+      const { referer, ...headers } = req.headers;
       return {
         id: req.id,
         method: req.method,
-        url: (req.url ?? "").split("?")[0],
-        headers: req.headers,
+        url: withoutQuery(req.url),
+        // Browsers send the page's full URL as Referer, query string included.
+        headers: referer ? { ...headers, referer: withoutQuery(referer) } : headers,
       };
     },
   },
