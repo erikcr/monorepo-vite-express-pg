@@ -264,7 +264,12 @@ for an email provider (1.6). Not taken: the reference app's product-specific rul
 4. `[x]` `GET /api/me`, `POST /api/orgs`, `GET /api/admin/orgs` (staff; paginated, member counts,
    `q` name search); `pnpm staff:grant` / `staff:revoke` / `org:grant`, also bundled into the image
    for `railway ssh`.
-5. Frontends: Clerk providers, token + org header in `apiFetch`, sign-in, org picker, admin gate.
+5. `[x]` Frontends: `@clerk/react` (Core 3) in both apps; `configureApiClient()` plugs the token and
+   org into `apiFetch` (which throws `ApiError`; Orval's `ErrorType` makes hooks say so). Web:
+   `/sign-in`, `/app` (create org, switch org, records list/add). Admin: staff-only, orgs list with a
+   Zod-validated `?q=` search, 403 → staff-required / second-factor screens. Found: a failing
+   Clerk load made `getToken` throw, breaking even public API calls; now it falls back to signed
+   out. E2E uses a placeholder Clerk key until task 6 (3 sign-in tests are `fixme`).
 6. E2E + provisioning: decide how E2E signs in (Clerk testing tokens vs a test-mode identity),
    add Clerk to `/provision-*` and DEPLOYMENTS, update AGENTS.md and the new-feature skill.
 

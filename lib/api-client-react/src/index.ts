@@ -38,6 +38,7 @@ import type {
 } from '@tanstack/react-query';
 
 import { apiFetch } from './client';
+import type { ErrorType } from './client';
 export interface ErrorResponse {
   /** A message, or field-level validation errors */
   error: unknown;
@@ -304,7 +305,7 @@ export const getGetHealthQueryKey = () => {
     }
 
 
-export const getGetHealthQueryOptions = <TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetHealthQueryOptions = <TData = Awaited<ReturnType<typeof getHealth>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -323,10 +324,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getHealth>>>
-export type GetHealthQueryError = unknown
+export type GetHealthQueryError = ErrorType<unknown>
 
 
-export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>(
+export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = ErrorType<unknown>>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getHealth>>,
@@ -336,7 +337,7 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>(
+export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = ErrorType<unknown>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getHealth>>,
@@ -346,7 +347,7 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>(
+export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = ErrorType<unknown>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -354,7 +355,7 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
  * @summary Liveness check (always 200 while the process is up)
  */
 
-export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>(
+export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = ErrorType<unknown>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getHealth>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -405,7 +406,7 @@ export const getGetReadyQueryKey = () => {
     }
 
 
-export const getGetReadyQueryOptions = <TData = Awaited<ReturnType<typeof getReady>>, TError = ReadyResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReady>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetReadyQueryOptions = <TData = Awaited<ReturnType<typeof getReady>>, TError = ErrorType<ReadyResponse>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReady>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -424,10 +425,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetReadyQueryResult = NonNullable<Awaited<ReturnType<typeof getReady>>>
-export type GetReadyQueryError = ReadyResponse
+export type GetReadyQueryError = ErrorType<ReadyResponse>
 
 
-export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError = ReadyResponse>(
+export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError = ErrorType<ReadyResponse>>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReady>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getReady>>,
@@ -437,7 +438,7 @@ export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError = ReadyResponse>(
+export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError = ErrorType<ReadyResponse>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReady>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getReady>>,
@@ -447,7 +448,7 @@ export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError = ReadyResponse>(
+export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError = ErrorType<ReadyResponse>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReady>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -455,7 +456,7 @@ export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError
  * @summary Readiness check (503 when the database is unreachable)
  */
 
-export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError = ReadyResponse>(
+export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError = ErrorType<ReadyResponse>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReady>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -515,7 +516,7 @@ return apiFetch<void>(getReportClientErrorUrl(),
 
 export const getReportClientErrorMutationKey = () => ['reportClientError'] as const;
 
-export const getReportClientErrorMutationOptions = <TError = BadRequestResponse,
+export const getReportClientErrorMutationOptions = <TError = ErrorType<BadRequestResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportClientError>>, TError,ReportClientErrorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof reportClientError>>, TError,ReportClientErrorMutationVariables, TContext> => {
 
@@ -544,13 +545,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ReportClientErrorMutationResult = NonNullable<Awaited<ReturnType<typeof reportClientError>>>
     export type ReportClientErrorMutationBody = ClientErrorReport
-    export type ReportClientErrorMutationError = BadRequestResponse
+    export type ReportClientErrorMutationError = ErrorType<BadRequestResponse>
     export type ReportClientErrorMutationVariables = {data: ClientErrorReport}
 
     /**
  * @summary Record a crash or unhandled error from a browser app
  */
-export const useReportClientError = <TError = BadRequestResponse,
+export const useReportClientError = <TError = ErrorType<BadRequestResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportClientError>>, TError,ReportClientErrorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof reportClientError>>,
@@ -594,7 +595,7 @@ export const getGetMeQueryKey = () => {
     }
 
 
-export const getGetMeQueryOptions = <TData = Awaited<ReturnType<typeof getMe>>, TError = UnauthorizedResponse | ForbiddenResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetMeQueryOptions = <TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -613,10 +614,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetMeQueryResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
-export type GetMeQueryError = UnauthorizedResponse | ForbiddenResponse
+export type GetMeQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
 
 
-export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = UnauthorizedResponse | ForbiddenResponse>(
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMe>>,
@@ -626,7 +627,7 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Una
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = UnauthorizedResponse | ForbiddenResponse>(
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMe>>,
@@ -636,7 +637,7 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Una
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = UnauthorizedResponse | ForbiddenResponse>(
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -644,7 +645,7 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Una
  * @summary The signed-in person and the orgs they belong to
  */
 
-export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = UnauthorizedResponse | ForbiddenResponse>(
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -704,7 +705,7 @@ return apiFetch<OrgMembership>(getCreateOrgUrl(),
 
 export const getCreateOrgMutationKey = () => ['createOrg'] as const;
 
-export const getCreateOrgMutationOptions = <TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse,
+export const getCreateOrgMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,CreateOrgMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,CreateOrgMutationVariables, TContext> => {
 
@@ -733,13 +734,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateOrgMutationResult = NonNullable<Awaited<ReturnType<typeof createOrg>>>
     export type CreateOrgMutationBody = CreateOrgInput
-    export type CreateOrgMutationError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse
+    export type CreateOrgMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
     export type CreateOrgMutationVariables = {data: CreateOrgInput}
 
     /**
  * @summary Create an org; the creator becomes its org_admin
  */
-export const useCreateOrg = <TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse,
+export const useCreateOrg = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,CreateOrgMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createOrg>>,
@@ -796,7 +797,7 @@ export const getListAdminOrgsQueryKey = (params?: ListAdminOrgsParams,) => {
     }
 
 
-export const getListAdminOrgsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(params?: ListAdminOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData, QueryKey, ListAdminOrgsParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+export const getListAdminOrgsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(params?: ListAdminOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData, QueryKey, ListAdminOrgsParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -815,10 +816,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListAdminOrgsInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminOrgs>>>
-export type ListAdminOrgsInfiniteQueryError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse
+export type ListAdminOrgsInfiniteQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
 
 
-export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params: undefined |  ListAdminOrgsParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData, QueryKey, ListAdminOrgsParams['cursor']>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAdminOrgs>>,
@@ -828,7 +829,7 @@ export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params?: ListAdminOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData, QueryKey, ListAdminOrgsParams['cursor']>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAdminOrgs>>,
@@ -838,7 +839,7 @@ export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params?: ListAdminOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData, QueryKey, ListAdminOrgsParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -846,7 +847,7 @@ export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType
  * @summary Every org, newest first (staff)
  */
 
-export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params?: ListAdminOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData, QueryKey, ListAdminOrgsParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -863,7 +864,7 @@ export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType
 
 
 
-export const getListAdminOrgsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(params?: ListAdminOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListAdminOrgsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(params?: ListAdminOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -882,10 +883,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListAdminOrgsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminOrgs>>>
-export type ListAdminOrgsQueryError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse
+export type ListAdminOrgsQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
 
 
-export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params: undefined |  ListAdminOrgsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAdminOrgs>>,
@@ -895,7 +896,7 @@ export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params?: ListAdminOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAdminOrgs>>,
@@ -905,7 +906,7 @@ export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params?: ListAdminOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -913,7 +914,7 @@ export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs
  * @summary Every org, newest first (staff)
  */
 
-export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params?: ListAdminOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -977,7 +978,7 @@ export const getListExamplesQueryKey = (params?: ListExamplesParams,) => {
     }
 
 
-export const getListExamplesInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(params?: ListExamplesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData, QueryKey, ListExamplesParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+export const getListExamplesInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(params?: ListExamplesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData, QueryKey, ListExamplesParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -996,10 +997,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListExamplesInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listExamples>>>
-export type ListExamplesInfiniteQueryError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse
+export type ListExamplesInfiniteQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
 
 
-export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params: undefined |  ListExamplesParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData, QueryKey, ListExamplesParams['cursor']>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listExamples>>,
@@ -1009,7 +1010,7 @@ export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params?: ListExamplesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData, QueryKey, ListExamplesParams['cursor']>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listExamples>>,
@@ -1019,7 +1020,7 @@ export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params?: ListExamplesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData, QueryKey, ListExamplesParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -1027,7 +1028,7 @@ export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<
  * @summary List example records, newest first, one page at a time
  */
 
-export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listExamples>>, ListExamplesParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params?: ListExamplesParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData, QueryKey, ListExamplesParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1044,7 +1045,7 @@ export function useListExamplesInfinite<TData = InfiniteData<Awaited<ReturnType<
 
 
 
-export const getListExamplesQueryOptions = <TData = Awaited<ReturnType<typeof listExamples>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(params?: ListExamplesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getListExamplesQueryOptions = <TData = Awaited<ReturnType<typeof listExamples>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(params?: ListExamplesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1063,10 +1064,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListExamplesQueryResult = NonNullable<Awaited<ReturnType<typeof listExamples>>>
-export type ListExamplesQueryError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse
+export type ListExamplesQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
 
 
-export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params: undefined |  ListExamplesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listExamples>>,
@@ -1076,7 +1077,7 @@ export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params?: ListExamplesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listExamples>>,
@@ -1086,7 +1087,7 @@ export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params?: ListExamplesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -1094,7 +1095,7 @@ export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>
  * @summary List example records, newest first, one page at a time
  */
 
-export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+export function useListExamples<TData = Awaited<ReturnType<typeof listExamples>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
  params?: ListExamplesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listExamples>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1154,7 +1155,7 @@ return apiFetch<Example>(getCreateExampleUrl(),
 
 export const getCreateExampleMutationKey = () => ['createExample'] as const;
 
-export const getCreateExampleMutationOptions = <TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse,
+export const getCreateExampleMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createExample>>, TError,CreateExampleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createExample>>, TError,CreateExampleMutationVariables, TContext> => {
 
@@ -1183,13 +1184,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateExampleMutationResult = NonNullable<Awaited<ReturnType<typeof createExample>>>
     export type CreateExampleMutationBody = CreateExampleInput
-    export type CreateExampleMutationError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse
+    export type CreateExampleMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
     export type CreateExampleMutationVariables = {data: CreateExampleInput}
 
     /**
  * @summary Create an example record
  */
-export const useCreateExample = <TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse,
+export const useCreateExample = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createExample>>, TError,CreateExampleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createExample>>,
@@ -1233,7 +1234,7 @@ export const getGetExampleQueryKey = (id: string,) => {
     }
 
 
-export const getGetExampleQueryOptions = <TData = Awaited<ReturnType<typeof getExample>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getExample>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getGetExampleQueryOptions = <TData = Awaited<ReturnType<typeof getExample>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getExample>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1252,10 +1253,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetExampleQueryResult = NonNullable<Awaited<ReturnType<typeof getExample>>>
-export type GetExampleQueryError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+export type GetExampleQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>
 
 
-export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>(
+export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>>(
  id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getExample>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getExample>>,
@@ -1265,7 +1266,7 @@ export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TE
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>(
+export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getExample>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getExample>>,
@@ -1275,7 +1276,7 @@ export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TE
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>(
+export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getExample>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -1283,7 +1284,7 @@ export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TE
  * @summary Get one example record
  */
 
-export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>(
+export function useGetExample<TData = Awaited<ReturnType<typeof getExample>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>>(
  id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getExample>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1344,7 +1345,7 @@ return apiFetch<Example>(getUpdateExampleUrl(id),
 
 export const getUpdateExampleMutationKey = () => ['updateExample'] as const;
 
-export const getUpdateExampleMutationOptions = <TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse,
+export const getUpdateExampleMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateExample>>, TError,UpdateExampleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateExample>>, TError,UpdateExampleMutationVariables, TContext> => {
 
@@ -1373,13 +1374,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateExampleMutationResult = NonNullable<Awaited<ReturnType<typeof updateExample>>>
     export type UpdateExampleMutationBody = UpdateExampleInput
-    export type UpdateExampleMutationError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+    export type UpdateExampleMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>
     export type UpdateExampleMutationVariables = {id: string;data: UpdateExampleInput}
 
     /**
  * @summary Update an example record
  */
-export const useUpdateExample = <TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse,
+export const useUpdateExample = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateExample>>, TError,UpdateExampleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateExample>>,
@@ -1418,7 +1419,7 @@ export const deleteExample = async (id: string, options?: Parameters<typeof apiF
 
 export const getDeleteExampleMutationKey = () => ['deleteExample'] as const;
 
-export const getDeleteExampleMutationOptions = <TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse,
+export const getDeleteExampleMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteExample>>, TError,DeleteExampleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteExample>>, TError,DeleteExampleMutationVariables, TContext> => {
 
@@ -1447,13 +1448,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteExampleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteExample>>>
 
-    export type DeleteExampleMutationError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse
+    export type DeleteExampleMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>
     export type DeleteExampleMutationVariables = {id: string}
 
     /**
  * @summary Delete an example record
  */
-export const useDeleteExample = <TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse,
+export const useDeleteExample = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteExample>>, TError,DeleteExampleMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteExample>>,

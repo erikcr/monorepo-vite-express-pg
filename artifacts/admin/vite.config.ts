@@ -7,6 +7,8 @@ const apiTarget = process.env.API_PROXY_TARGET ?? "http://localhost:3000";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // VITE_* variables (e.g. VITE_CLERK_PUBLISHABLE_KEY) come from the repo-root .env, like the API's.
+  envDir: "../..",
   server: {
     port: 3001,
     proxy: {

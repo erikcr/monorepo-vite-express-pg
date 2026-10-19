@@ -1,30 +1,29 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createAppRouter } from "../router.tsx";
+import { clerk } from "./clerk-mock.tsx";
 
-const listExamples = vi.fn();
-const listQueryOptions = vi.fn();
+vi.mock("@clerk/react", () => import("./clerk-mock.tsx"));
 
+const listOrgs = vi.fn();
 vi.mock("@repo/api-client-react", () => ({
   useGetHealth: () => ({ data: undefined, isLoading: true, isError: false }),
-  useListExamplesInfinite: (params: unknown) => listExamples(params),
-  getListExamplesInfiniteQueryOptions: (params: object) => {
-    listQueryOptions(params);
-    return {
-      queryKey: ["examples"],
-      queryFn: async () => ({ items: [], nextCursor: null }),
-    };
-  },
+  useListAdminOrgsInfinite: (params: unknown) => listOrgs(params),
 }));
 
-const row = (id: string, name: string) => ({
+const org = (id: string, name: string, memberCount = 1) => ({
   id,
-  orgId: "123e4567-e89b-42d3-a456-426614174001",
   name,
+  memberCount,
   createdAt: "2026-01-01T00:00:00.000Z",
-  updatedAt: "2026-01-01T00:00:00.000Z",
+});
+const page = (items: object[], extra: object = {}) => ({
+  data: { pages: [{ items, nextCursor: null }] },
+  isLoading: false,
+  error: null,
+  ...extra,
 });
 
 function renderAt(path: string) {
@@ -40,52 +39,77 @@ function renderAt(path: string) {
 
 describe("routes (admin)", () => {
   beforeEach(() => {
-    listExamples.mockReset().mockReturnValue({ data: undefined, isLoading: true, error: null });
-    listQueryOptions.mockReset();
+    clerk.signedIn = true;
+    listOrgs.mockReset().mockReturnValue(page([]));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it("renders the dashboard at /", async () => {
+  it("requires sign-in for every page", async () => {
+    clerk.signedIn = false;
     renderAt("/");
-    expect(await screen.findByRole("heading", { name: /admin/i })).toBeTruthy();
-    expect(screen.getByText("Overview")).toBeTruthy();
+    expect(await screen.findByText("redirecting to sign-in")).toBeTruthy();
+    expect(listOrgs).not.toHaveBeenCalled();
   });
 
-  it("prefetches the first page of records in the route loader", async () => {
+  it("lists organizations with member counts", async () => {
+    listOrgs.mockReturnValue(page([org("o1", "Acme", 3), org("o2", "Globex", 0)]));
     renderAt("/");
-    await screen.findByText("Overview");
-    expect(listQueryOptions).toHaveBeenCalledWith({});
-    expect(listExamples).toHaveBeenCalledWith({});
+    expect(await screen.findByRole("cell", { name: "Acme" })).toBeTruthy();
+    expect(screen.getByRole("cell", { name: "3" })).toBeTruthy();
+    expect(listOrgs).toHaveBeenCalledWith({});
   });
 
-  it("lists rows from every loaded page and loads the next one on request", async () => {
-    const fetchNextPage = vi.fn();
-    listExamples.mockReturnValue({
-      data: {
-        pages: [
-          { items: [row("a", "First")], nextCursor: "c1" },
-          { items: [row("b", "Second")], nextCursor: "c2" },
-        ],
-      },
-      isLoading: false,
-      error: null,
-      hasNextPage: true,
-      fetchNextPage,
-      isFetchingNextPage: false,
+  it("searches by the ?q= in the URL", async () => {
+    renderAt("/?q=acme");
+    expect(((await screen.findByLabelText("Search organizations")) as HTMLInputElement).value).toBe(
+      "acme"
+    );
+    expect(listOrgs).toHaveBeenCalledWith({ q: "acme" });
+  });
+
+  it("writes the search to the URL once typing pauses", async () => {
+    const router = renderAt("/");
+    const box = await screen.findByLabelText("Search organizations");
+    vi.useFakeTimers();
+    fireEvent.change(box, { target: { value: "glob" } });
+    expect(router.state.location.search).toEqual({});
+    await act(async () => {
+      vi.advanceTimersByTime(300);
     });
-    renderAt("/");
-    expect(await screen.findByText("First")).toBeTruthy();
-    expect(screen.getByText("Second")).toBeTruthy();
-    expect(screen.getByText("2+")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    expect(fetchNextPage).toHaveBeenCalled();
+    vi.useRealTimers();
+    await vi.waitFor(() => expect(router.state.location.search).toEqual({ q: "glob" }));
   });
 
-  it("renders the settings placeholder at /settings", async () => {
+  it("loads the next page on request", async () => {
+    const fetchNextPage = vi.fn();
+    listOrgs.mockReturnValue(page([org("o1", "Acme")], { hasNextPage: true, fetchNextPage }));
+    renderAt("/");
+    fireEvent.click(await screen.findByRole("button", { name: "Load more" }));
+    expect(fetchNextPage).toHaveBeenCalled();
+    expect(screen.getByText("1+")).toBeTruthy();
+  });
+
+  it("explains a 403 instead of showing an empty table", async () => {
+    listOrgs.mockReturnValue(page([], { error: { status: 403, code: "forbidden", message: "x" } }));
+    renderAt("/");
+    expect(await screen.findByRole("heading", { name: "Staff access required" })).toBeTruthy();
+  });
+
+  it("asks staff without a second factor to set one up", async () => {
+    listOrgs.mockReturnValue(
+      page([], { error: { status: 403, code: "second_factor_required", message: "x" } })
+    );
+    renderAt("/");
+    expect(await screen.findByRole("heading", { name: "Second factor required" })).toBeTruthy();
+  });
+
+  it("renders the settings placeholder, sign-in and the 404 page", async () => {
     renderAt("/settings");
     expect(await screen.findByRole("heading", { name: "Settings" })).toBeTruthy();
-  });
-
-  it("shows the 404 page for an unknown path", async () => {
+    renderAt("/sign-in/");
+    expect(await screen.findByText("clerk sign-in form")).toBeTruthy();
     renderAt("/no-such-page");
     expect(await screen.findByRole("heading", { name: "Page not found" })).toBeTruthy();
   });

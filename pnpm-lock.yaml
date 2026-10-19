@@ -164,6 +164,9 @@ settings:
 
 catalogs:
   default:
+    '@clerk/react':
+      specifier: ~6.17.8
+      version: 6.17.8
     '@tailwindcss/vite':
       specifier: ^4.3.3
       version: 4.3.3
@@ -259,6 +262,9 @@ importers:
 
   artifacts/admin:
     dependencies:
+      '@clerk/react':
+        specifier: 'catalog:'
+        version: 6.17.8(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@repo/api-client-react':
         specifier: workspace:*
         version: link:../../lib/api-client-react
@@ -274,6 +280,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.3.1(react@19.3.1)
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       '@tailwindcss/vite':
         specifier: 'catalog:'
@@ -402,6 +411,9 @@ importers:
 
   artifacts/web:
     dependencies:
+      '@clerk/react':
+        specifier: 'catalog:'
+        version: 6.17.8(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@repo/api-client-react':
         specifier: workspace:*
         version: link:../../lib/api-client-react
@@ -658,6 +670,13 @@ packages:
   '@clerk/backend@3.25.0':
     resolution: {integrity: sha512-hmJS0a61FO08PDaV2MtZ/hj6pE+cQBRmpxR8oUFGQTXewOQLLOAbcgob0rmFAnMNuHgXfsYf3NVxcQCUOWE+QA==}
     engines: {node: '>=20.9.0'}
+
+  '@clerk/react@6.17.8':
+    resolution: {integrity: sha512-sNeMe+5ArLshOJgNtqUGHb7cLHjDjRhumBHBN2ovg4uHpL49kQ2UfDUTtxpRUdMNikUg0Oc1CwzLFBlUv1umXA==}
+    engines: {node: '>=20.9.0'}
+    peerDependencies:
+      react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+      react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
 
   '@clerk/shared@4.40.0':
     resolution: {integrity: sha512-80KM/uw5ZseYTKwJjIhJj7jsHqX6rFem6cwcFJVCUriE3R4tpzkhXsfbhtdho6cG2pQD3NVqKspxTVbSjATzPg==}
@@ -3662,6 +3681,13 @@ snapshots:
     transitivePeerDependencies:
       - react
       - react-dom
+
+  '@clerk/react@6.17.8(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+    dependencies:
+      '@clerk/shared': 4.40.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
+      tslib: 2.8.1
 
   '@clerk/shared@4.40.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:

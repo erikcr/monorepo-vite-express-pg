@@ -27,13 +27,72 @@ const API_BASE =
     ? resolveBrowserApiBase(viteEnv?.VITE_API_URL, viteEnv?.PROD === true)
     : (nodeApiUrl ?? "http://localhost:3000");
 
+/** A non-2xx API response. `code` is the API's machine-readable reason (e.g. "org_required"). */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly body: unknown
+  ) {
+    const message =
+      typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
+        ? body.error
+        : `Request failed (${status})`;
+    super(message);
+    this.name = "ApiError";
+  }
+
+  get code(): string | undefined {
+    const { body } = this;
+    return typeof body === "object" &&
+      body !== null &&
+      "code" in body &&
+      typeof body.code === "string"
+      ? body.code
+      : undefined;
+  }
+}
+
+/** Tells Orval what generated hooks' errors really are: apiFetch throws ApiError for every non-2xx. */
+export type ErrorType<_Body> = ApiError;
+
+interface ClientConfig {
+  /** The session token to send as `Authorization: Bearer`, or null when signed out. */
+  getToken?: () => Promise<string | null>;
+  /** The org to act in, sent as `X-Org-Id` (the API checks it against your memberships). */
+  getOrgId?: () => string | null;
+}
+
+let config: ClientConfig = {};
+
+/**
+ * Plugs the app's identity provider and org selection into every request. Each app calls this
+ * once at startup (with Clerk's getToken); this package stays provider-agnostic.
+ */
+export function configureApiClient(next: ClientConfig): void {
+  config = next;
+}
+
 // Orval mutator — generated hooks build the URL (path + query string) and RequestInit
 // (method, headers, JSON body, signal), and expect the parsed response body back.
 export async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${url}`, init);
+  const headers = new Headers(init?.headers);
+  // If the identity provider can't produce a token (down, blocked, failed to load), carry on
+  // signed out: public endpoints still work, and the API refuses the rest.
+  const token = await config.getToken?.().catch(() => null);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const orgId = config.getOrgId?.();
+  if (orgId) headers.set("X-Org-Id", orgId);
+
+  const res = await fetch(`${API_BASE}${url}`, { ...init, headers });
   if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(`${res.status} ${text}`);
+    const text = await res.text().catch(() => "");
+    let body: unknown = text;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      // not JSON: keep the text
+    }
+    throw new ApiError(res.status, body);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;

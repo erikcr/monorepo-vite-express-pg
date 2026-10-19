@@ -24,7 +24,11 @@ pnpm db:migrate                   # apply migrations
 pnpm dev                          # starts api-server, web, and admin in parallel
 ```
 
-Optionally run `pnpm db:seed` to add sample data.
+Sign-in uses [Clerk](https://clerk.com): create a development instance and put its keys in
+`.env` (`CLERK_SECRET_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`). Without them the apps show a setup
+message and the API answers 401 to anything that needs a session.
+
+Optionally run `pnpm db:seed` to add sample data (it prints how to give yourself access).
 
 ### Git hooks
 

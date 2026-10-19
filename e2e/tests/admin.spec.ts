@@ -35,9 +35,13 @@ test.fixme("pages through a long list with Load more", async ({ page, request })
   await expect(page.getByRole("button", { name: "Load more" })).toHaveCount(0);
 });
 
-test("deep-links to settings and shows a 404 page", async ({ page }) => {
-  await page.goto("/settings");
-  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+test("shows the 404 page for an unknown path", async ({ page }) => {
   await page.goto("/no-such-page");
   await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
+});
+
+// Every admin page now requires sign-in: waits for E2E sign-in (auth task 6).
+test.fixme("deep-links to settings", async ({ page }) => {
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
 });

@@ -6,7 +6,10 @@ import { defineConfig, devices } from "@playwright/test";
 export const API = "http://localhost:3100";
 const WEB = "http://localhost:5174";
 const ADMIN = "http://localhost:3002";
-const proxyToApi = { API_PROXY_TARGET: API };
+// A well-formed but fake Clerk key: the apps render, Clerk never loads, so public pages work and
+// signed-in flows don't. Real E2E sign-in comes with auth task 6.
+const PLACEHOLDER_CLERK_KEY = "pk_test_ZTJlLXBsYWNlaG9sZGVyLmNsZXJrLmFjY291bnRzLmRldiQ=";
+const frontendEnv = { API_PROXY_TARGET: API, VITE_CLERK_PUBLISHABLE_KEY: PLACEHOLDER_CLERK_KEY };
 
 export default defineConfig({
   testDir: "./tests",
@@ -35,13 +38,13 @@ export default defineConfig({
     {
       command: "pnpm --filter @repo/web exec vite --port 5174 --strictPort",
       url: WEB,
-      env: proxyToApi,
+      env: frontendEnv,
       reuseExistingServer: false,
     },
     {
       command: "pnpm --filter @repo/admin exec vite --port 3002 --strictPort",
       url: ADMIN,
-      env: proxyToApi,
+      env: frontendEnv,
       reuseExistingServer: false,
     },
   ],

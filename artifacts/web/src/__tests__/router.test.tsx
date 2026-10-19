@@ -3,6 +3,9 @@ import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createAppRouter } from "../router.tsx";
+import { clerk } from "./clerk-mock.tsx";
+
+vi.mock("@clerk/react", () => import("./clerk-mock.tsx"));
 
 const health = vi.fn(() => ({ data: undefined, isLoading: true, isError: false }));
 vi.mock("@repo/api-client-react", () => ({ useGetHealth: () => health() }));
@@ -24,6 +27,7 @@ function renderAt(path: string) {
 
 describe("routes (web)", () => {
   beforeEach(() => {
+    clerk.signedIn = false;
     health.mockImplementation(() => ({ data: undefined, isLoading: true, isError: false }));
     reportError.mockClear();
   });
@@ -63,5 +67,25 @@ describe("routes (web)", () => {
     fireEvent.click(retry);
     expect(reportError).toHaveBeenCalledWith("web", expect.any(Error), expect.any(String));
     expect(await screen.findByText("Status")).toBeTruthy(); // retry renders the page again
+  });
+
+  it("offers sign-in when signed out, and the user menu when signed in", async () => {
+    renderAt("/");
+    expect(await screen.findByRole("link", { name: "Sign in" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "user menu" })).toBeNull();
+  });
+
+  it("shows the user menu once signed in", async () => {
+    clerk.signedIn = true;
+    renderAt("/");
+    expect(await screen.findByRole("button", { name: "user menu" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
+  });
+
+  it("renders Clerk's sign-in under /sign-in, including its sub-steps", async () => {
+    renderAt("/sign-in");
+    expect(await screen.findByText("clerk sign-in form")).toBeTruthy();
+    renderAt("/sign-in/factor-one");
+    expect((await screen.findAllByText("clerk sign-in form")).length).toBeGreaterThan(0);
   });
 });

@@ -1,9 +1,9 @@
-import { type ExamplePage, useGetHealth, useListExamplesInfinite } from "@repo/api-client-react";
+import { useGetHealth, useListAdminOrgsInfinite } from "@repo/api-client-react";
+import { getRouteApi } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { StaffRequired } from "./StaffRequired.tsx";
 
-// Shared with the route loader (router.tsx) so the prefetch and the hook use the same query.
-export const examplesPaging = {
-  getNextPageParam: (page: ExamplePage) => page.nextCursor ?? undefined,
-};
+const route = getRouteApi("/");
 
 function StatusBadge({ ok, loading }: { ok: boolean | undefined; loading?: boolean }) {
   if (loading) return <span className="text-xs text-text-muted">checking…</span>;
@@ -42,18 +42,30 @@ const swatches: { label: string; bg: string; fg: string }[] = [
 
 export function DashboardPage() {
   const { data: health, isLoading: healthLoading, isError: healthError } = useGetHealth();
-  const {
-    data: examplePages,
-    isLoading: examplesLoading,
-    error: examplesError,
-    hasNextPage,
-    fetchNextPage,
-    isFetchingNextPage,
-  } = useListExamplesInfinite({}, { query: examplesPaging });
-  const examples = examplePages?.pages.flatMap((page) => page.items);
+  // The org search lives in the URL (?q=…), validated by the route's search schema.
+  const { q = "" } = route.useSearch();
+  const navigate = route.useNavigate();
+  const [search, setSearch] = useState(q);
+  // Write the search to the URL once typing pauses, not on every keystroke.
+  useEffect(() => {
+    if (search === q) return;
+    const timer = setTimeout(
+      () => navigate({ search: search ? { q: search } : {}, replace: true }),
+      300
+    );
+    return () => clearTimeout(timer);
+  }, [search, q, navigate]);
+
+  const orgs = useListAdminOrgsInfinite(q ? { q } : {}, {
+    query: { getNextPageParam: (page) => page.nextCursor ?? undefined },
+  });
+  const items = orgs.data?.pages.flatMap((page) => page.items);
 
   const apiOk = !healthLoading && !healthError && health?.status === "ok";
   const dbOk = health?.db === "ok";
+
+  // Signed in but not staff (or no second factor): explain, rather than show an empty table.
+  if (orgs.error?.status === 403) return <StaffRequired code={orgs.error.code} />;
 
   return (
     <div className="min-h-screen">
@@ -98,61 +110,62 @@ export function DashboardPage() {
               value={<StatusBadge ok={apiOk ? dbOk : undefined} loading={healthLoading} />}
             />
             <StatCard
-              label="Records"
+              label="Organizations"
               value={
-                examplesLoading
-                  ? "…"
-                  : examples
-                    ? `${examples.length}${hasNextPage ? "+" : ""}`
-                    : "—"
+                orgs.isLoading ? "…" : items ? `${items.length}${orgs.hasNextPage ? "+" : ""}` : "—"
               }
-              sub="loaded from example table"
+              sub={q ? `matching "${q}"` : "loaded"}
             />
           </div>
         </section>
 
-        {/* Example table */}
+        {/* Orgs table */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Example records
+              Organizations
             </h2>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name"
+              aria-label="Search organizations"
+              className="bg-surface border border-border rounded-input px-2 py-1 text-xs text-text"
+            />
           </div>
           <div className="bg-surface-raised border border-border rounded-card overflow-hidden">
-            {examplesLoading && <p className="text-sm text-text-muted p-4">Loading…</p>}
-            {!!examplesError && (
-              <p className="text-sm text-destructive p-4">
-                Failed to load: {String(examplesError)}
-              </p>
+            {orgs.isLoading && <p className="text-sm text-text-muted p-4">Loading…</p>}
+            {orgs.error && (
+              <p className="text-sm text-destructive p-4">Failed to load: {orgs.error.message}</p>
             )}
-            {!examplesLoading && !examplesError && (
+            {!orgs.isLoading && !orgs.error && (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-text-muted text-xs uppercase tracking-wide">
-                    <th className="px-4 py-2.5 font-medium">ID</th>
-                    <th className="px-4 py-2.5 font-medium">Org</th>
                     <th className="px-4 py-2.5 font-medium">Name</th>
+                    <th className="px-4 py-2.5 font-medium">Members</th>
                     <th className="px-4 py-2.5 font-medium">Created</th>
+                    <th className="px-4 py-2.5 font-medium">ID</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {examples?.length === 0 && (
+                  {items?.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-4 py-4 text-text-muted text-center">
-                        No records. Run <code className="font-mono text-xs">pnpm db:seed</code> to
-                        add sample data.
+                        {q ? "No organizations match." : "No organizations yet."}
                       </td>
                     </tr>
                   )}
-                  {examples?.map((item) => (
-                    <tr key={item.id} className="border-b border-border-subtle last:border-0">
-                      <td className="px-4 py-2.5 font-mono text-xs text-text-muted truncate max-w-32">
-                        {item.id}
-                      </td>
-                      <td className="px-4 py-2.5">{item.orgId}</td>
-                      <td className="px-4 py-2.5">{item.name}</td>
+                  {items?.map((org) => (
+                    <tr key={org.id} className="border-b border-border-subtle last:border-0">
+                      <td className="px-4 py-2.5">{org.name}</td>
+                      <td className="px-4 py-2.5">{org.memberCount}</td>
                       <td className="px-4 py-2.5 text-text-muted">
-                        {new Date(item.createdAt).toLocaleDateString()}
+                        {new Date(org.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-2.5 font-mono text-xs text-text-muted truncate max-w-32">
+                        {org.id}
                       </td>
                     </tr>
                   ))}
@@ -160,14 +173,14 @@ export function DashboardPage() {
               </table>
             )}
           </div>
-          {hasNextPage && (
+          {orgs.hasNextPage && (
             <button
               type="button"
-              onClick={() => fetchNextPage()}
-              disabled={isFetchingNextPage}
+              onClick={() => orgs.fetchNextPage()}
+              disabled={orgs.isFetchingNextPage}
               className="mt-3 bg-brand text-brand-fg rounded-button px-3 py-1.5 text-xs disabled:opacity-50"
             >
-              {isFetchingNextPage ? "Loading…" : "Load more"}
+              {orgs.isFetchingNextPage ? "Loading…" : "Load more"}
             </button>
           )}
         </section>

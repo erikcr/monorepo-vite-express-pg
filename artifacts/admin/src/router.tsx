@@ -1,4 +1,4 @@
-import { getListExamplesInfiniteQueryOptions } from "@repo/api-client-react";
+import { RedirectToSignIn, Show, UserButton } from "@clerk/react";
 import { reportError } from "@repo/api-client-react/errors";
 import type { QueryClient } from "@tanstack/react-query";
 import {
@@ -9,10 +9,13 @@ import {
   Outlet,
   type RouterHistory,
 } from "@tanstack/react-router";
+import type { ComponentType } from "react";
+import { z } from "zod";
 import { CrashScreen } from "./pages/CrashScreen.tsx";
-import { DashboardPage, examplesPaging } from "./pages/DashboardPage.tsx";
+import { DashboardPage } from "./pages/DashboardPage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
 import { SettingsPage } from "./pages/SettingsPage.tsx";
+import { SignInPage } from "./pages/SignInPage.tsx";
 
 // Route loaders get the QueryClient, so they can prefetch into the same cache the hooks read.
 export interface RouterContext {
@@ -23,18 +26,31 @@ function RootLayout() {
   const link = "text-text-muted hover:text-text";
   return (
     <>
-      <nav className="px-page-x pt-3 flex gap-4 text-xs border-b border-border bg-surface-raised pb-3">
+      <nav className="px-page-x pt-3 flex items-center gap-4 text-xs border-b border-border bg-surface-raised pb-3">
         <Link to="/" className={link} activeProps={{ className: "text-text font-medium" }}>
           Dashboard
         </Link>
         <Link to="/settings" className={link} activeProps={{ className: "text-text font-medium" }}>
           Settings
         </Link>
+        <span className="ml-auto">
+          <Show when="signed-in">
+            <UserButton />
+          </Show>
+        </span>
       </nav>
       <Outlet />
     </>
   );
 }
+
+// The whole admin app is for signed-in staff: pages render only with a session (the API then
+// checks the staff grant), and anyone else goes to sign-in.
+const signedIn = (Page: ComponentType) => () => (
+  <Show when="signed-in" fallback={<RedirectToSignIn />}>
+    <Page />
+  </Show>
+);
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
@@ -46,23 +62,25 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  // Prefetch the first page so the table renders with data. prefetch never throws: API errors
-  // surface in the page's own error state.
-  loader: ({ context }) =>
-    context.queryClient.prefetchInfiniteQuery({
-      ...getListExamplesInfiniteQueryOptions({}, { query: examplesPaging }),
-      initialPageParam: undefined,
-    }),
-  component: DashboardPage,
+  // Search params are validated like any other input; ?q= filters the org list by name.
+  validateSearch: z.object({ q: z.string().max(100).optional().catch(undefined) }),
+  component: signedIn(DashboardPage),
 });
 
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/settings",
-  component: SettingsPage,
+  component: signedIn(SettingsPage),
 });
 
-const routeTree = rootRoute.addChildren([dashboardRoute, settingsRoute]);
+// Clerk's sign-in renders its own steps under /sign-in/… (factor-one, verify, …).
+const signInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/sign-in/$",
+  component: SignInPage,
+});
+
+const routeTree = rootRoute.addChildren([dashboardRoute, settingsRoute, signInRoute]);
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
   return createRouter({

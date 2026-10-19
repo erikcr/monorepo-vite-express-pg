@@ -2,7 +2,13 @@ import { expect, test } from "@playwright/test";
 
 test("shows the real API and database as healthy", async ({ page }) => {
   const errors: string[] = [];
-  page.on("console", (msg) => msg.type() === "error" && errors.push(msg.text()));
+  page.on("console", (msg) => {
+    // The E2E build uses a placeholder Clerk key (see playwright.config.ts), so Clerk itself fails
+    // to load; that's expected until auth task 6. Every other error still fails the test.
+    const fromPlaceholderClerk =
+      msg.location().url.includes("clerk.accounts.dev") || msg.text().includes("ClerkJS");
+    if (msg.type() === "error" && !fromPlaceholderClerk) errors.push(msg.text());
+  });
 
   await page.goto("/");
   await expect(page.getByRole("img", { name: "API server: ok" })).toBeVisible();

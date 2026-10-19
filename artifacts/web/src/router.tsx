@@ -1,3 +1,4 @@
+import { Show, UserButton } from "@clerk/react";
 import { reportError } from "@repo/api-client-react/errors";
 import type { QueryClient } from "@tanstack/react-query";
 import {
@@ -9,9 +10,11 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { AboutPage } from "./pages/AboutPage.tsx";
+import { AppPage } from "./pages/AppPage.tsx";
 import { CrashScreen } from "./pages/CrashScreen.tsx";
 import { HomePage } from "./pages/HomePage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
+import { SignInPage } from "./pages/SignInPage.tsx";
 
 // Route loaders get the QueryClient, so they can prefetch into the same cache the hooks read.
 export interface RouterContext {
@@ -20,15 +23,29 @@ export interface RouterContext {
 
 function RootLayout() {
   const link = "text-text-muted hover:text-text";
+  const active = { className: "text-text font-medium" };
   return (
     <>
-      <nav className="px-page-x pt-4 flex gap-4 text-sm max-w-xl mx-auto">
-        <Link to="/" className={link} activeProps={{ className: "text-text font-medium" }}>
+      <nav className="px-page-x pt-4 flex items-center gap-4 text-sm max-w-xl mx-auto">
+        <Link to="/" className={link} activeProps={active} activeOptions={{ exact: true }}>
           Home
         </Link>
-        <Link to="/about" className={link} activeProps={{ className: "text-text font-medium" }}>
+        <Link to="/about" className={link} activeProps={active}>
           About
         </Link>
+        <Link to="/app" className={link} activeProps={active}>
+          App
+        </Link>
+        <span className="ml-auto">
+          <Show when="signed-in">
+            <UserButton />
+          </Show>
+          <Show when="signed-out">
+            <Link to="/sign-in/$" params={{ _splat: "" }} className={link}>
+              Sign in
+            </Link>
+          </Show>
+        </span>
       </nav>
       <Outlet />
     </>
@@ -49,7 +66,15 @@ const aboutRoute = createRoute({
   component: AboutPage,
 });
 
-const routeTree = rootRoute.addChildren([homeRoute, aboutRoute]);
+const appRoute = createRoute({ getParentRoute: () => rootRoute, path: "/app", component: AppPage });
+// Clerk's sign-in renders its own steps under /sign-in/… (factor-one, verify, …).
+const signInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/sign-in/$",
+  component: SignInPage,
+});
+
+const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, appRoute, signInRoute]);
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
   return createRouter({
