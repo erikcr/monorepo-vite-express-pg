@@ -114,6 +114,7 @@ describe("/api/example", () => {
     it("returns 400 for a cursor it didn't issue", async () => {
       const res = await request.get("/api/example?orgId=org_a&cursor=not-a-cursor");
       expect(res.status).toBe(400);
+      expect(res.body.error.fieldErrors.cursor).toEqual(["Invalid cursor"]);
     });
   });
 

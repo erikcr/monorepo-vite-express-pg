@@ -148,6 +148,12 @@ search params are type-checked; validate search params with Zod (`validateSearch
 with `context.queryClient.prefetch…` in a route `loader`. Read route state in pages through
 `getRouteApi("/path")` to avoid importing the router. Navigate with `<Link>`/`useNavigate`, never `<a href>`.
 
+**Validate input, validate output** — routes validate with `validate({ params, query, body })`
+(`src/middleware/validate.ts`) using the generated `@repo/api-zod` schemas; handlers then get
+typed, coerced `req.params/query/body`, and every 400 is `{ error: { fieldErrors, formErrors } }`.
+Send responses with `sendValidated(res, XResponse, data)` (`src/lib/send-validated.ts`): it strips
+anything the spec doesn't declare, so returning a full DB row can't leak a column.
+
 **Lists are paginated** — list endpoints take `limit` (default 20, max 100) and an opaque `cursor`,
 and return `{ items, nextCursor }` ordered newest first. Use `toPage()`/`decodeCursor()` from
 `src/lib/pagination.ts` (keyset on `createdAt desc, id desc`; see `routes/example.ts`), and store

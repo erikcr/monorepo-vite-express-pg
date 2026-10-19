@@ -265,7 +265,7 @@ draining time is 0 (immediate SIGKILL), so `railway.toml` sets `drainingSeconds 
 
 ## Phase 2 — Tier 2 (strongly recommended defaults)
 
-### 2.1 `[ ]` Validation helper middleware
+### 2.1 `[x]` Validation helper middleware
 **Change:** `validate(schema)` Express middleware (body/query/params variants) replacing
 hand-rolled `safeParse` blocks; consistent 400 shape `{ error: { fieldErrors, formErrors } }`.
 **Files:** `artifacts/api-server/src/middleware/validate.ts` (new), routes, tests.
@@ -296,7 +296,7 @@ only in production. Replaces the per-getter checks.
 set until after the first deploy (Vercel URLs come later), so requiring it would fail every fresh
 provision. Instead production defaults to no allowed origins and the API logs a warning.
 
-### 2.6 `[ ]` Validated responses
+### 2.6 `[x]` Validated responses
 **Change:** `sendValidated(res, schema, data)` parses each response through the generated Zod
 schema, stripping fields the spec doesn't declare, so returning a full DB row can't leak a
 server-only column. Example routes use it.

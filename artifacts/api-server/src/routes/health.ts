@@ -1,7 +1,9 @@
+import { GetHealthResponse, GetReadyResponse } from "@repo/api-zod";
 import type { Db } from "@repo/db";
 import { env } from "@repo/env";
 import { sql } from "drizzle-orm";
 import { Router } from "express";
+import { sendValidated } from "../lib/send-validated.js";
 
 const READY_TIMEOUT_MS = 2_000;
 // Only successes are cached: probes can't hammer a healthy DB, and recovery shows up immediately.
@@ -28,7 +30,7 @@ export function createHealthRouter(db: Db): Router {
   // Liveness: 200 while the process is up. Reports DB status for dashboards, and the deployed commit.
   router.get("/", async (_req, res) => {
     const dbOk = await pingDb(db, READY_TIMEOUT_MS);
-    res.json({
+    sendValidated(res, GetHealthResponse, {
       status: "ok",
       ts: new Date().toISOString(),
       db: dbOk ? "ok" : "error",
@@ -43,9 +45,12 @@ export function createHealthRouter(db: Db): Router {
       dbOk = await pingDb(db, READY_TIMEOUT_MS);
       if (dbOk) readyUntil = Date.now() + READY_CACHE_MS;
     }
-    res
-      .status(dbOk ? 200 : 503)
-      .json({ status: dbOk ? "ready" : "not_ready", checks: { db: dbOk ? "ok" : "error" } });
+    sendValidated(
+      res,
+      GetReadyResponse,
+      { status: dbOk ? "ready" : "not_ready", checks: { db: dbOk ? "ok" : "error" } },
+      dbOk ? 200 : 503
+    );
   });
 
   return router;
