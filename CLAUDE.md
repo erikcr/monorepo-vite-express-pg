@@ -88,8 +88,8 @@ docs/
 | Layer | Technology |
 |-------|-----------|
 | API server | Express 5 + TypeScript, deployed to Railway via Dockerfile |
-| Web app | React 19 + Vite 8 + Tailwind CSS 4, deployed to Vercel |
-| Admin app | React 19 + Vite 8 + Tailwind CSS 4, deployed to Vercel |
+| Web app | React 19 + Vite 8 + Tailwind CSS 4 + TanStack Router, deployed to Vercel |
+| Admin app | React 19 + Vite 8 + Tailwind CSS 4 + TanStack Router, deployed to Vercel |
 | Database | PostgreSQL + Drizzle ORM (`drizzle-orm/postgres-js`) |
 | Background jobs | pg-boss (jobs in `artifacts/api-server/src/jobs/registry.ts`) |
 | Package manager | pnpm 12 workspace monorepo |
@@ -136,6 +136,13 @@ await db.select().from(exampleTable).where(eq(exampleTable.orgId, orgId));
 // production: createApp(db, createJobQueue(boss)) with the real postgres-js driver
 // tests:      createApp(testDb, createFakeQueue()) with a PGlite-backed db
 ```
+
+**Routing** — TanStack Router, code-based routes in each app's `src/router.tsx`, pages in
+`src/pages/`. Declare every route as its own `const` (inline `createRoute()` calls in
+`addChildren([...])` lose their types and `<Link to>` accepts any string). Links, params and
+search params are type-checked; validate search params with Zod (`validateSearch`), and prefetch
+with `context.queryClient.prefetch…` in a route `loader`. Read route state in pages through
+`getRouteApi("/path")` to avoid importing the router. Navigate with `<Link>`/`useNavigate`, never `<a href>`.
 
 **Lists are paginated** — list endpoints take `limit` (default 20, max 100) and an opaque `cursor`,
 and return `{ items, nextCursor }` ordered newest first. Use `toPage()`/`decodeCursor()` from

@@ -13,8 +13,10 @@
   "dependencies": {
     "@repo/api-client-react": "workspace:*",
     "@tanstack/react-query": "catalog:",
+    "@tanstack/react-router": "catalog:",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@tailwindcss/vite": "catalog:",

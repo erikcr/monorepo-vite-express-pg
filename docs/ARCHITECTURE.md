@@ -15,6 +15,7 @@ Key technical decisions and their rationale. Add an entry here whenever a non-ob
 | Frontend | React 19 + Vite 8 | Best-in-class DX, fast builds |
 | Styling | Tailwind CSS 4 | Utility-first, no runtime overhead |
 | Data fetching | TanStack Query v5 | Cache management, loading/error states |
+| Routing | TanStack Router (code-based) | Links, params and search params are type-checked, so a broken link fails `pnpm typecheck`; Zod-validated search params; loaders prefetch into the Query cache. Code-based routes avoid another generated file |
 | Validation | Zod | Runtime safety at API boundaries |
 | Linting/formatting | Biome | Single tool, Rust speed, zero config |
 | Testing | vitest + supertest + Playwright | Fast, ESM-native, no config overhead |

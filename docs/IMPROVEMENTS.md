@@ -209,15 +209,14 @@ keeps local work and tests provider-free. Example route reads orgId from `req.au
 orgs are in the template.
 **Accept:** Unauthenticated → 401; org A cannot read org B; a route without an access rule fails CI.
 
-### 1.2 `[ ]` Client-side routing + SPA rewrites
-**Problem:** No router in either app; deep links will 404 on Vercel once routes exist.
-**Change:** Add TanStack Router (code-based routes) to web and admin with a minimal two-route
-setup (`/` + a placeholder) and a 404 page; one route shows a loader using the Query cache and
-a Zod-validated search param. SPA rewrites in both `vercel.json` files:
-`{ "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }`. Catalog entry.
-**Note:** both `vercel.json` files already have SPA rewrites (excluding `/api/`).
-**Files:** both apps' `package.json`, `main.tsx`, `router.tsx`, pages, tests.
-**Accept:** Tests render routes; unknown path shows 404; a typo'd link fails typecheck.
+### 1.2 `[x]` Client-side routing + SPA rewrites
+**Done:** TanStack Router (code-based) in both apps: `src/router.tsx` with a root layout + nav,
+`src/pages/`, a placeholder second route (`/about`, `/settings`) and a 404 page. The router context
+carries the QueryClient. Admin's org filter is a Zod-validated search param (`/?orgId=…`) whose
+loader prefetches the first page. Verified a typo'd `<Link to>` and a misspelled search param both
+fail typecheck — which first required declaring routes as separate consts (inline `createRoute()`
+in `addChildren` silently degrades to `string`). Checked in headless Chromium against the real
+API: filter → URL, Load more, deep links, 404, no console errors. SPA rewrites already existed.
 
 ### 1.3 `[x]` Complete CRUD example + pagination convention
 **Done:** `GET/PATCH/DELETE /api/example/{id}` (404 when missing or another org's; 400 for a bad id
@@ -336,3 +335,4 @@ a `docs/plans/` + status-board layout that `/new-project` sets up.
 | 2026-10-18 | Plan revised | Added Phase P (merge/promotion) and Phase U (upgrades) from the reference-app comparison; routing → TanStack Router; folded its patterns into 0.4, 1.1, 1.4, 2.2–2.9 |
 | 2026-10-18 | P.1–P.5 | Hooks, CI gate + Promotion source, `/provision-github` (verified on a scratch repo), staging in provisioning commands (not verified live), `docs/DEPLOYMENTS.md`. Template repo itself doesn't use the process |
 | 2026-10-18 | U.1–U.3 | Full toolchain upgrade (see U.1); Renovate. The flaky api-server test seen once under Orval 8 didn't recur in later runs |
+| 2026-10-18 | 0.4, 1.2–1.5 | Health split, routing, CRUD + pagination, real worker, graceful shutdown. Found: Railway draining defaults to 0s (SIGKILL), config-as-code deprecated (P.7) |

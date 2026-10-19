@@ -1,5 +1,12 @@
-import { useGetHealth, useListExamplesInfinite } from "@repo/api-client-react";
-import { useState } from "react";
+import { type ExamplePage, useGetHealth, useListExamplesInfinite } from "@repo/api-client-react";
+import { getRouteApi } from "@tanstack/react-router";
+
+// Shared with the route loader (router.tsx) so the prefetch and the hook use the same query.
+export const examplesPaging = {
+  getNextPageParam: (page: ExamplePage) => page.nextCursor ?? undefined,
+};
+
+const route = getRouteApi("/");
 
 function StatusBadge({ ok, loading }: { ok: boolean | undefined; loading?: boolean }) {
   if (loading) return <span className="text-xs text-text-muted">checking…</span>;
@@ -36,8 +43,11 @@ const swatches: { label: string; bg: string; fg: string }[] = [
   { label: "warning", bg: "bg-warning", fg: "text-warning-fg" },
 ];
 
-export default function App() {
-  const [orgId, setOrgId] = useState("org_1");
+export function DashboardPage() {
+  // The org filter lives in the URL (?orgId=…), validated by the route's search schema.
+  const { orgId } = route.useSearch();
+  const navigate = route.useNavigate();
+  const setOrgId = (value: string) => navigate({ search: { orgId: value }, replace: true });
   const { data: health, isLoading: healthLoading, isError: healthError } = useGetHealth();
   const {
     data: examplePages,
@@ -46,10 +56,7 @@ export default function App() {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-  } = useListExamplesInfinite(
-    { orgId },
-    { query: { getNextPageParam: (page) => page.nextCursor ?? undefined } }
-  );
+  } = useListExamplesInfinite({ orgId }, { query: { ...examplesPaging, enabled: orgId !== "" } });
   const examples = examplePages?.pages.flatMap((page) => page.items);
 
   const apiOk = !healthLoading && !healthError && health?.status === "ok";

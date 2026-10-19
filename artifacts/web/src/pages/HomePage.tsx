@@ -17,7 +17,7 @@ const swatches: { label: string; bg: string; text: string }[] = [
   { label: "warning", bg: "bg-warning", text: "text-warning-fg" },
 ];
 
-export default function App() {
+export function HomePage() {
   const { data, isLoading, isError } = useGetHealth();
 
   const apiOk = !isLoading && !isError && data?.status === "ok";
