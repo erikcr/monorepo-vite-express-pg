@@ -275,7 +275,7 @@ hand-rolled `safeParse` blocks; consistent 400 shape `{ error: { fieldErrors, fo
 existing pino logger. Logged URLs drop query strings; `authorization` and `cookie` headers redacted.
 **Files:** `app.ts`, `logger.ts`, `package.json`, tests for redaction.
 
-### 2.3 `[ ]` helmet, rate limiting, request limits
+### 2.3 `[x]` helmet, rate limiting, request limits
 **Change:** `helmet()`, `express-rate-limit` (env-tunable, off in tests), `trust proxy` set for
 Railway (so rate limits key on the client IP), explicit JSON body size limit.
 **Files:** `app.ts`, `@repo/env`, `package.json`, tests.
@@ -355,3 +355,4 @@ a `docs/plans/` + status-board layout that `/new-project` sets up.
 | 2026-10-18 | P.1–P.5 | Hooks, CI gate + Promotion source, `/provision-github` (verified on a scratch repo), staging in provisioning commands (not verified live), `docs/DEPLOYMENTS.md`. Template repo itself doesn't use the process |
 | 2026-10-18 | U.1–U.3 | Full toolchain upgrade (see U.1); Renovate. The flaky api-server test seen once under Orval 8 didn't recur in later runs |
 | 2026-10-18 | 0.4, 1.2–1.5 | Health split, routing, CRUD + pagination, real worker, graceful shutdown. Found: Railway draining defaults to 0s (SIGKILL), config-as-code deprecated (P.7) |
+| 2026-10-18 | 2.1, 2.2, 2.3, 2.5, 2.6 | Typed env, validate()/sendValidated(), pino-http + request ids, helmet/rate limit/trust proxy. Fixed: 500s leaked err.message; API tests' PGlite cold start could exceed vitest's 5s timeout under load (the earlier flake) |

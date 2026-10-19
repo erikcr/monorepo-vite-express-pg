@@ -2,6 +2,8 @@ import type { Db } from "@repo/db";
 import { env } from "@repo/env";
 import cors from "cors";
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
+import { rateLimit } from "express-rate-limit";
+import helmet from "helmet";
 import type { JobQueue } from "./jobs/queue.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { createExampleRouter } from "./routes/example.js";
@@ -9,15 +11,33 @@ import { createHealthRouter } from "./routes/health.js";
 
 export function createApp(db: Db, queue: JobQueue): Express {
   const app = express();
+  // Railway's edge is one proxy hop: trust its X-Forwarded-For so req.ip is the client's address
+  // (the rate limiter keys on it). Raise this if you add another proxy (e.g. a CDN) in front.
+  app.set("trust proxy", 1);
 
   app.use(requestLogger);
+  app.use(helmet());
   app.use(
     cors({
       origin: env.CORS_ORIGIN,
       credentials: true,
     })
   );
-  app.use(express.json());
+  if (env.RATE_LIMIT_MAX > 0) {
+    app.use(
+      rateLimit({
+        windowMs: env.RATE_LIMIT_WINDOW_MS,
+        limit: env.RATE_LIMIT_MAX,
+        standardHeaders: "draft-8",
+        legacyHeaders: false,
+        // Health probes come from the platform and must never be throttled.
+        skip: (req) => req.path.startsWith("/health"),
+        message: { error: "Too many requests" },
+      })
+    );
+  }
+  // Explicit body size cap (Express's default, stated): larger bodies get 413.
+  app.use(express.json({ limit: "100kb" }));
 
   app.use("/health", createHealthRouter(db));
   app.use("/api/example", createExampleRouter(db, queue));

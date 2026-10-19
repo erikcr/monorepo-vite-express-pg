@@ -29,6 +29,10 @@ const fields = {
   RUN_WORKER: flag("true"),
   /** Comma-separated browser origins allowed to call the API (see the CORS_ORIGIN getter). */
   CORS_ORIGIN: list.optional(),
+  /** Rate limit per client IP: at most RATE_LIMIT_MAX requests per RATE_LIMIT_WINDOW_MS. */
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  /** 0 disables the limiter. Unset: 300, or 0 under tests (see the getter). */
+  RATE_LIMIT_MAX: z.coerce.number().int().min(0).optional(),
   /** Deployed git commit; set by Railway. */
   RAILWAY_GIT_COMMIT_SHA: z.string().optional(),
 };
@@ -93,6 +97,12 @@ export const env = {
     return read("NODE_ENV") === "production"
       ? []
       : ["http://localhost:5173", "http://localhost:3001"];
+  },
+  get RATE_LIMIT_WINDOW_MS() {
+    return read("RATE_LIMIT_WINDOW_MS");
+  },
+  get RATE_LIMIT_MAX() {
+    return read("RATE_LIMIT_MAX") ?? (read("NODE_ENV") === "test" ? 0 : 300);
   },
   /** Deployed git commit, or null when not running on Railway. */
   get COMMIT_SHA() {
