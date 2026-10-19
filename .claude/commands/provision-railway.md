@@ -40,6 +40,8 @@ Provision a new Railway project for this monorepo's API server from `.railway/ra
    ```
    This creates Postgres and the `api` service deploying `main`, with the build, migrations, health check, draining time, Wait for CI and variables from the file. If it fails with a GitHub access error, tell the user to install the Railway GitHub app on the repo (Railway dashboard → Account → GitHub) and re-run from step 7.
 
+   Then run `railway config plan` again. Railway doesn't save Wait for CI (`source.checkSuites`) on a service it is creating, so the plan typically still shows `source.checkSuites (null → true)`. Run `railway config apply --yes` once more, and repeat `railway config plan` until it says `Your Railway configuration is already up to date.` Without this, deploys don't wait for CI.
+
 9. Generate the production domain and record it as `<prod-api-url>`:
    ```
    railway domain --service api --json
@@ -58,7 +60,7 @@ Provision a new Railway project for this monorepo's API server from `.railway/ra
     railway config plan
     railway config apply --yes
     ```
-    Expect the same two creations as in production.
+    Expect the same two creations as in production. As there, run `railway config plan` again, and apply once more if it still shows `source.checkSuites`, until the plan is up to date.
 
 12. Generate the staging domain and record it as `<staging-api-url>`:
     ```

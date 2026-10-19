@@ -155,10 +155,15 @@ CI (`checkSuites`, previously a manual dashboard step), variables (`DATABASE_URL
 `CORS_ORIGIN` preserved, set per environment by `/provision-vercel`). `production` deploys `main`,
 other environments `staging`. `railway.toml` removed; `/provision-railway` creates the project and
 applies the file to both environments; README/DEPLOYMENTS/CLAUDE.md updated; `pnpm typecheck` covers it.
-**Verified:** `railway config plan` (read-only) against the template's own project compiles every
-setting as intended. **Not yet:** an `apply` on a real project, and moving the template's own
-deployment (`api.template.erikcr`, service `@repo/api-server`, still on `railway.toml`) — both
-need the user's go-ahead (see below).
+**Template's own deployment migrated (2026-10-18):** service renamed `@repo/api-server` → `api`,
+plan showed updates only (no deletes, no variable changes), applied; `main` without
+`railway.toml` deployed after CI and serves `/health/ready` 200. Caught first: the file set
+`PORT=3000` while the service's domains route to Railway's injected port (8080) — now unset.
+**`/provision-railway` tested end to end** on a throwaway project + scratch repo: production
+(`main`) and staging (`staging`) each got Postgres + api, healthy in about a minute, separate
+databases, a staging-only push redeployed only staging, and a CI-failing commit was SKIPPED.
+Found: Railway drops `checkSuites` when it creates the service (a second apply sets it; the
+command now re-plans until clean). `ON_FAILURE` restart policy reads back as unset (removed).
 **Later (optional):** Railway's `railwayapp/config` GitHub Action plans on PRs and applies on
 merge, which would replace the manual apply step.
 
