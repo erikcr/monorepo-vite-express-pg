@@ -48,6 +48,31 @@ describe("env getters", () => {
     expect(env.CORS_ORIGIN).toEqual([]);
   });
 
+  it("API_DOCS is on by default except in production, and can be set either way", () => {
+    vi.stubEnv("API_DOCS", undefined);
+    vi.stubEnv("NODE_ENV", "development");
+    expect(env.API_DOCS).toBe(true);
+    vi.stubEnv("NODE_ENV", "production");
+    expect(env.API_DOCS).toBe(false);
+    vi.stubEnv("API_DOCS", "true");
+    expect(env.API_DOCS).toBe(true);
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("API_DOCS", "false");
+    expect(env.API_DOCS).toBe(false);
+  });
+
+  it("RATE_LIMIT_MAX defaults to 300, or 0 under tests; the window to 60s", () => {
+    vi.stubEnv("RATE_LIMIT_MAX", undefined);
+    vi.stubEnv("RATE_LIMIT_WINDOW_MS", undefined);
+    vi.stubEnv("NODE_ENV", "production");
+    expect(env.RATE_LIMIT_MAX).toBe(300);
+    vi.stubEnv("NODE_ENV", "test");
+    expect(env.RATE_LIMIT_MAX).toBe(0);
+    vi.stubEnv("RATE_LIMIT_MAX", "50");
+    expect(env.RATE_LIMIT_MAX).toBe(50);
+    expect(env.RATE_LIMIT_WINDOW_MS).toBe(60_000);
+  });
+
   it("COMMIT_SHA is Railway's commit, or null", () => {
     vi.stubEnv("RAILWAY_GIT_COMMIT_SHA", undefined);
     expect(env.COMMIT_SHA).toBeNull();
