@@ -6,6 +6,7 @@ import { rateLimit } from "express-rate-limit";
 import helmet from "helmet";
 import type { JobQueue } from "./jobs/queue.js";
 import { requestLogger } from "./middleware/request-logger.js";
+import { createClientErrorsRouter } from "./routes/client-errors.js";
 import { createExampleRouter } from "./routes/example.js";
 import { createHealthRouter } from "./routes/health.js";
 
@@ -41,6 +42,7 @@ export function createApp(db: Db, queue: JobQueue): Express {
 
   app.use("/health", createHealthRouter(db));
   app.use("/api/example", createExampleRouter(db, queue));
+  app.use("/api/client-errors", createClientErrorsRouter());
 
   // 404
   app.use((_req, res) => {

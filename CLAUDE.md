@@ -158,6 +158,11 @@ anything the spec doesn't declare, so returning a full DB row can't leak a colum
 `req.id`); log from handlers with `req.log` so lines carry that id. Unexpected errors return
 `{ error: "Internal server error", requestId }` — never `err.message` — and are logged with it.
 
+**Frontend errors** — both apps build their QueryClient with `createQueryClient()` and report
+crashes through `@repo/api-client-react/errors` (`ErrorBoundary`, `reportError`,
+`installGlobalErrorReporting`) to `POST /api/client-errors`, which logs them. Route render errors
+go through the router's `defaultOnCatch`/`defaultErrorComponent` (`CrashScreen`).
+
 **Lists are paginated** — list endpoints take `limit` (default 20, max 100) and an opaque `cursor`,
 and return `{ items, nextCursor }` ordered newest first. Use `toPage()`/`decodeCursor()` from
 `src/lib/pagination.ts` (keyset on `createdAt desc, id desc`; see `routes/example.ts`), and store

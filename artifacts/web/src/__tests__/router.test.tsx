@@ -1,11 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createAppRouter } from "../router.tsx";
 
-vi.mock("@repo/api-client-react", () => ({
-  useGetHealth: () => ({ data: undefined, isLoading: true, isError: false }),
+const health = vi.fn(() => ({ data: undefined, isLoading: true, isError: false }));
+vi.mock("@repo/api-client-react", () => ({ useGetHealth: () => health() }));
+const reportError = vi.fn();
+vi.mock("@repo/api-client-react/errors", () => ({
+  reportError: (...a: unknown[]) => reportError(...a),
 }));
 
 function renderAt(path: string) {
@@ -20,6 +23,11 @@ function renderAt(path: string) {
 }
 
 describe("routes (web)", () => {
+  beforeEach(() => {
+    health.mockImplementation(() => ({ data: undefined, isLoading: true, isError: false }));
+    reportError.mockClear();
+  });
+
   it("renders the home page at /", async () => {
     renderAt("/");
     expect(await screen.findByText("Status")).toBeTruthy();
@@ -40,5 +48,20 @@ describe("routes (web)", () => {
     fireEvent.click(await screen.findByRole("link", { name: "About" }));
     expect(await screen.findByRole("heading", { name: "About" })).toBeTruthy();
     expect(router.state.location.pathname).toBe("/about");
+  });
+
+  it("shows the crash screen when a route throws, reports it, and retries", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let broken = true;
+    health.mockImplementation(() => {
+      if (broken) throw new Error("page exploded");
+      return { data: undefined, isLoading: true, isError: false };
+    });
+    renderAt("/");
+    const retry = await screen.findByRole("button", { name: "Try again" });
+    broken = false;
+    fireEvent.click(retry);
+    expect(reportError).toHaveBeenCalledWith("web", expect.any(Error), expect.any(String));
+    expect(await screen.findByText("Status")).toBeTruthy(); // retry renders the page again
   });
 });

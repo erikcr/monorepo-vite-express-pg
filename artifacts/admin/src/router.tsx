@@ -1,4 +1,5 @@
 import { getListExamplesInfiniteQueryOptions } from "@repo/api-client-react";
+import { reportError } from "@repo/api-client-react/errors";
 import type { QueryClient } from "@tanstack/react-query";
 import {
   createRootRouteWithContext,
@@ -9,6 +10,7 @@ import {
   type RouterHistory,
 } from "@tanstack/react-router";
 import { z } from "zod";
+import { CrashScreen } from "./pages/CrashScreen.tsx";
 import { DashboardPage, examplesPaging } from "./pages/DashboardPage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
 import { SettingsPage } from "./pages/SettingsPage.tsx";
@@ -69,7 +71,15 @@ const settingsRoute = createRoute({
 const routeTree = rootRoute.addChildren([dashboardRoute, settingsRoute]);
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
-  return createRouter({ routeTree, context: { queryClient }, history, defaultPreload: "intent" });
+  return createRouter({
+    routeTree,
+    context: { queryClient },
+    history,
+    defaultPreload: "intent",
+    // Render errors inside routes: report them, show the crash screen with a retry.
+    defaultOnCatch: (error, info) => reportError("admin", error, info.componentStack),
+    defaultErrorComponent: ({ reset }) => <CrashScreen onRetry={reset} />,
+  });
 }
 
 // Registers the route tree so <Link to>, params and search are type-checked app-wide.

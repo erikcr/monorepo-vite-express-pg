@@ -41,6 +41,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/ReadyResponse"
 
+  /api/client-errors:
+    post:
+      operationId: reportClientError
+      summary: Record a crash or unhandled error from a browser app
+      tags: [system]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientErrorReport"
+      responses:
+        "204":
+          description: Recorded
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
   /api/example:
     get:
       operationId: listExamples
@@ -185,6 +202,29 @@ components:
       properties:
         error:
           description: A message, or field-level validation errors
+
+    ClientErrorReport:
+      type: object
+      required: [app, message]
+      properties:
+        app:
+          description: Which frontend sent it
+          type: string
+          enum: [web, admin]
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        stack:
+          type: string
+          maxLength: 10000
+        componentStack:
+          type: string
+          maxLength: 10000
+        url:
+          description: Page the error happened on (the server drops any query string)
+          type: string
+          maxLength: 2000
 
     ExamplePage:
       type: object

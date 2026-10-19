@@ -30,6 +30,30 @@ export const GetReadyResponse = zod.object({
 
 
 /**
+ * @summary Record a crash or unhandled error from a browser app
+ */
+export const reportClientErrorBodyMessageMax = 2000;
+
+export const reportClientErrorBodyStackMax = 10000;
+
+export const reportClientErrorBodyComponentStackMax = 10000;
+
+export const reportClientErrorBodyUrlMax = 2000;
+
+
+
+export const ReportClientErrorBody = zod.object({
+  "app": zod.enum(['web', 'admin']).describe('Which frontend sent it'),
+  "message": zod.string().min(1).max(reportClientErrorBodyMessageMax),
+  "stack": zod.string().max(reportClientErrorBodyStackMax).optional(),
+  "componentStack": zod.string().max(reportClientErrorBodyComponentStackMax).optional(),
+  "url": zod.string().max(reportClientErrorBodyUrlMax).optional().describe('Page the error happened on (the server drops any query string)')
+})
+
+export const ReportClientErrorResponse = zod.void()
+
+
+/**
  * @summary List example records, newest first, one page at a time
  */
 

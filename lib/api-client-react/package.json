@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./errors": "./src/error-reporting.tsx",
+    "./query-client": "./src/query-client.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

@@ -280,7 +280,7 @@ existing pino logger. Logged URLs drop query strings; `authorization` and `cooki
 Railway (so rate limits key on the client IP), explicit JSON body size limit.
 **Files:** `app.ts`, `@repo/env`, `package.json`, tests.
 
-### 2.4 `[ ]` React ErrorBoundary + QueryClient defaults + client error reports
+### 2.4 `[x]` React ErrorBoundary + QueryClient defaults + client error reports
 **Change:** A crash screen in each app; reports posted to `POST /api/client-errors` (spec'd,
 rate-limited, logged server-side). QueryClient with explicit defaults (retry: 1, staleTime 30s,
 refetchOnWindowFocus false). Shared code lives in `@repo/api-client-react`.

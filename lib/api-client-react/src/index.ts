@@ -35,6 +35,36 @@ export interface ErrorResponse {
   error: unknown;
 }
 
+/**
+ * Which frontend sent it
+ */
+export type ClientErrorReportApp = typeof ClientErrorReportApp[keyof typeof ClientErrorReportApp];
+
+
+export const ClientErrorReportApp = {
+  web: 'web',
+  admin: 'admin',
+} as const;
+
+export interface ClientErrorReport {
+  /** Which frontend sent it */
+  app: ClientErrorReportApp;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  message: string;
+  /** @maxLength 10000 */
+  stack?: string;
+  /** @maxLength 10000 */
+  componentStack?: string;
+  /**
+     * Page the error happened on (the server drops any query string)
+     * @maxLength 2000
+     */
+  url?: string;
+}
+
 export interface Example {
   id: string;
   orgId: string;
@@ -391,6 +421,94 @@ export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError
 
 
 
+
+export const getReportClientErrorUrl = () => {
+
+
+
+
+  return `/api/client-errors`
+}
+
+/**
+ * @summary Record a crash or unhandled error from a browser app
+ */
+export const reportClientError = async (clientErrorReport: ClientErrorReport, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetch<void>(getReportClientErrorUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(clientErrorReport)
+  }
+);}
+
+
+
+
+
+export const getReportClientErrorMutationKey = () => ['reportClientError'] as const;
+
+export const getReportClientErrorMutationOptions = <TError = BadRequestResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportClientError>>, TError,ReportClientErrorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reportClientError>>, TError,ReportClientErrorMutationVariables, TContext> => {
+
+const mutationKey = getReportClientErrorMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reportClientError>>, ReportClientErrorMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  reportClientError(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReportClientErrorMutationResult = NonNullable<Awaited<ReturnType<typeof reportClientError>>>
+    export type ReportClientErrorMutationBody = ClientErrorReport
+    export type ReportClientErrorMutationError = BadRequestResponse
+    export type ReportClientErrorMutationVariables = {data: ClientErrorReport}
+
+    /**
+ * @summary Record a crash or unhandled error from a browser app
+ */
+export const useReportClientError = <TError = BadRequestResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reportClientError>>, TError,ReportClientErrorMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reportClientError>>,
+        TError,
+        ReportClientErrorMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReportClientErrorMutationOptions(options), queryClient);
+    }
 
 export const getListExamplesUrl = (params: ListExamplesParams,) => {
   const normalizedParams = new URLSearchParams();
