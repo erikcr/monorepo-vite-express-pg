@@ -42,7 +42,7 @@ Provision a new Railway project for this monorepo's API server from `.railway/ra
 
 9. Generate the production domain and record it as `<prod-api-url>`:
    ```
-   railway domain --service api --port 3000 --json
+   railway domain --service api --json
    ```
 
 ## Staging
@@ -62,7 +62,7 @@ Provision a new Railway project for this monorepo's API server from `.railway/ra
 
 12. Generate the staging domain and record it as `<staging-api-url>`:
     ```
-    railway domain --service api --port 3000 --json
+    railway domain --service api --json
     ```
 
 13. Switch the link back to production: `railway environment production`.

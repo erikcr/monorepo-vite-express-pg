@@ -90,7 +90,7 @@ active jobs finish, then closes the database pool. `drainingSeconds: 30` gives i
 
 ### Environment variables
 
-`DATABASE_URL` references the Postgres service; `NODE_ENV` and `PORT` are set in the file.
+`DATABASE_URL` references the Postgres service. Railway injects `PORT` (and routes the domains to it); the Dockerfile sets `NODE_ENV=production`.
 
 `CORS_ORIGIN` is a comma-separated list of your Vercel app URLs, so the browser can call the API:
 

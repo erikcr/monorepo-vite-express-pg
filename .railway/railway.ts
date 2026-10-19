@@ -38,13 +38,13 @@ export default defineRailway((ctx) => {
       // Time between SIGTERM and SIGKILL on redeploy (Railway's default is 0). The server's
       // own shutdown timeout (25s, src/shutdown.ts) stays below it.
       drainingSeconds: 30,
-      restartPolicyType: "ON_FAILURE",
+      // Restart on crash (Railway's default policy, ON_FAILURE), at most 3 times.
       restartPolicyMaxRetries: 3,
     },
+    // PORT is not set: Railway injects it and routes the service's domains to it. (NODE_ENV comes
+    // from the Dockerfile.)
     env: {
       DATABASE_URL: db.env.DATABASE_URL,
-      NODE_ENV: "production",
-      PORT: "3000",
       // Set per environment by /provision-vercel once the site URLs exist.
       CORS_ORIGIN: preserve(),
     },
