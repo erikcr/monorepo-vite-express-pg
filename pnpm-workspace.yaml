@@ -1,6 +1,7 @@
 packages:
   - 'artifacts/*'
   - 'lib/*'
+  - 'e2e'
 
 # Supply-chain security: ignore packages published less than 24h ago
 minimumReleaseAge: 1440

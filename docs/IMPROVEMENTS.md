@@ -330,7 +330,7 @@ defaults to on except in production; `.railway/railway.ts` turns it on for every
 environment, so staging has docs. Scalar's CDN bundle is pinned (its default URL serves the
 latest release); only `/docs` drops helmet's CSP (the page needs an inline bootstrap script).
 
-### 3.2 `[ ]` Real full-stack E2E
+### 3.2 `[x]` Real full-stack E2E
 **Change:** Playwright test hitting the real server (PGlite-backed `createApp` via a test boot
 script) instead of stubbed routes; cache Playwright browsers; add admin smoke test.
 (CI concurrency moved to P.2.)

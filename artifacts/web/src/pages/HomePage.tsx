@@ -1,9 +1,15 @@
 import { useGetHealth } from "@repo/api-client-react";
 
-function StatusDot({ ok }: { ok: boolean | undefined }) {
-  if (ok === undefined) return <span className="inline-block w-2 h-2 rounded-full bg-border" />;
+// Labelled for screen readers (and tests): the color alone doesn't say which state it is.
+function StatusDot({ ok, label }: { ok: boolean | undefined; label: string }) {
+  const state = ok === undefined ? "unknown" : ok ? "ok" : "error";
+  const color = ok === undefined ? "bg-border" : ok ? "bg-success" : "bg-destructive";
   return (
-    <span className={`inline-block w-2 h-2 rounded-full ${ok ? "bg-success" : "bg-destructive"}`} />
+    <span
+      role="img"
+      aria-label={`${label}: ${state}`}
+      className={`inline-block w-2 h-2 rounded-full ${color}`}
+    />
   );
 }
 
@@ -35,7 +41,7 @@ export function HomePage() {
         </h2>
         <ul className="space-y-3">
           <li className="flex items-center gap-3">
-            <StatusDot ok={apiOk} />
+            <StatusDot ok={apiOk} label="API server" />
             <span className="text-sm">
               API server
               {isLoading && <span className="text-text-muted ml-2">checking…</span>}
@@ -47,7 +53,7 @@ export function HomePage() {
             </span>
           </li>
           <li className="flex items-center gap-3">
-            <StatusDot ok={apiOk ? dbOk : undefined} />
+            <StatusDot ok={apiOk ? dbOk : undefined} label="Database" />
             <span className="text-sm">Database</span>
           </li>
         </ul>

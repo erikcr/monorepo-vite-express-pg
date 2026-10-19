@@ -20,6 +20,7 @@ export default defineConfig({
         "src/worker.ts",
         "src/migrate.ts",
         "src/validate-env.ts",
+        "src/e2e-server.ts",
       ],
       // Floors just below current coverage: CI fails if it drops. Raise them as tests improve.
       thresholds: { statements: 80, branches: 80, functions: 75, lines: 80 },

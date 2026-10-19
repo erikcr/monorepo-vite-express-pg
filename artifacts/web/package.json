@@ -9,7 +9,6 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "e2e": "playwright test",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
@@ -20,11 +19,11 @@
     "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "catalog:",
     "@testing-library/dom": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
+    "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",

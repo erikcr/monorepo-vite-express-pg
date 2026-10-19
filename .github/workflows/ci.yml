@@ -131,8 +131,18 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @repo/web exec playwright install --with-deps chromium
-      - run: pnpm --filter @repo/web e2e
+      # Browsers are ~150MB: cache them per Playwright version (pinned via the lockfile).
+      - id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @repo/e2e exec playwright install --with-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @repo/e2e exec playwright install-deps chromium
+      # Full stack: the real API on in-process Postgres behind both frontends (e2e/).
+      - run: pnpm --filter @repo/e2e e2e
         env:
           CI: "true"
 
