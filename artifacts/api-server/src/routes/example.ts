@@ -60,6 +60,7 @@ export function createExampleRouter(db: Db, queue: JobQueue): Router {
 
   router.post("/", validate({ body: CreateExampleBody }), async (req, res) => {
     const [row] = await db.insert(exampleTable).values(req.body).returning();
+    if (!row) throw new Error("insert returned no row"); // can't happen; narrows the type
     await queue.enqueue(exampleCreated, { exampleId: row.id, orgId: row.orgId });
     sendValidated(res, CreateExampleResponse, row, 201);
   });

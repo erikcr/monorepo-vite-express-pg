@@ -302,7 +302,7 @@ schema, stripping fields the spec doesn't declare, so returning a full DB row ca
 server-only column. Example routes use it.
 **Files:** `artifacts/api-server/src/lib/send-validated.ts` (new), routes, tests.
 
-### 2.7 `[ ]` Stricter TypeScript
+### 2.7 `[x]` Stricter TypeScript
 **Change:** `noUncheckedIndexedAccess`, `noUnusedLocals`, `noUnusedParameters`,
 `noImplicitReturns` in the base tsconfig; fix what they flag.
 
