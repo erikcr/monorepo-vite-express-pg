@@ -254,7 +254,8 @@ for an email provider (1.6). Not taken: the reference app's product-specific rul
 **Tasks** (one PR each)
 1. `[x]` Schema + migration: users, orgs, org_users, platform_staff (additive). The
    `example.org_id` → uuid FK conversion moved to task 3, so each PR stays green on its own.
-2. Identity module + `authenticate` + test tokens; env vars.
+2. `[x]` Identity module + `authenticate` + test tokens; env vars (`CLERK_SECRET_KEY`,
+   `STAFF_MFA_REQUIRED`: on by default in production only).
 3. Policy, grants loader, `resolveTenant`, `requireOrg` / `signedIn` / `requireStaff`, route
    coverage test; example routes on `req.ctx`; `example.org_id` → uuid FK to `orgs` (drops the
    demo rows); seed creates a real org; spec + codegen.

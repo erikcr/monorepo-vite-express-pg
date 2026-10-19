@@ -73,6 +73,25 @@ describe("env getters", () => {
     expect(env.RATE_LIMIT_WINDOW_MS).toBe(60_000);
   });
 
+  it("CLERK_SECRET_KEY is optional but must look like a Clerk secret", () => {
+    vi.stubEnv("CLERK_SECRET_KEY", undefined);
+    expect(env.CLERK_SECRET_KEY).toBeUndefined();
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_abc");
+    expect(env.CLERK_SECRET_KEY).toBe("sk_test_abc");
+    vi.stubEnv("CLERK_SECRET_KEY", "pk_test_abc");
+    expect(() => env.CLERK_SECRET_KEY).toThrow("Invalid env var CLERK_SECRET_KEY");
+  });
+
+  it("STAFF_MFA_REQUIRED defaults to on in production only, and can be set", () => {
+    vi.stubEnv("STAFF_MFA_REQUIRED", undefined);
+    vi.stubEnv("NODE_ENV", "production");
+    expect(env.STAFF_MFA_REQUIRED).toBe(true);
+    vi.stubEnv("NODE_ENV", "development");
+    expect(env.STAFF_MFA_REQUIRED).toBe(false);
+    vi.stubEnv("STAFF_MFA_REQUIRED", "true");
+    expect(env.STAFF_MFA_REQUIRED).toBe(true);
+  });
+
   it("COMMIT_SHA is Railway's commit, or null", () => {
     vi.stubEnv("RAILWAY_GIT_COMMIT_SHA", undefined);
     expect(env.COMMIT_SHA).toBeNull();

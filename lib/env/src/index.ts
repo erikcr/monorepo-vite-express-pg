@@ -38,6 +38,16 @@ const fields = {
     .enum(["true", "false"])
     .optional()
     .transform((v) => (v === undefined ? undefined : v === "true")),
+  /** Clerk secret key (sk_test_… / sk_live_…). Without it no session verifies (every request is 401). */
+  CLERK_SECRET_KEY: z.string().startsWith("sk_").optional(),
+  /**
+   * Require a completed second factor for staff (admin API). Unset: required, except under
+   * NODE_ENV=development/test. Set "false" only where your Clerk plan lacks MFA, and never in production.
+   */
+  STAFF_MFA_REQUIRED: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "true")),
   /** Deployed git commit; set by Railway. */
   RAILWAY_GIT_COMMIT_SHA: z.string().optional(),
 };
@@ -111,6 +121,12 @@ export const env = {
   },
   get API_DOCS() {
     return read("API_DOCS") ?? read("NODE_ENV") !== "production";
+  },
+  get CLERK_SECRET_KEY() {
+    return read("CLERK_SECRET_KEY");
+  },
+  get STAFF_MFA_REQUIRED() {
+    return read("STAFF_MFA_REQUIRED") ?? read("NODE_ENV") === "production";
   },
   /** Deployed git commit, or null when not running on Railway. */
   get COMMIT_SHA() {
