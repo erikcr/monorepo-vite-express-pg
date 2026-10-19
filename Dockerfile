@@ -23,6 +23,6 @@ COPY --from=build /app/lib/db/migrations ./migrations
 COPY scripts/migrate-and-start.sh ./scripts/migrate-and-start.sh
 ENV NODE_ENV=production
 EXPOSE 3000
-# Railway overrides CMD via startCommand in railway.toml (runs migrate as preDeployCommand first).
+# Railway overrides CMD with the start command in .railway/railway.ts (migrations run as its pre-deploy command).
 # docker-compose has no pre-deploy concept, so migrate-and-start.sh is used there instead.
 CMD ["sh", "scripts/migrate-and-start.sh"]

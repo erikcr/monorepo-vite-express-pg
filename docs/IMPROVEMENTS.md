@@ -145,12 +145,22 @@ API stays compatible with the previous frontend for one release**. Linked from C
 Git workflow section) and README.
 **Files:** `docs/DEPLOYMENTS.md` (new), `CLAUDE.md`, `README.md`.
 
-### P.7 `[ ]` Migrate `railway.toml` to Railway Infrastructure as Code — **deadline 2026-12-01**
-Railway's docs (checked 2026-10-18): "Config as Code is deprecated. Prefer Infrastructure as Code.
-Existing files keep working for legacy services until 2026-12-01." The template relies on
-`railway.toml` for the Dockerfile build, `watchPatterns`, `preDeployCommand` (migrations),
-`startCommand`, `healthcheckPath` and `drainingSeconds`. Read Railway's migration guide, move these
-settings, and update `/provision-railway` and README.
+### P.7 `[x]` Migrate `railway.toml` to Railway Infrastructure as Code — deadline 2026-12-01
+Railway (docs checked 2026-10-18): Config as Code is deprecated, existing files stop being read on
+2026-12-01, and **new services can't use it at all** — so projects provisioned from the template
+were already getting none of its settings.
+**Done:** `.railway/railway.ts` defines Postgres + the `api` service: Dockerfile build, watch
+patterns, pre-deploy migrations, `/health/ready`, `drainingSeconds: 30`, restart policy, Wait for
+CI (`checkSuites`, previously a manual dashboard step), variables (`DATABASE_URL` reference;
+`CORS_ORIGIN` preserved, set per environment by `/provision-vercel`). `production` deploys `main`,
+other environments `staging`. `railway.toml` removed; `/provision-railway` creates the project and
+applies the file to both environments; README/DEPLOYMENTS/CLAUDE.md updated; `pnpm typecheck` covers it.
+**Verified:** `railway config plan` (read-only) against the template's own project compiles every
+setting as intended. **Not yet:** an `apply` on a real project, and moving the template's own
+deployment (`api.template.erikcr`, service `@repo/api-server`, still on `railway.toml`) — both
+need the user's go-ahead (see below).
+**Later (optional):** Railway's `railwayapp/config` GitHub Action plans on PRs and applies on
+merge, which would replace the manual apply step.
 
 ### P.6 `[ ]` (Decide later) Deploy sequencing
 Vercel Deployment Checks can hold the production deploys until the API reports the new commit

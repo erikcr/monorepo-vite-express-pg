@@ -2,7 +2,7 @@ import { logger } from "./logger.js";
 
 /**
  * Runs `steps` in order on SIGTERM/SIGINT, then exits. Railway sends SIGTERM on every redeploy
- * and SIGKILL after `drainingSeconds` (railway.toml), so the timeout must stay below that.
+ * and SIGKILL after `drainingSeconds` (.railway/railway.ts), so the timeout must stay below that.
  */
 export function onShutdown(steps: Array<() => Promise<unknown>>, timeoutMs = 25_000): void {
   let started = false;

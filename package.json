@@ -11,7 +11,7 @@
     "codegen": "pnpm --filter @repo/api-spec codegen",
     "codegen:check": "pnpm codegen && git diff --exit-code lib/api-zod/src/index.ts lib/api-client-react/src/index.ts",
     "dev": "pnpm --parallel --filter='./artifacts/*' dev",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm -r typecheck && tsc -p .railway",
     "lint": "biome check .",
     "format": "biome format --write .",
     "db:generate": "pnpm --filter @repo/db generate",
@@ -26,6 +26,7 @@
     "@biomejs/biome": "^2.5.15",
     "@repo/db": "workspace:*",
     "drizzle-orm": "catalog:",
+    "railway": "^3.16.0",
     "tsx": "catalog:",
     "typescript": "catalog:"
   }

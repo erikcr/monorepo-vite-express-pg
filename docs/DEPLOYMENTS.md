@@ -33,6 +33,19 @@ feature branch ──PR (squash)──▶ staging ──check on staging──�
 - **No third branch** (`develop`) and no merging one branch into both `staging` and `main`: the first adds a promotion step with the same batching one level up, the second puts on `main` a combination `staging` never ran.
 - **Promotions use merge commits, never squash**, so `main` keeps `staging`'s commits.
 
+## Infrastructure changes
+
+`.railway/railway.ts` defines the Railway services, database, build/deploy settings and variables.
+Railway doesn't read it on deploy: a change takes effect when someone applies it, per environment,
+in the same order as code:
+
+1. Change the file in a feature PR into `staging`; the PR shows the diff.
+2. After merging: `railway environment staging && railway config plan`, check it, then `railway config apply`.
+3. After the promotion PR merges into `main`: the same against `production`.
+
+Apply before merging code that depends on the change (a new variable, say), so the deploy that
+needs it finds it. `plan` is always safe; `apply` marks anything destructive and asks first.
+
 ## What gates each step
 
 | # | Step | Where | Gate |
@@ -69,7 +82,7 @@ The API and the sites deploy independently, and migrations run while the previou
 ## Things that are not obvious
 
 - **Wait for CI needs CI to run on push** to the deployed branch (it does: `ci.yml` triggers on pushes to `main` and `staging`), and never cancels those runs, because a cancelled run can block a deploy.
-- **Railway skips deploys whose changes miss `watchPatterns`** in `railway.toml` (frontend-only commits don't redeploy the API). A change to `watchPatterns` only takes effect after one deploy of a commit that contains it; use **Deploy Latest Commit** (Cmd+K) to break the loop.
-- **Dashboard settings override `railway.toml` and `vercel.json`.** Keep Railway's Root Directory and Start Command blank, and Vercel's build settings blank.
+- **Railway skips deploys whose changes miss `watchPatterns`** in `.railway/railway.ts` (frontend-only commits don't redeploy the API). Use **Deploy Latest Commit** (Cmd+K in the service) to deploy one anyway.
+- **Railway settings live in `.railway/railway.ts`, not the dashboard.** A dashboard edit lasts only until the next `railway config apply`. Vercel's build settings stay blank so `vercel.json` controls them.
 - **PR previews on Vercel have no API.** Only the `staging` branch gets `VITE_API_URL`, because `CORS_ORIGIN` lists exact origins and preview URLs change per PR.
 - **Rulesets on private repos need a paid GitHub plan.** Without one, the hooks and the Promotion source job still apply, but GitHub doesn't enforce the PR requirement.

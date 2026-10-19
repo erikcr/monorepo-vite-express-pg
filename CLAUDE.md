@@ -234,13 +234,17 @@ See `docs/DEPLOYMENTS.md`.
 
 ### Deployment
 
+Railway is configured by `.railway/railway.ts` (Infrastructure as Code), never the dashboard or
+`railway.toml`. After changing it, `railway config plan` then `railway config apply`, staging
+first, then production (see `docs/DEPLOYMENTS.md`).
+
 Run once per new project, in order:
 
 ```bash
 gh auth login
 /provision-github    # Claude skill: staging branch + rulesets protecting staging and main
 railway login
-/provision-railway   # Claude skill: production + staging environments, Postgres, API service
+/provision-railway   # Claude skill: applies .railway/railway.ts to production + staging
 vercel login
 /provision-vercel    # Claude skill: both Vercel projects, per-environment API URL, CORS
 ```

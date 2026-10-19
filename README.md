@@ -52,62 +52,55 @@ are the provider gotchas behind those commands.
 
 ## Deploying to Railway (API server)
 
-### Initial setup
+### Infrastructure as Code
 
-1. Create a new Railway project and connect your GitHub repo
-2. Add a **PostgreSQL** database service — Railway auto-injects `DATABASE_URL` when linked
-3. Configure the API server service with the settings below before triggering a deploy
+The Railway project is defined in [`.railway/railway.ts`](.railway/railway.ts): the `Postgres`
+database and the `api` service (Dockerfile build, watch patterns, migrations, health check,
+draining time, restart policy, Wait for CI, variables), with `production` deploying `main` and
+`staging` deploying `staging`. `/provision-railway` creates the project and applies it.
 
-### Required dashboard settings
+Railway doesn't read this file during deploys. Change it, then apply it to each environment:
 
-| Setting | Location | Value |
-|---------|----------|-------|
-| Root Directory | Settings → Build | **leave blank** |
-| Builder | Settings → Build | Dockerfile (or leave on auto-detect) |
-| Start Command | Settings → Deploy | **leave blank** |
-
-**Root Directory must be blank.**
-The Dockerfile lives at the repo root. If you set Root Directory to `artifacts/api-server`, Railway can't find the Dockerfile and falls back to Nixpacks. Nixpacks detects the `package.json` and uses `pnpm start` as the start command — but pnpm isn't installed in the lean runtime image, so the deploy fails with:
-```
-The executable 'pnpm' could not be found
+```bash
+railway environment staging      # or production
+railway config plan              # read-only preview of what would change
+railway config apply             # applies after confirmation
 ```
 
-**Start Command must be blank.**
-Any value set in the dashboard overrides `railway.toml` and the Dockerfile `CMD`. If something was previously entered here, clear it. `railway.toml` already sets `startCommand = "node dist/index.js"`.
-
-### Service auto-detection on import
-
-When you import the repo, Railway scans every `package.json` and offers ~8 services. Keep only the one at the repo root (the Dockerfile service) and delete the rest. This is a one-time step — future pushes deploy automatically without going through the import wizard again.
-
-There is no config file that suppresses Railway's detection heuristics during the initial import. The `.dockerignore` controls what files are sent to the Docker build context, not what Railway's UI detects.
+Don't change these settings in the Railway dashboard: the next `apply` puts them back. (Railway's
+older `railway.toml` / config-as-code files stop working on 2026-12-01, and new services can't use
+them at all.)
 
 ### Migrations
 
-`dist/migrate.js` is a standalone migration runner bundled into the image alongside the server. It runs automatically as a pre-deploy step — if migrations fail, Railway aborts the deploy and the old instance keeps running.
-
-This is configured in `railway.toml` via `preDeployCommand = "node dist/migrate.js"` — no dashboard setup needed.
+`dist/migrate.js` is a standalone migration runner bundled into the image alongside the server.
+It runs as the service's pre-deploy command: if migrations fail, Railway aborts the deploy and the
+old instance keeps running.
 
 ### Background jobs and shutdown
 
 The API process also runs the pg-boss worker, so one Railway service handles requests and jobs.
-To scale them separately, set `RUN_WORKER=false` on the API service and add a second service from
-the same repo with start command `node dist/worker.js` (no domain or health check needed).
+To scale them separately, set `RUN_WORKER=false` on `api` and add a second service in
+`.railway/railway.ts` from the same repo with start command `node dist/worker.js` (no domain or
+health check needed).
 
 On redeploy Railway sends SIGTERM; the server stops taking requests, lets in-flight requests and
-active jobs finish, then closes the database pool. `drainingSeconds = 30` in `railway.toml` gives
-it that time (Railway's default is 0: an immediate SIGKILL).
+active jobs finish, then closes the database pool. `drainingSeconds: 30` gives it that time
+(Railway's default is 0: an immediate SIGKILL).
 
 ### Environment variables
 
-`DATABASE_URL` is injected automatically when you link the Postgres service to the API service in Railway.
+`DATABASE_URL` references the Postgres service; `NODE_ENV` and `PORT` are set in the file.
 
-Set `CORS_ORIGIN` to a comma-separated list of your Vercel app URLs so the browser can call the API:
+`CORS_ORIGIN` is a comma-separated list of your Vercel app URLs, so the browser can call the API:
 
 ```
 CORS_ORIGIN=https://your-web-app.vercel.app,https://your-admin-app.vercel.app
 ```
 
-Without this, browsers will block cross-origin requests from Vercel to Railway with a CORS error even though the API is reachable. The default only allows localhost.
+It differs per environment, so the file keeps whatever Railway has (`preserve()`), and
+`/provision-vercel` sets it once the site URLs exist. Without it, browsers block cross-origin
+requests from Vercel to Railway with a CORS error even though the API is reachable.
 
 ---
 

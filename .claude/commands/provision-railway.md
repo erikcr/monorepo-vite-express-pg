@@ -1,9 +1,9 @@
-Provision a new Railway project for this monorepo's API server, with a `production` environment deploying `main` and a `staging` environment deploying `staging` (see `docs/DEPLOYMENTS.md`). Work through the steps below in order, stopping and reporting clearly if any step fails.
+Provision a new Railway project for this monorepo's API server from `.railway/railway.ts` (Railway Infrastructure as Code): a `production` environment deploying `main` and a `staging` environment deploying `staging`, each with its own Postgres (see `docs/DEPLOYMENTS.md`). Work through the steps below in order, stopping and reporting clearly if any step fails.
 
 ## Pre-flight Checks
 
-1. Verify the `railway` CLI is installed by running `railway --version`. If the command is not found, tell the user:
-   > "Railway CLI not found. Install it with: npm install -g @railway/cli"
+1. Verify the `railway` CLI is installed and recent enough for Infrastructure as Code by running `railway --version`. If the command is not found, or the version is below 5.42.1, tell the user:
+   > "Railway CLI 5.42.1 or newer is required. Install or upgrade it with: npm install -g @railway/cli"
    Then stop.
 
 2. Verify the user is authenticated by running `railway whoami`. If the output indicates they are not logged in, tell the user:
@@ -14,65 +14,69 @@ Provision a new Railway project for this monorepo's API server, with a `producti
    > "Run /provision-github first: Railway deploys staging from the staging branch."
    Then stop.
 
+4. Point the IaC file at this repo: in `.railway/railway.ts`, set `const REPO = "<repo>";`. (The template ships with its own repo name there.)
+
 ## Project Setup
 
-4. Ask the user: "What should the Railway project be named? (press Enter to use the git repo name as default)"
+5. Ask the user: "What should the Railway project be named? (press Enter to use the git repo name as default)"
    - If they press Enter or provide no name, derive the default by running `basename $(git rev-parse --show-toplevel)` and appending `-api`.
 
-5. Create the project. This links the current directory to its default `production` environment:
+6. Create the project. This links the current directory to its default `production` environment:
    ```
    railway init --name <project-name> --json
    ```
 
-6. Add PostgreSQL:
-   ```
-   railway add --database postgres --json
-   ```
-   Note the database service name in the output (normally `Postgres`); wait a few seconds for it to provision.
+## Production
 
-7. Add the API service from the GitHub repo, deploying `main`, with `DATABASE_URL` referencing the database:
+7. Preview what the file will create:
    ```
-   railway add --service api --repo <repo> --branch main \
-     --variables 'DATABASE_URL=${{Postgres.DATABASE_URL}}' \
-     --variables NODE_ENV=production --variables PORT=3000 --json
+   railway config plan
    ```
-   Keep the single quotes so the shell doesn't expand `${{…}}`; Railway resolves the reference. Build, start, pre-deploy (migrations) and health-check settings come from `railway.toml`. If this fails with a GitHub access error, tell the user to install the Railway GitHub app on the repo (Railway dashboard → Account → GitHub) and re-run from this step.
+   Expect `Create database Postgres` and `Create service api`, and nothing destructive. If the plan shows anything else, stop and show it to the user.
 
-8. Generate the production domain and record it as `<prod-api-url>`:
+8. Apply it:
+   ```
+   railway config apply --yes
+   ```
+   This creates Postgres and the `api` service deploying `main`, with the build, migrations, health check, draining time, Wait for CI and variables from the file. If it fails with a GitHub access error, tell the user to install the Railway GitHub app on the repo (Railway dashboard → Account → GitHub) and re-run from step 7.
+
+9. Generate the production domain and record it as `<prod-api-url>`:
    ```
    railway domain --service api --port 3000 --json
    ```
 
-## Staging Environment
+## Staging
 
-9. Create `staging` as a copy of `production` (its own Postgres and API service), with the API deploying the `staging` branch:
-   ```
-   railway environment new staging --duplicate production \
-     --service-config api source.branch staging --json
-   ```
-
-10. Generate the staging domain and record it as `<staging-api-url>`:
+10. Create an empty `staging` environment and switch the link to it:
     ```
-    railway domain --service api --environment staging --port 3000 --json
+    railway environment new staging --json
+    railway environment staging
     ```
 
-11. Confirm both environments: `railway environment config --environment staging --json` shows the api service's `source.branch` as `staging`; the same for `production` shows `main`.
+11. Preview and apply the same file there. The file deploys `staging` in every environment except `production`:
+    ```
+    railway config plan
+    railway config apply --yes
+    ```
+    Expect the same two creations as in production.
 
-## Dashboard Settings (manual)
+12. Generate the staging domain and record it as `<staging-api-url>`:
+    ```
+    railway domain --service api --port 3000 --json
+    ```
 
-12. Tell the user to do these in the Railway dashboard, **for the api service in both environments** (switch environment at the top of the project):
-    - **Settings → Source → Wait for CI: on.** Railway then holds each deploy until the commit's GitHub Actions finish, and skips it if CI failed.
-    - **Settings → Build → Root Directory: blank**, and **Settings → Deploy → Start Command: blank** (see README for why).
-    Wait for them to confirm.
+13. Switch the link back to production: `railway environment production`.
 
 ## Summary
 
-13. Print a success summary in this format:
+14. Tell the user to commit the `REPO` change in `.railway/railway.ts` on a feature branch and open a PR into `staging`.
+
+15. Print a success summary in this format:
     ```
     ✓ Railway project created: <project-name>
     ✓ production: Postgres + api (deploys main)    → <prod-api-url>
     ✓ staging:    Postgres + api (deploys staging) → <staging-api-url>
-    ✓ Wait for CI on in both environments
+    ✓ Settings come from .railway/railway.ts (change the file, then `railway config apply`)
 
     Your local .env keeps pointing at local Postgres (docker compose); the
     Railway databases are only reachable from Railway.
