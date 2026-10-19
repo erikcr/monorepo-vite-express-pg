@@ -62,6 +62,68 @@ export const ReportClientErrorResponse = zod.void()
 
 
 /**
+ * @summary The signed-in person and the orgs they belong to
+ */
+export const GetMeResponse = zod.object({
+  "user": zod.object({
+  "id": zod.uuid(),
+  "email": zod.string(),
+  "name": zod.string()
+}),
+  "orgs": zod.array(zod.object({
+  "id": zod.uuid(),
+  "name": zod.string(),
+  "role": zod.enum(['org_admin', 'org_member'])
+})).describe('Every org the person belongs to; send one\'s id as X-Org-Id')
+})
+
+
+/**
+ * @summary Create an org; the creator becomes its org_admin
+ */
+export const createOrgBodyNameMax = 100;
+
+
+
+export const CreateOrgBody = zod.object({
+  "name": zod.string().min(1).max(createOrgBodyNameMax)
+})
+
+export const CreateOrgResponse = zod.object({
+  "id": zod.uuid(),
+  "name": zod.string(),
+  "role": zod.enum(['org_admin', 'org_member'])
+})
+
+
+/**
+ * @summary Every org, newest first (staff)
+ */
+export const listAdminOrgsQueryQMax = 100;
+
+export const listAdminOrgsQueryLimitDefault = 20;
+export const listAdminOrgsQueryLimitMax = 100;
+
+
+
+export const ListAdminOrgsQueryParams = zod.object({
+  "q": zod.string().max(listAdminOrgsQueryQMax).optional().describe('Only orgs whose name contains this (case-insensitive)'),
+  "limit": zod.coerce.number().int().min(1).max(listAdminOrgsQueryLimitMax).default(listAdminOrgsQueryLimitDefault),
+  "cursor": zod.string().optional().describe('The nextCursor from the previous page; omit for the first page')
+})
+
+export const ListAdminOrgsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.uuid(),
+  "name": zod.string(),
+  "memberCount": zod.int(),
+  "createdAt": zod.iso.datetime({"offset":true})
+})),
+  "nextCursor": zod.string().nullable().describe('Pass as cursor to get the next page; null on the last page')
+})
+
+
+/**
  * @summary List example records, newest first, one page at a time
  */
 export const listExamplesQueryLimitDefault = 20;

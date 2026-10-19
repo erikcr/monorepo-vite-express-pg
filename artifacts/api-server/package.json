@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "e2e:server": "tsx src/e2e-server.ts"
+    "e2e:server": "tsx src/e2e-server.ts",
+    "staff:grant": "tsx src/scripts/staff-grant.ts",
+    "staff:revoke": "tsx src/scripts/staff-revoke.ts",
+    "org:grant": "tsx src/scripts/org-grant.ts"
   },
   "dependencies": {
     "@clerk/backend": "~3.25.0",

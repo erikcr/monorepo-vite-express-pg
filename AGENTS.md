@@ -64,6 +64,8 @@ docs/                 PROJECT.md, ARCHITECTURE.md, DEPLOYMENTS.md, board + plans
 pnpm dev                       # api-server, web, admin in parallel
 pnpm db:generate | db:migrate | db:seed | db:studio
 pnpm codegen                   # Zod schemas + React Query hooks from openapi.yaml
+pnpm staff:grant <email> <role> | staff:revoke <email> | org:grant <email> <org id> <role>
+                               # deployed: railway ssh --service api -- node dist/scripts/<name>.js …
 pnpm lint | format             # Biome
 pnpm typecheck                 # strict TS everywhere (incl. .railway)
 pnpm test | test:coverage      # vitest; test:coverage enforces coverage floors (CI runs it)

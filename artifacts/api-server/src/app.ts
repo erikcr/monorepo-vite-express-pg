@@ -13,6 +13,8 @@ import helmet from "helmet";
 import type { JobQueue } from "./jobs/queue.js";
 import { createAccess } from "./middleware/access.js";
 import { requestLogger } from "./middleware/request-logger.js";
+import { createMeRouter, createOrgsRouter } from "./routes/account.js";
+import { createAdminRouter } from "./routes/admin.js";
 import { createClientErrorsRouter } from "./routes/client-errors.js";
 import { createDocsRouter } from "./routes/docs.js";
 import { createExampleRouter } from "./routes/example.js";
@@ -26,6 +28,9 @@ export function createRouters(db: Db, queue: JobQueue): Record<string, Router> {
   const access = createAccess(db);
   return {
     "/health": createHealthRouter(db),
+    "/api/me": createMeRouter(db, access),
+    "/api/orgs": createOrgsRouter(db, access),
+    "/api/admin": createAdminRouter(db, access),
     "/api/example": createExampleRouter(db, queue, access),
     "/api/client-errors": createClientErrorsRouter(),
     ...(env.API_DOCS ? { "/docs": createDocsRouter() } : {}),

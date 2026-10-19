@@ -1,7 +1,15 @@
 import { build } from "esbuild";
 
 await build({
-  entryPoints: ["src/index.ts", "src/worker.ts", "src/migrate.ts"],
+  entryPoints: [
+    "src/index.ts",
+    "src/worker.ts",
+    "src/migrate.ts",
+    // Admin scripts, runnable in the deployed image: railway ssh -- node dist/scripts/<name>.js
+    "src/scripts/staff-grant.ts",
+    "src/scripts/staff-revoke.ts",
+    "src/scripts/org-grant.ts",
+  ],
   bundle: true,
   platform: "node",
   target: "node24",

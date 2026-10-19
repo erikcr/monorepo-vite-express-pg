@@ -261,7 +261,9 @@ for an email provider (1.6). Not taken: the reference app's product-specific rul
    demo rows); seed creates real orgs; spec + codegen. Admin's org filter removed (task 5 moves
    admin to staff endpoints and brings back a validated search param); the two admin E2E data
    tests are `fixme` until tasks 5–6.
-4. `/api/me`, `POST /api/orgs`, `staff:grant` script; admin API stub (`GET /api/admin/orgs`).
+4. `[x]` `GET /api/me`, `POST /api/orgs`, `GET /api/admin/orgs` (staff; paginated, member counts,
+   `q` name search); `pnpm staff:grant` / `staff:revoke` / `org:grant`, also bundled into the image
+   for `railway ssh`.
 5. Frontends: Clerk providers, token + org header in `apiFetch`, sign-in, org picker, admin gate.
 6. E2E + provisioning: decide how E2E signs in (Clerk testing tokens vs a test-mode identity),
    add Clerk to `/provision-*` and DEPLOYMENTS, update AGENTS.md and the new-feature skill.

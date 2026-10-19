@@ -26,8 +26,9 @@ async function main() {
     { orgId: two.id, name: "Third example" },
   ]);
 
-  // Nobody belongs to these orgs yet: sign in, then grant yourself a membership (auth task 4).
   console.log(`seed complete: orgs ${SEED_ORGS.map((o) => `${o.name} (${o.id})`).join(", ")}`);
+  // Nobody belongs to these orgs yet.
+  console.log(`to see them, sign in once, then: pnpm org:grant <your email> ${one.id} org_admin`);
   await closeDb();
 }
 

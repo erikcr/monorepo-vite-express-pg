@@ -24,6 +24,9 @@ export default defineConfig({
           listExamples: {
             query: { useInfinite: true, useInfiniteQueryParam: "cursor" },
           },
+          listAdminOrgs: {
+            query: { useInfinite: true, useInfiniteQueryParam: "cursor" },
+          },
         },
       },
     },

@@ -75,6 +75,56 @@ export interface ClientErrorReport {
   url?: string;
 }
 
+export type OrgRole = typeof OrgRole[keyof typeof OrgRole];
+
+
+export const OrgRole = {
+  org_admin: 'org_admin',
+  org_member: 'org_member',
+} as const;
+
+export interface OrgMembership {
+  id: string;
+  name: string;
+  role: OrgRole;
+}
+
+export type MeUser = {
+  id: string;
+  email: string;
+  name: string;
+};
+
+export interface Me {
+  user: MeUser;
+  /** Every org the person belongs to; send one's id as X-Org-Id */
+  orgs: OrgMembership[];
+}
+
+export interface CreateOrgInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+}
+
+export interface AdminOrg {
+  id: string;
+  name: string;
+  memberCount: number;
+  createdAt: string;
+}
+
+export interface AdminOrgPage {
+  items: AdminOrg[];
+  /**
+     * Pass as cursor to get the next page; null on the last page
+     * @nullable
+     */
+  nextCursor: string | null;
+}
+
 export interface Example {
   id: string;
   orgId: string;
@@ -172,6 +222,23 @@ export type ForbiddenResponse = ErrorResponse;
  * No such record in this org
  */
 export type NotFoundResponse = ErrorResponse;
+
+export type ListAdminOrgsParams = {
+/**
+ * Only orgs whose name contains this (case-insensitive)
+ * @maxLength 100
+ */
+q?: string;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * The nextCursor from the previous page; omit for the first page
+ */
+cursor?: string;
+};
 
 export type ListExamplesParams = {
 /**
@@ -493,6 +560,376 @@ export const useReportClientError = <TError = BadRequestResponse,
       > => {
       return useMutation(getReportClientErrorMutationOptions(options), queryClient);
     }
+
+export const getGetMeUrl = () => {
+
+
+
+
+  return `/api/me`
+}
+
+/**
+ * @summary The signed-in person and the orgs they belong to
+ */
+export const getMe = async ( options?: Parameters<typeof apiFetch>[1]): Promise<Me> => {
+
+  return apiFetch<Me>(getGetMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMeQueryKey = () => {
+    return [
+    `/api/me`
+    ] as const;
+    }
+
+
+export const getGetMeQueryOptions = <TData = Awaited<ReturnType<typeof getMe>>, TError = UnauthorizedResponse | ForbiddenResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMe>>> = ({ signal }) => getMe({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetMeQueryResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
+export type GetMeQueryError = UnauthorizedResponse | ForbiddenResponse
+
+
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = UnauthorizedResponse | ForbiddenResponse>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMe>>,
+          TError,
+          Awaited<ReturnType<typeof getMe>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = UnauthorizedResponse | ForbiddenResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMe>>,
+          TError,
+          Awaited<ReturnType<typeof getMe>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = UnauthorizedResponse | ForbiddenResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary The signed-in person and the orgs they belong to
+ */
+
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = UnauthorizedResponse | ForbiddenResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetMeQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateOrgUrl = () => {
+
+
+
+
+  return `/api/orgs`
+}
+
+/**
+ * @summary Create an org; the creator becomes its org_admin
+ */
+export const createOrg = async (createOrgInput: CreateOrgInput, options?: Parameters<typeof apiFetch>[1]): Promise<OrgMembership> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetch<OrgMembership>(getCreateOrgUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createOrgInput)
+  }
+);}
+
+
+
+
+
+export const getCreateOrgMutationKey = () => ['createOrg'] as const;
+
+export const getCreateOrgMutationOptions = <TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,CreateOrgMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,CreateOrgMutationVariables, TContext> => {
+
+const mutationKey = getCreateOrgMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrg>>, CreateOrgMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOrg(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrgMutationResult = NonNullable<Awaited<ReturnType<typeof createOrg>>>
+    export type CreateOrgMutationBody = CreateOrgInput
+    export type CreateOrgMutationError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse
+    export type CreateOrgMutationVariables = {data: CreateOrgInput}
+
+    /**
+ * @summary Create an org; the creator becomes its org_admin
+ */
+export const useCreateOrg = <TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,CreateOrgMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createOrg>>,
+        TError,
+        CreateOrgMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateOrgMutationOptions(options), queryClient);
+    }
+
+export const getListAdminOrgsUrl = (params?: ListAdminOrgsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/orgs?${stringifiedParams}` : `/api/admin/orgs`
+}
+
+/**
+ * @summary Every org, newest first (staff)
+ */
+export const listAdminOrgs = async (params?: ListAdminOrgsParams, options?: Parameters<typeof apiFetch>[1]): Promise<AdminOrgPage> => {
+
+  return apiFetch<AdminOrgPage>(getListAdminOrgsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminOrgsInfiniteQueryKey = (params?: ListAdminOrgsParams,) => {
+    return [
+    'infinite', `/api/admin/orgs`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getListAdminOrgsQueryKey = (params?: ListAdminOrgsParams,) => {
+    return [
+    `/api/admin/orgs`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminOrgsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(params?: ListAdminOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData, QueryKey, ListAdminOrgsParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminOrgsInfiniteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminOrgs>>, QueryKey, ListAdminOrgsParams['cursor']> = ({ signal, pageParam }) => listAdminOrgs({...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData, QueryKey, ListAdminOrgsParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAdminOrgsInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminOrgs>>>
+export type ListAdminOrgsInfiniteQueryError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse
+
+
+export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+ params: undefined |  ListAdminOrgsParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData, QueryKey, ListAdminOrgsParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminOrgs>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminOrgs>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+ params?: ListAdminOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData, QueryKey, ListAdminOrgsParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminOrgs>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminOrgs>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+ params?: ListAdminOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData, QueryKey, ListAdminOrgsParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Every org, newest first (staff)
+ */
+
+export function useListAdminOrgsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listAdminOrgs>>, ListAdminOrgsParams['cursor']>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+ params?: ListAdminOrgsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData, QueryKey, ListAdminOrgsParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAdminOrgsInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getListAdminOrgsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(params?: ListAdminOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminOrgsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminOrgs>>> = ({ signal }) => listAdminOrgs(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAdminOrgsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminOrgs>>>
+export type ListAdminOrgsQueryError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse
+
+
+export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+ params: undefined |  ListAdminOrgsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminOrgs>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminOrgs>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+ params?: ListAdminOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminOrgs>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminOrgs>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+ params?: ListAdminOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Every org, newest first (staff)
+ */
+
+export function useListAdminOrgs<TData = Awaited<ReturnType<typeof listAdminOrgs>>, TError = BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>(
+ params?: ListAdminOrgsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminOrgs>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAdminOrgsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListExamplesUrl = (params?: ListExamplesParams,) => {
   const normalizedParams = new URLSearchParams();
