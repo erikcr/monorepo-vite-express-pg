@@ -335,8 +335,12 @@ latest release); only `/docs` drops helmet's CSP (the page needs an inline boots
 script) instead of stubbed routes; cache Playwright browsers; add admin smoke test.
 (CI concurrency moved to P.2.)
 
-### 3.3 `[ ]` Typed frontend env
+### 3.3 `[x]` Typed frontend env
 **Change:** Validate `VITE_API_URL` at app boot in production builds.
+**Done:** a malformed value (not absolute http(s), or a trailing slash) throws at load; a missing
+one in a production build logs a console error instead of silently calling the site's own
+origin. Not a hard failure when missing: PR previews deliberately have no API URL. Typed in each
+app's `ImportMetaEnv`. Live sites' values checked first (valid).
 
 ### 3.4 `[ ]` (Decide) Shared UI package
 Theme CSS + small components are duplicated between web and admin. Fine at 2 apps.
