@@ -252,10 +252,12 @@ for an email provider (1.6). Not taken: the reference app's product-specific rul
   (dev instance for local/staging, production instance for production).
 
 **Tasks** (one PR each)
-1. Schema + migration: users, orgs, org_users, platform_staff; example.org_id → uuid FK.
+1. `[x]` Schema + migration: users, orgs, org_users, platform_staff (additive). The
+   `example.org_id` → uuid FK conversion moved to task 3, so each PR stays green on its own.
 2. Identity module + `authenticate` + test tokens; env vars.
 3. Policy, grants loader, `resolveTenant`, `requireOrg` / `signedIn` / `requireStaff`, route
-   coverage test; example routes on `req.ctx`; spec + codegen.
+   coverage test; example routes on `req.ctx`; `example.org_id` → uuid FK to `orgs` (drops the
+   demo rows); seed creates a real org; spec + codegen.
 4. `/api/me`, `POST /api/orgs`, `staff:grant` script; admin API stub (`GET /api/admin/orgs`).
 5. Frontends: Clerk providers, token + org header in `apiFetch`, sign-in, org picker, admin gate.
 6. E2E + provisioning: decide how E2E signs in (Clerk testing tokens vs a test-mode identity),
