@@ -3,6 +3,9 @@ import supertest from "supertest";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { createApp } from "../app.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
+import { createFakeQueue } from "../test-helpers/fake-queue.js";
+
+const app = (db: Db) => createApp(db, createFakeQueue());
 
 // A db whose queries fail or hang, controlled per test.
 function fakeDb(execute: () => Promise<unknown>) {
@@ -13,7 +16,7 @@ describe("GET /health", () => {
   let request: ReturnType<typeof supertest>;
 
   beforeAll(async () => {
-    request = supertest(createApp(await createTestDb()));
+    request = supertest(app(await createTestDb()));
   });
 
   afterEach(() => {
@@ -40,7 +43,7 @@ describe("GET /health", () => {
   });
 
   it("stays 200 when the db is down (liveness), reporting db: error", async () => {
-    const res = await supertest(createApp(fakeDb(() => Promise.reject(new Error("down"))))).get(
+    const res = await supertest(app(fakeDb(() => Promise.reject(new Error("down"))))).get(
       "/health"
     );
     expect(res.status).toBe(200);
@@ -54,13 +57,13 @@ describe("GET /health/ready", () => {
   });
 
   it("returns 200 when the db answers", async () => {
-    const res = await supertest(createApp(await createTestDb())).get("/health/ready");
+    const res = await supertest(app(await createTestDb())).get("/health/ready");
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: "ready", checks: { db: "ok" } });
   });
 
   it("returns 503 when the db query fails", async () => {
-    const res = await supertest(createApp(fakeDb(() => Promise.reject(new Error("down"))))).get(
+    const res = await supertest(app(fakeDb(() => Promise.reject(new Error("down"))))).get(
       "/health/ready"
     );
     expect(res.status).toBe(503);
@@ -68,9 +71,7 @@ describe("GET /health/ready", () => {
   });
 
   it("returns 503 when the db hangs, after the timeout", async () => {
-    const res = await supertest(createApp(fakeDb(() => new Promise(() => {})))).get(
-      "/health/ready"
-    );
+    const res = await supertest(app(fakeDb(() => new Promise(() => {})))).get("/health/ready");
     expect(res.status).toBe(503);
   });
 
@@ -78,7 +79,7 @@ describe("GET /health/ready", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     let up = true;
     const db = fakeDb(() => (up ? Promise.resolve() : Promise.reject(new Error("down"))));
-    const request = supertest(createApp(db));
+    const request = supertest(app(db));
 
     expect((await request.get("/health/ready")).status).toBe(200);
     up = false;
@@ -92,7 +93,7 @@ describe("GET /health/ready", () => {
   it("never caches a failure", async () => {
     let up = false;
     const request = supertest(
-      createApp(fakeDb(() => (up ? Promise.resolve() : Promise.reject(new Error("down")))))
+      app(fakeDb(() => (up ? Promise.resolve() : Promise.reject(new Error("down")))))
     );
     expect((await request.get("/health/ready")).status).toBe(503);
     up = true;

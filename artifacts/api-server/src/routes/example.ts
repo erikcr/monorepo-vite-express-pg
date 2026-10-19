@@ -3,8 +3,10 @@ import type { Db } from "@repo/db";
 import { exampleTable } from "@repo/db/schema";
 import { eq } from "drizzle-orm";
 import { Router } from "express";
+import type { JobQueue } from "../jobs/queue.js";
+import { exampleCreated } from "../jobs/registry.js";
 
-export function createExampleRouter(db: Db): Router {
+export function createExampleRouter(db: Db, queue: JobQueue): Router {
   const router = Router();
 
   router.get("/", async (req, res) => {
@@ -25,6 +27,7 @@ export function createExampleRouter(db: Db): Router {
       return;
     }
     const [row] = await db.insert(exampleTable).values(parsed.data).returning();
+    await queue.enqueue(exampleCreated, { exampleId: row.id, orgId: row.orgId });
     res.status(201).json(row);
   });
 

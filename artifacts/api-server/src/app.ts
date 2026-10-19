@@ -2,11 +2,12 @@ import type { Db } from "@repo/db";
 import { env } from "@repo/env";
 import cors from "cors";
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
+import type { JobQueue } from "./jobs/queue.js";
 import { logger } from "./logger.js";
 import { createExampleRouter } from "./routes/example.js";
 import { createHealthRouter } from "./routes/health.js";
 
-export function createApp(db: Db): Express {
+export function createApp(db: Db, queue: JobQueue): Express {
   const app = express();
 
   app.use(
@@ -18,7 +19,7 @@ export function createApp(db: Db): Express {
   app.use(express.json());
 
   app.use("/health", createHealthRouter(db));
-  app.use("/api/example", createExampleRouter(db));
+  app.use("/api/example", createExampleRouter(db, queue));
 
   // 404
   app.use((_req, res) => {

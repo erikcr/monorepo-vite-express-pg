@@ -11,8 +11,7 @@ const migrationsFolder = join(
   "../../../../lib/db/migrations"
 );
 
-export async function createTestDb(): Promise<Db> {
-  const client = new PGlite();
+export async function createTestDb(client = new PGlite()): Promise<Db> {
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder });
   return db as unknown as Db;

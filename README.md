@@ -87,6 +87,16 @@ There is no config file that suppresses Railway's detection heuristics during th
 
 This is configured in `railway.toml` via `preDeployCommand = "node dist/migrate.js"` — no dashboard setup needed.
 
+### Background jobs and shutdown
+
+The API process also runs the pg-boss worker, so one Railway service handles requests and jobs.
+To scale them separately, set `RUN_WORKER=false` on the API service and add a second service from
+the same repo with start command `node dist/worker.js` (no domain or health check needed).
+
+On redeploy Railway sends SIGTERM; the server stops taking requests, lets in-flight requests and
+active jobs finish, then closes the database pool. `drainingSeconds = 30` in `railway.toml` gives
+it that time (Railway's default is 0: an immediate SIGKILL).
+
 ### Environment variables
 
 `DATABASE_URL` is injected automatically when you link the Postgres service to the API service in Railway.

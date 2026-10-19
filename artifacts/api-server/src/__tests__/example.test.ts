@@ -2,12 +2,14 @@ import supertest from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
+import { createFakeQueue } from "../test-helpers/fake-queue.js";
 
 describe("/api/example", () => {
   let request: ReturnType<typeof supertest>;
+  const queue = createFakeQueue();
 
   beforeAll(async () => {
-    request = supertest(createApp(await createTestDb()));
+    request = supertest(createApp(await createTestDb(), queue));
   });
 
   it("GET / returns 400 without orgId (tenant isolation)", async () => {
@@ -27,6 +29,14 @@ describe("/api/example", () => {
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({ orgId: "org_test", name: "Alpha" });
     expect(typeof res.body.id).toBe("string");
+  });
+
+  it("POST / enqueues an example-created job for the new record", async () => {
+    const res = await request.post("/api/example").send({ orgId: "org_job", name: "Queued" });
+    expect(queue.enqueued).toContainEqual({
+      name: "example-created",
+      data: { exampleId: res.body.id, orgId: "org_job" },
+    });
   });
 
   it("GET / returns the created record", async () => {

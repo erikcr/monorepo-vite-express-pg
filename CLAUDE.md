@@ -91,7 +91,7 @@ docs/
 | Web app | React 19 + Vite 8 + Tailwind CSS 4, deployed to Vercel |
 | Admin app | React 19 + Vite 8 + Tailwind CSS 4, deployed to Vercel |
 | Database | PostgreSQL + Drizzle ORM (`drizzle-orm/postgres-js`) |
-| Background jobs | pg-boss (worker at `artifacts/api-server/src/worker.ts`) |
+| Background jobs | pg-boss (jobs in `artifacts/api-server/src/jobs/registry.ts`) |
 | Package manager | pnpm 12 workspace monorepo |
 
 ### Workspace Layout
@@ -131,11 +131,19 @@ const url = env.DATABASE_URL; // throws if missing
 await db.select().from(exampleTable).where(eq(exampleTable.orgId, orgId));
 ```
 
-**App factory** — Express app is created via `createApp(db)` in `src/app.ts` to support db injection in tests:
+**App factory** — Express app is created via `createApp(db, queue)` in `src/app.ts` so tests can inject the db and job queue:
 ```typescript
-// production: createApp(db) with real postgres-js driver
-// tests:      createApp(testDb) with PGlite-backed db
+// production: createApp(db, createJobQueue(boss)) with the real postgres-js driver
+// tests:      createApp(testDb, createFakeQueue()) with a PGlite-backed db
 ```
+
+**Background jobs** — define each job in `src/jobs/registry.ts` (name, handler, optional cron
+`schedule` and retry options) and add it to `jobs`. Routes enqueue through the injected queue,
+never a pg-boss instance, so tests can use `createFakeQueue()`:
+```typescript
+await queue.enqueue(exampleCreated, { exampleId: row.id, orgId: row.orgId });
+```
+The worker runs inside the API process unless `RUN_WORKER=false` (then `node dist/worker.js`).
 
 **API client** — consume the API via `@repo/api-client-react` hooks in React apps, not raw fetch.
 
@@ -195,7 +203,7 @@ pnpm build                    # all artifacts
 ### Testing Approach
 
 - **Unit/integration** — vitest, co-located in `src/__tests__/` per package
-- **API tests** — supertest against `createApp(testDb)`, db backed by PGlite which runs the actual migration SQL files — schema changes without committed migrations will cause test failures
+- **API tests** — supertest against `createApp(testDb, createFakeQueue())`, db backed by PGlite which runs the actual migration SQL files — schema changes without committed migrations will cause test failures
 - **Component tests** — `@testing-library/react` + jsdom environment
 - **E2E** — Playwright health-page smoke test in `artifacts/web/e2e/`
 - **CI** — GitHub Actions: lint → typecheck → db-check → codegen-check → test → build → e2e on every push/PR

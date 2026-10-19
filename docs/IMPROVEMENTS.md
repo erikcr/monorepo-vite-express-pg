@@ -145,6 +145,13 @@ API stays compatible with the previous frontend for one release**. Linked from C
 Git workflow section) and README.
 **Files:** `docs/DEPLOYMENTS.md` (new), `CLAUDE.md`, `README.md`.
 
+### P.7 `[ ]` Migrate `railway.toml` to Railway Infrastructure as Code — **deadline 2026-12-01**
+Railway's docs (checked 2026-10-18): "Config as Code is deprecated. Prefer Infrastructure as Code.
+Existing files keep working for legacy services until 2026-12-01." The template relies on
+`railway.toml` for the Dockerfile build, `watchPatterns`, `preDeployCommand` (migrations),
+`startCommand`, `healthcheckPath` and `drainingSeconds`. Read Railway's migration guide, move these
+settings, and update `/provision-railway` and README.
+
 ### P.6 `[ ]` (Decide later) Deploy sequencing
 Vercel Deployment Checks can hold the production deploys until the API reports the new commit
 live. It works around several Railway/Vercel quirks and is
@@ -221,25 +228,23 @@ delete, or pagination pattern.
 **Files:** `lib/api-spec/openapi.yaml`, codegen, `routes/example.ts`, tests, admin table.
 **Accept:** Tests for 404, cross-org 404, update, delete, pagination ordering.
 
-### 1.4 `[ ]` Make the worker real
-**Problem:** `worker.ts` is built but never run; nothing enqueues jobs.
-**Change:** A registry of queues (each created with `createQueue`, required by pg-boss v12), a
-handler wrapper that logs failures with job context, an example scheduled job, an `enqueue`
-helper for the API, and `stopWorker()`. A `WORKER` env flag runs the worker in the API process
-(simplest deploy) or as a second Railway service from the same image. `worker` service in
-`docker-compose.yaml`; dev script runs it alongside the server. Create-example enqueues a job.
-**Files:** `artifacts/api-server/src/worker/` (replaces `worker.ts`), `routes/example.ts`,
-`docker-compose.yaml`, `package.json` scripts, `@repo/env`, README.
-**Accept:** Create-example enqueues and the worker processes it (test against PGlite if pg-boss
-supports it, otherwise compose); failed jobs are logged.
+### 1.4 `[x]` Make the worker real
+**Done:** `src/jobs/` — a registry of job definitions (name, handler, optional cron schedule,
+queue options), `startBoss()` (creates every queue: required since pg-boss v11), a `JobQueue`
+the API gets injected (`createApp(db, queue)`; tests use `createFakeQueue()`), and
+`startWorker()` with a wrapper that logs failures before pg-boss retries. POST /api/example
+enqueues `example-created`; `example-daily-count` runs on a cron. The worker runs in the API
+process unless `RUN_WORKER=false`, then `node dist/worker.js` runs it as a second service (same
+image) — so no separate compose service or dev script is needed.
+**Tests:** pg-boss runs on PGlite in-process (custom `executeSql` adapter), so the worker is
+tested end to end: processing, failure logging, schedules. Also verified against Postgres: in-process
+and split modes both process jobs.
 
-### 1.5 `[ ]` Graceful shutdown
-**Problem:** No SIGTERM handling — Railway deploys drop in-flight requests; pg connections and
-pg-boss never closed.
-**Change:** `index.ts`: on SIGTERM/SIGINT `server.close()`, `stopWorker()`, then `closeDb()`, with
-a timeout fallback.
-**Files:** `artifacts/api-server/src/index.ts`.
-**Accept:** Local manual check: SIGTERM exits 0 cleanly; build passes.
+### 1.5 `[x]` Graceful shutdown
+**Done:** `onShutdown()` on SIGTERM/SIGINT: close the HTTP server (in-flight requests finish), stop
+pg-boss gracefully (active jobs finish), close the DB pool; force-exit after 25s. Railway's default
+draining time is 0 (immediate SIGKILL), so `railway.toml` sets `drainingSeconds = 30`. Verified:
+`docker stop` → exit code 0 after "shutdown complete".
 
 ---
 

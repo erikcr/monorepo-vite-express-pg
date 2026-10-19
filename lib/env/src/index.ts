@@ -25,6 +25,10 @@ export const env = {
   get NODE_ENV() {
     return process.env.NODE_ENV ?? "development";
   },
+  /** Run the job worker inside the API process (default). Set to "false" to run it separately. */
+  get RUN_WORKER() {
+    return process.env.RUN_WORKER !== "false";
+  },
   /** Deployed git commit; Railway sets RAILWAY_GIT_COMMIT_SHA. Null locally. */
   get COMMIT_SHA() {
     return process.env.RAILWAY_GIT_COMMIT_SHA ?? null;

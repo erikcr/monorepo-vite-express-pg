@@ -1,19 +1,12 @@
+// Standalone worker, for running jobs in a separate service: set RUN_WORKER=false on the API
+// and start this with `node dist/worker.js` (same image).
+import { closeDb, db } from "@repo/db";
 import { env } from "@repo/env";
-import { PgBoss } from "pg-boss";
-import { logger } from "./logger.js";
+import { startBoss } from "./jobs/queue.js";
+import { startWorker } from "./jobs/worker.js";
+import { onShutdown } from "./shutdown.js";
 
-const boss = new PgBoss(env.DATABASE_URL);
+const boss = await startBoss(env.DATABASE_URL);
+await startWorker(boss, db);
 
-boss.on("error", (err) => logger.error({ err }, "pg-boss error"));
-
-await boss.start();
-
-// pg-boss v11+ requires a queue to exist before work() or send().
-await boss.createQueue("example-job");
-await boss.work("example-job", async (jobs) => {
-  for (const job of jobs) {
-    logger.info({ jobId: job.id }, "processing job");
-  }
-});
-
-logger.info("worker started");
+onShutdown([() => boss.stop({ graceful: true, timeout: 20_000 }), closeDb]);
