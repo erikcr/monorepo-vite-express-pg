@@ -49,6 +49,9 @@ export default defineRailway((ctx) => {
       API_DOCS: production ? "false" : "true",
       // Set per environment by /provision-vercel once the site URLs exist.
       CORS_ORIGIN: preserve(),
+      // Clerk secret: a development instance's (sk_test_) in staging, the production instance's
+      // (sk_live_) in production. Set by /provision-railway; never written into this file.
+      CLERK_SECRET_KEY: preserve(),
     },
   });
 

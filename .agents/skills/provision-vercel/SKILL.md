@@ -38,7 +38,14 @@ Do steps 5–9 for `web`, then repeat them for `admin`. `<app>` is `web` or `adm
    vercel env add VITE_API_URL production --value <prod-api-url> --yes
    vercel env add VITE_API_URL preview staging --value <staging-api-url> --yes
    ```
-   The second is scoped to the `staging` branch, so the staging site calls the staging API. PR previews get no API URL; their API calls fail until a project adds a CORS rule for preview origins.
+   The second is scoped to the `staging` branch, so the staging site calls the staging API.
+
+   Then the Clerk publishable key, from the same instances as the API's secret keys (production
+   instance for production, development instance for the `staging` branch and PR previews):
+   ```
+   vercel env add VITE_CLERK_PUBLISHABLE_KEY production --value <pk_live_…> --yes
+   vercel env add VITE_CLERK_PUBLISHABLE_KEY preview --value <pk_test_…> --yes
+   ``` PR previews get no API URL; their API calls fail until a project adds a CORS rule for preview origins.
 
 8. Trigger the first production deployment and record its URL as `<prod-<app>-url>`:
    ```
@@ -76,6 +83,7 @@ Do steps 5–9 for `web`, then repeat them for `admin`. `<app>` is `web` or `adm
     ✓ Vercel project created: <base-name>-admin
       production → <prod-admin-url>    staging → <staging-admin-url>
     ✓ VITE_API_URL: production → <prod-api-url>, staging branch → <staging-api-url>
+    ✓ VITE_CLERK_PUBLISHABLE_KEY: production instance (production), development instance (previews)
     ✓ CORS_ORIGIN set on both Railway environments
 
     Next steps:

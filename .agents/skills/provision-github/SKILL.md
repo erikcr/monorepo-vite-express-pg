@@ -81,14 +81,24 @@ Use `<repo>` below for the `nameWithOwner` value.
 
 8. Verify: `gh api repos/<repo>/rulesets --jq '.[] | .name + " " + .enforcement'` lists both rulesets as `active`.
 
+## E2E secrets
+
+9. The E2E job signs in through a Clerk **development** instance. Ask the user for its keys (dashboard.clerk.com → API keys: `sk_test_…` and `pk_test_…`; never a production instance's), check the prefixes, and store them without printing them back:
+   ```bash
+   gh secret set CLERK_SECRET_KEY --repo <repo>            # paste sk_test_… when prompted
+   gh secret set VITE_CLERK_PUBLISHABLE_KEY --repo <repo>  # paste pk_test_…
+   ```
+   Without them CI's E2E job fails on purpose (it won't silently skip the signed-in tests). If the user has no Clerk instance yet, list this as a follow-up.
+
 ## Summary
 
-9. Print a success summary in this format:
+10. Print a success summary in this format:
    ```
    ✓ staging branch created from main (or: already existed)
    ✓ Merge settings: merge commits + squash, branches deleted on merge
    ✓ Ruleset "Protect main": PR + CI passed, merge commits only, no bypass
    ✓ Ruleset "Protect staging": PR + CI passed, squash only, no bypass
+   ✓ E2E secrets: Clerk development instance keys (or: follow-up)
 
    From now on:
    - Feature work: branch off staging, open a PR into staging.

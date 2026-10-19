@@ -74,15 +74,28 @@ Provision a new Railway project for this monorepo's API server from `.railway/ra
 
 13. Switch the link back to production: `railway environment production`.
 
+## Clerk
+
+14. Ask the user for two Clerk secret keys (dashboard.clerk.com → the application → API keys):
+    > "Paste the Clerk secret key of your **development** instance (sk_test_…) for staging, and of your **production** instance (sk_live_…) for production. Create the production instance first if needed (Clerk asks for your domain)."
+
+    Check the prefixes (`sk_test_` for staging, `sk_live_` for production) before using them, and never print the values back. Set them (each redeploys that environment's API):
+    ```
+    railway variable set --service api --environment staging CLERK_SECRET_KEY=<sk_test_…>
+    railway variable set --service api --environment production CLERK_SECRET_KEY=<sk_live_…>
+    ```
+    `.railway/railway.ts` declares the variable with `preserve()`, so `railway config apply` keeps these values. Until a key is set, the API answers 401 to everything that needs a session. If the user has no production instance yet, set only staging and list production as a follow-up.
+
 ## Summary
 
-14. Tell the user to commit the `REPO` change in `.railway/railway.ts` on a feature branch and open a PR into `staging`.
+15. Tell the user to commit the `REPO` change in `.railway/railway.ts` on a feature branch and open a PR into `staging`.
 
-15. Print a success summary in this format:
+16. Print a success summary in this format:
     ```
     ✓ Railway project created: <project-name>
     ✓ production: Postgres + api (deploys main)    → <prod-api-url>
     ✓ staging:    Postgres + api (deploys staging) → <staging-api-url>
+    ✓ Clerk secret keys set (staging: development instance, production: production instance)
     ✓ Settings come from .railway/railway.ts (change the file, then `railway config apply`)
 
     Your local .env keeps pointing at local Postgres (docker compose); the

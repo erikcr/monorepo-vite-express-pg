@@ -475,6 +475,12 @@ importers:
 
   e2e:
     devDependencies:
+      '@clerk/backend':
+        specifier: ~3.25.0
+        version: 3.25.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@clerk/testing':
+        specifier: ~2.2.47
+        version: 2.2.47(@playwright/test@1.64.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@playwright/test':
         specifier: ^1.64.1
         version: 1.64.1
@@ -688,6 +694,18 @@ packages:
       react:
         optional: true
       react-dom:
+        optional: true
+
+  '@clerk/testing@2.2.47':
+    resolution: {integrity: sha512-jhww7pZ05CcHOhWnq7sodQ/Ydj+g6JOrFemJIpulambAcXVpKbqbInuYTM6wdUx1sKGZOJOH20qK/e7U3FvsMQ==}
+    engines: {node: '>=20.9.0'}
+    peerDependencies:
+      '@playwright/test': ^1
+      cypress: ^13 || ^14 || ^15
+    peerDependenciesMeta:
+      '@playwright/test':
+        optional: true
+      cypress:
         optional: true
 
   '@commander-js/extra-typings@15.0.0':
@@ -2253,6 +2271,10 @@ packages:
   dom-accessibility-api@0.6.3:
     resolution: {integrity: sha512-7ZgogeTnjuHbo+ct10G9Ffp0mif17idi0IyWNVA/wcwcm7NPOD/WEHVP3n7n3MhXqxoIYm8d6MuZohYWIZ4T3w==}
 
+  dotenv@17.2.2:
+    resolution: {integrity: sha512-Sf2LSQP+bOlhKWWyhFsn0UsfdK/kCWRv1iuA2gXAwt3dyNabr6QSj00I2V10pidqz69soatm9ZwZvpQMTIOd5Q==}
+    engines: {node: '>=12'}
+
   drizzle-kit@0.31.11:
     resolution: {integrity: sha512-YCYqxTLIB2OCqf6w9/Vef13baBVbwQIPcbT4Y56AfO6B9ajZhDhD8Jkveg/hJvT/iuMloKD/IYYkyMMNhr7Kqg==}
     hasBin: true
@@ -3699,6 +3721,17 @@ snapshots:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
+  '@clerk/testing@2.2.47(@playwright/test@1.64.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+    dependencies:
+      '@clerk/backend': 3.25.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@clerk/shared': 4.40.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      dotenv: 17.2.2
+    optionalDependencies:
+      '@playwright/test': 1.64.1
+    transitivePeerDependencies:
+      - react
+      - react-dom
+
   '@commander-js/extra-typings@15.0.0(commander@15.0.0)':
     dependencies:
       commander: 15.0.0
@@ -4872,6 +4905,8 @@ snapshots:
   dom-accessibility-api@0.5.16: {}
 
   dom-accessibility-api@0.6.3: {}
+
+  dotenv@17.2.2: {}
 
   drizzle-kit@0.31.11:
     dependencies:

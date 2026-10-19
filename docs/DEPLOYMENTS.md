@@ -6,10 +6,16 @@ How a change gets from a branch to production, what gates each step, and what to
 
 Run these once, in order, after creating the GitHub repo from this template:
 
-1. `pnpm install` — also points git at `.githooks/`.
-2. `/provision-github` — creates `staging` and the rulesets that protect `staging` and `main`.
-3. `/provision-railway` — API + Postgres in `production` (deploys `main`) and `staging` (deploys `staging`).
-4. `/provision-vercel` — web + admin, production on `main`, staging on the `staging` branch; sets `CORS_ORIGIN` on Railway.
+0. Create a [Clerk](https://dashboard.clerk.com) application: its **development** instance serves
+   local work, staging, PR previews and E2E; its **production** instance (needs your domain) serves
+   production. Keep both instances' keys at hand.
+1. `pnpm install` — also points git at `.githooks/`; put the development keys in `.env`.
+2. `/provision-github` — creates `staging` and the rulesets that protect `staging` and `main`, and
+   stores the development instance's keys as the E2E job's secrets.
+3. `/provision-railway` — API + Postgres in `production` (deploys `main`) and `staging` (deploys
+   `staging`), with each environment's Clerk secret key.
+4. `/provision-vercel` — web + admin, production on `main`, staging on the `staging` branch, with the
+   matching Clerk publishable keys; sets `CORS_ORIGIN` on Railway.
 5. `/new-project` — defines the project scope on a branch; its PR into `staging` is the first one through the process.
 6. Install the [Renovate GitHub app](https://github.com/apps/renovate) on the repo — `renovate.json` opens weekly dependency PRs into `staging`.
 
@@ -84,5 +90,10 @@ The API and the sites deploy independently, and migrations run while the previou
 - **Wait for CI needs CI to run on push** to the deployed branch (it does: `ci.yml` triggers on pushes to `main` and `staging`), and never cancels those runs, because a cancelled run can block a deploy.
 - **Railway skips deploys whose changes miss `watchPatterns`** in `.railway/railway.ts` (frontend-only commits don't redeploy the API). Use **Deploy Latest Commit** (Cmd+K in the service) to deploy one anyway.
 - **Railway settings live in `.railway/railway.ts`, not the dashboard.** A dashboard edit lasts only until the next `railway config apply`. Vercel's build settings stay blank so `vercel.json` controls them.
+- **`CORS_ORIGIN` also decides whose sign-ins the API accepts**: Clerk session tokens must come
+  from one of those origins (`authorizedParties`). Set it in production; until it is, the API
+  logs a warning and doesn't check the origin.
+- **Production and staging use different Clerk instances**, so production users never mix with
+  test accounts. A user who signs up in staging doesn't exist in production.
 - **PR previews on Vercel have no API.** Only the `staging` branch gets `VITE_API_URL`, because `CORS_ORIGIN` lists exact origins and preview URLs change per PR.
 - **Rulesets on private repos need a paid GitHub plan.** Without one, the hooks and the Promotion source job still apply, but GitHub doesn't enforce the PR requirement.

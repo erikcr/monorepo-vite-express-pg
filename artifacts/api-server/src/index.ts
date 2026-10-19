@@ -13,7 +13,9 @@ const boss = await startBoss(env.DATABASE_URL);
 if (env.RUN_WORKER) await startWorker(boss, db);
 
 if (env.NODE_ENV === "production" && env.CORS_ORIGIN.length === 0) {
-  logger.warn("CORS_ORIGIN is not set: browsers on other origins can't call this API");
+  logger.warn(
+    "CORS_ORIGIN is not set: browsers on other origins can't call this API, and session tokens' origin isn't checked"
+  );
 }
 
 const app = createApp(db, createJobQueue(boss));

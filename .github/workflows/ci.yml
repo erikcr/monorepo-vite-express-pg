@@ -145,6 +145,9 @@ jobs:
       - run: pnpm --filter @repo/e2e e2e
         env:
           CI: "true"
+          # A Clerk *development* instance: the signed-in tests sign test users in through it.
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
 
   promotion-source:
     name: Promotion source
