@@ -15,6 +15,7 @@
     "@repo/api-zod": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/env": "workspace:*",
+    "@scalar/express-api-reference": "0.10.29",
     "cors": "^2.8.6",
     "drizzle-orm": "catalog:",
     "express": "^5.3.0",

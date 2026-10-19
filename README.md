@@ -36,6 +36,9 @@ Optionally run `pnpm db:seed` to add sample data.
 
 Work on a feature branch and open a PR into `staging`; CI runs the full check suite.
 
+The API reference (from `lib/api-spec/openapi.yaml`) is at http://localhost:3000/docs; deployed,
+it's on in staging and off in production (`API_DOCS`).
+
 See `CLAUDE.md` for the full command reference.
 
 ---

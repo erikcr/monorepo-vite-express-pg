@@ -329,6 +329,9 @@ importers:
       '@repo/env':
         specifier: workspace:*
         version: link:../../lib/env
+      '@scalar/express-api-reference':
+        specifier: 0.10.29
+        version: 0.10.29
       cors:
         specifier: ^2.8.6
         version: 2.8.6
@@ -1507,6 +1510,14 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
+  '@scalar/client-side-rendering@0.4.11':
+    resolution: {integrity: sha512-2k75dLAR6Ft3Yf73sdKEjOUQzZ7nmpWgNswjnGCbPO4P0iDOKBXJXmnuNVmaOpFOZl+u4HM4lay0QuyihheTmw==}
+    engines: {node: '>=22'}
+
+  '@scalar/express-api-reference@0.10.29':
+    resolution: {integrity: sha512-mfDWjNIzmBLnGsQDkxY3yeCxsQ3O8J3swy4qh1rWL+fn3aNdgTZvylo9IQ2H8jvbelLzcmot9UZIONNid58Ykw==}
+    engines: {node: '>=22'}
+
   '@scalar/helpers@0.16.3':
     resolution: {integrity: sha512-He0CySU4Iv4DwyVF40EoVpvPneRQ1zqC/g1eBfR2i2G9RE/BEq/F5AiUrjIkbtTPjSbIiIL1AXMkXvBvgHVdsA==}
     engines: {node: '>=22'}
@@ -1547,9 +1558,21 @@ packages:
     resolution: {integrity: sha512-o40Dka4QOdtdz0KKrmOjp+r50KkMbH36i3fb+6qQPCpIMkfAHoJiQlOa3Z2DFpkfTSpc3p5UdPbWKwjZxpvUVg==}
     engines: {node: '>=22'}
 
+  '@scalar/schemas@0.13.2':
+    resolution: {integrity: sha512-T4dTbpphpDVHugS2ETd6cHOgF0FUBy58qDB6I3UviIr2HNsJQRG2RB1MX1+XQCT9md7igAzXw9lBJV12hw3NVA==}
+    engines: {node: '>=22'}
+
+  '@scalar/types@0.23.2':
+    resolution: {integrity: sha512-sya+RIpIODwcvem7SYRnPB0OdVZtQ15mSpVdPwB5qltYry7xgyp9skdc3PuxTDbyEmLuZ4ZmkSVybpaFMICZiQ==}
+    engines: {node: '>=22'}
+
   '@scalar/types@0.24.0':
     resolution: {integrity: sha512-x4O8ddCvh+59zwh9Xc+bG2QACxYARcPDfJBYiUzD/hzSxb6vpcms+WKgMksBfYWCZneO6e5Kt6hZFBoE9D9YCg==}
     engines: {node: '>=22'}
+
+  '@scalar/validation@0.6.7':
+    resolution: {integrity: sha512-xvmeYb0LOg9B598oVA/1fs9MvnMdtWjQYG3v2Wgftewizr7tQjsdDYT1TQahlDzqRG+r+ml6zlSkPrFiCE5jHQ==}
+    engines: {node: '>=20'}
 
   '@sec-ant/readable-stream@0.4.1':
     resolution: {integrity: sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg==}
@@ -4136,6 +4159,17 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
+  '@scalar/client-side-rendering@0.4.11':
+    dependencies:
+      '@scalar/helpers': 0.16.3
+      '@scalar/schemas': 0.13.2
+      '@scalar/types': 0.23.2
+      '@scalar/validation': 0.6.7
+
+  '@scalar/express-api-reference@0.10.29':
+    dependencies:
+      '@scalar/client-side-rendering': 0.4.11
+
   '@scalar/helpers@0.16.3': {}
 
   '@scalar/helpers@0.16.4': {}
@@ -4189,12 +4223,26 @@ snapshots:
       '@scalar/types': 0.24.0
       yaml: 2.9.0
 
+  '@scalar/schemas@0.13.2':
+    dependencies:
+      '@scalar/helpers': 0.16.3
+      '@scalar/validation': 0.6.7
+
+  '@scalar/types@0.23.2':
+    dependencies:
+      '@scalar/helpers': 0.16.3
+      nanoid: 5.1.16
+      type-fest: 5.10.0
+      zod: 4.6.7
+
   '@scalar/types@0.24.0':
     dependencies:
       '@scalar/helpers': 0.16.4
       nanoid: 5.1.16
       type-fest: 5.10.0
       zod: 4.6.7
+
+  '@scalar/validation@0.6.7': {}
 
   '@sec-ant/readable-stream@0.4.1': {}
 

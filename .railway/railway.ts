@@ -45,6 +45,8 @@ export default defineRailway((ctx) => {
     // from the Dockerfile.)
     env: {
       DATABASE_URL: db.env.DATABASE_URL,
+      // Interactive API reference at /docs everywhere except production.
+      API_DOCS: production ? "false" : "true",
       // Set per environment by /provision-vercel once the site URLs exist.
       CORS_ORIGIN: preserve(),
     },

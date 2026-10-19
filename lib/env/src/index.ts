@@ -33,6 +33,11 @@ const fields = {
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   /** 0 disables the limiter. Unset: 300, or 0 under tests (see the getter). */
   RATE_LIMIT_MAX: z.coerce.number().int().min(0).optional(),
+  /** Serve the API reference at /docs. Unset: on, except in production. */
+  API_DOCS: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "true")),
   /** Deployed git commit; set by Railway. */
   RAILWAY_GIT_COMMIT_SHA: z.string().optional(),
 };
@@ -103,6 +108,9 @@ export const env = {
   },
   get RATE_LIMIT_MAX() {
     return read("RATE_LIMIT_MAX") ?? (read("NODE_ENV") === "test" ? 0 : 300);
+  },
+  get API_DOCS() {
+    return read("API_DOCS") ?? read("NODE_ENV") !== "production";
   },
   /** Deployed git commit, or null when not running on Railway. */
   get COMMIT_SHA() {

@@ -20,6 +20,8 @@ FROM node:24-alpine AS runtime
 WORKDIR /app
 COPY --from=build /app/artifacts/api-server/dist ./dist
 COPY --from=build /app/lib/db/migrations ./migrations
+# Served at /docs when API_DOCS is on (routes/docs.ts).
+COPY --from=build /app/lib/api-spec/openapi.yaml ./openapi.yaml
 COPY scripts/migrate-and-start.sh ./scripts/migrate-and-start.sh
 ENV NODE_ENV=production
 EXPOSE 3000

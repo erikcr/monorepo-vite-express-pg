@@ -310,18 +310,25 @@ server-only column. Example routes use it.
 **Change:** `knip.json` + `pnpm knip` CI job (unused files, exports, deps, catalog entries);
 coverage thresholds in each package's vitest config, enforced in CI.
 
-### 2.9 `[ ]` (Decide) Error recording + audit log
+### 2.9 `[x]` (Decided 2026-10-18: not in the template) Error recording + audit log
 One option records errors in Postgres (grouped by fingerprint, emails/IDs scrubbed) instead of a
 third-party service, and has an `audit_events` table + helper. Both add schema to every project.
 Decide whether they ship in the template or stay a documented pattern.
+**Decision:** leave both out. Server and client errors already reach the logs with request ids
+(and the error handler marks where an error tracker plugs in); an audit log's events and
+retention are product decisions, so a project that needs one designs it as a feature.
 
 ---
 
 ## Phase 3 — Tier 3 (nice to have)
 
-### 3.1 `[ ]` Serve API reference at /docs
+### 3.1 `[x]` Serve API reference at /docs
 **Change:** Serve `openapi.yaml` + Scalar API reference from the API server (non-production only,
 or always — decide at implementation).
+**Done:** Scalar at `/docs` (spec at `/docs/openapi.yaml`, copied into the image). `API_DOCS`
+defaults to on except in production; `.railway/railway.ts` turns it on for every non-production
+environment, so staging has docs. Scalar's CDN bundle is pinned (its default URL serves the
+latest release); only `/docs` drops helmet's CSP (the page needs an inline bootstrap script).
 
 ### 3.2 `[ ]` Real full-stack E2E
 **Change:** Playwright test hitting the real server (PGlite-backed `createApp` via a test boot
