@@ -75,7 +75,7 @@ the example table (migration) or delete-then-insert. Prefer delete-then-insert (
 **Files:** `scripts/seed.ts`.
 **Accept:** Running seed twice yields same row count.
 
-### 0.4 `[ ]` Liveness vs readiness split
+### 0.4 `[x]` Liveness vs readiness split
 **Problem:** `/health` returns 200 with `db: "error"`; Railway healthcheck passes while DB is down.
 **Change:** `/health` stays liveness (200, used by frontends) and also reports the deployed commit
 (`sha`, from Railway's `RAILWAY_GIT_COMMIT_SHA`) so a deploy can be confirmed live. Add

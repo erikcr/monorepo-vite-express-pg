@@ -44,6 +44,36 @@ export interface HealthResponse {
   status: HealthResponseStatus;
   ts: string;
   db: HealthResponseDb;
+  /**
+     * Deployed git commit, or null when not running on Railway
+     * @nullable
+     */
+  sha: string | null;
+}
+
+export type ReadyResponseStatus = typeof ReadyResponseStatus[keyof typeof ReadyResponseStatus];
+
+
+export const ReadyResponseStatus = {
+  ready: 'ready',
+  not_ready: 'not_ready',
+} as const;
+
+export type ReadyResponseChecksDb = typeof ReadyResponseChecksDb[keyof typeof ReadyResponseChecksDb];
+
+
+export const ReadyResponseChecksDb = {
+  ok: 'ok',
+  error: 'error',
+} as const;
+
+export type ReadyResponseChecks = {
+  db: ReadyResponseChecksDb;
+};
+
+export interface ReadyResponse {
+  status: ReadyResponseStatus;
+  checks: ReadyResponseChecks;
 }
 
 export interface Example {
@@ -96,7 +126,7 @@ export const getGetHealthUrl = () => {
 }
 
 /**
- * @summary Health check
+ * @summary Liveness check (always 200 while the process is up)
  */
 export const getHealth = async ( options?: Parameters<typeof apiFetch>[1]): Promise<HealthResponse> => {
 
@@ -167,7 +197,7 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Health check
+ * @summary Liveness check (always 200 while the process is up)
  */
 
 export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TError = unknown>(
@@ -176,6 +206,107 @@ export function useGetHealth<TData = Awaited<ReturnType<typeof getHealth>>, TErr
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetHealthQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetReadyUrl = () => {
+
+
+
+
+  return `/health/ready`
+}
+
+/**
+ * @summary Readiness check (503 when the database is unreachable)
+ */
+export const getReady = async ( options?: Parameters<typeof apiFetch>[1]): Promise<ReadyResponse> => {
+
+  return apiFetch<ReadyResponse>(getGetReadyUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReadyQueryKey = () => {
+    return [
+    `/health/ready`
+    ] as const;
+    }
+
+
+export const getGetReadyQueryOptions = <TData = Awaited<ReturnType<typeof getReady>>, TError = ReadyResponse>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReady>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReadyQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReady>>> = ({ signal }) => getReady({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReady>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetReadyQueryResult = NonNullable<Awaited<ReturnType<typeof getReady>>>
+export type GetReadyQueryError = ReadyResponse
+
+
+export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError = ReadyResponse>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReady>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReady>>,
+          TError,
+          Awaited<ReturnType<typeof getReady>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError = ReadyResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReady>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReady>>,
+          TError,
+          Awaited<ReturnType<typeof getReady>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError = ReadyResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReady>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Readiness check (503 when the database is unreachable)
+ */
+
+export function useGetReady<TData = Awaited<ReturnType<typeof getReady>>, TError = ReadyResponse>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReady>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetReadyQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

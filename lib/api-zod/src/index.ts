@@ -8,12 +8,24 @@
 import * as zod from 'zod';
 
 /**
- * @summary Health check
+ * @summary Liveness check (always 200 while the process is up)
  */
 export const GetHealthResponse = zod.object({
   "status": zod.enum(['ok']),
   "ts": zod.iso.datetime({"offset":true}),
+  "db": zod.enum(['ok', 'error']),
+  "sha": zod.string().nullable().describe('Deployed git commit, or null when not running on Railway')
+})
+
+
+/**
+ * @summary Readiness check (503 when the database is unreachable)
+ */
+export const GetReadyResponse = zod.object({
+  "status": zod.enum(['ready', 'not_ready']),
+  "checks": zod.object({
   "db": zod.enum(['ok', 'error'])
+})
 })
 
 

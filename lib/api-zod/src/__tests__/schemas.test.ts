@@ -5,22 +5,25 @@ const validUuid = "123e4567-e89b-12d3-a456-426614174000";
 const validTs = new Date().toISOString();
 
 describe("GetHealthResponse", () => {
-  it("accepts a valid response", () => {
-    expect(GetHealthResponse.safeParse({ status: "ok", ts: validTs, db: "ok" }).success).toBe(true);
+  const valid = { status: "ok", ts: validTs, db: "ok", sha: null };
+
+  it("accepts a valid response, with or without a commit sha", () => {
+    expect(GetHealthResponse.safeParse(valid).success).toBe(true);
+    expect(GetHealthResponse.safeParse({ ...valid, sha: "abc123" }).success).toBe(true);
   });
 
   it("rejects a non-ok status", () => {
-    expect(GetHealthResponse.safeParse({ status: "error", ts: validTs, db: "ok" }).success).toBe(
-      false
-    );
+    expect(GetHealthResponse.safeParse({ ...valid, status: "error" }).success).toBe(false);
   });
 
   it("rejects a missing timestamp", () => {
-    expect(GetHealthResponse.safeParse({ status: "ok", db: "ok" }).success).toBe(false);
+    const { ts: _, ...rest } = valid;
+    expect(GetHealthResponse.safeParse(rest).success).toBe(false);
   });
 
   it("rejects a missing db field", () => {
-    expect(GetHealthResponse.safeParse({ status: "ok", ts: validTs }).success).toBe(false);
+    const { db: _, ...rest } = valid;
+    expect(GetHealthResponse.safeParse(rest).success).toBe(false);
   });
 });
 

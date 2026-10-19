@@ -25,6 +25,10 @@ export const env = {
   get NODE_ENV() {
     return process.env.NODE_ENV ?? "development";
   },
+  /** Deployed git commit; Railway sets RAILWAY_GIT_COMMIT_SHA. Null locally. */
+  get COMMIT_SHA() {
+    return process.env.RAILWAY_GIT_COMMIT_SHA ?? null;
+  },
   get CORS_ORIGIN() {
     return process.env.CORS_ORIGIN ?? "http://localhost:5173,http://localhost:3001";
   },

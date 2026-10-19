@@ -12,7 +12,7 @@ paths:
   /health:
     get:
       operationId: getHealth
-      summary: Health check
+      summary: Liveness check (always 200 while the process is up)
       tags: [system]
       responses:
         "200":
@@ -21,6 +21,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+
+  /health/ready:
+    get:
+      operationId: getReady
+      summary: Readiness check (503 when the database is unreachable)
+      tags: [system]
+      responses:
+        "200":
+          description: Ready to serve traffic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
+        "503":
+          description: Not ready
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyResponse"
 
   /api/example:
     get:
@@ -66,7 +85,7 @@ components:
   schemas:
     HealthResponse:
       type: object
-      required: [status, ts, db]
+      required: [status, ts, db, sha]
       properties:
         status:
           type: string
@@ -77,6 +96,24 @@ components:
         db:
           type: string
           enum: [ok, error]
+        sha:
+          description: Deployed git commit, or null when not running on Railway
+          type: [string, "null"]
+
+    ReadyResponse:
+      type: object
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        checks:
+          type: object
+          required: [db]
+          properties:
+            db:
+              type: string
+              enum: [ok, error]
 
     Example:
       type: object

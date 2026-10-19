@@ -41,7 +41,7 @@ feature branch ──PR (squash)──▶ staging ──check on staging──�
 | 1 | Merge | GitHub | Rulesets on `staging` and `main` require a PR and the **CI passed** check, no bypass (admins included). **Promotion source** fails any PR into `main` that doesn't come from `staging` |
 | 2 | CI on the merged commit | GitHub Actions | Runs again on the push to `staging`/`main` |
 | 3 | Migrations | Railway pre-deploy (`node dist/migrate.js`) | Railway **Wait for CI** holds the deploy until the commit's workflows finish and skips it if one failed |
-| 4 | API | Railway | Starts only if migrations succeeded; traffic switches once the health check passes |
+| 4 | API | Railway | Starts only if migrations succeeded; traffic switches once `/health/ready` returns 200 (the database answers) |
 | 5 | Sites | Vercel | Build on the same push, independently of the API (see "Rules" below) |
 
 **CI passed** needs every other job and runs even when one fails, because GitHub treats a *skipped* required check as passing. It's the only check the rulesets require; add new jobs to its `needs`.
