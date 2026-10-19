@@ -44,8 +44,10 @@ Do steps 5–9 for `web`, then repeat them for `admin`. `<app>` is `web` or `adm
    instance for production, development instance for the `staging` branch and PR previews):
    ```
    vercel env add VITE_CLERK_PUBLISHABLE_KEY production --value <pk_live_…> --yes
-   vercel env add VITE_CLERK_PUBLISHABLE_KEY preview --value <pk_test_…> --yes
-   ``` PR previews get no API URL; their API calls fail until a project adds a CORS rule for preview origins.
+   vercel env add VITE_CLERK_PUBLISHABLE_KEY preview "" --value <pk_test_…> --yes
+   ```
+   The empty `""` means "all Preview branches": without it the CLI stops with `git_branch_required`
+   when it isn't interactive. PR previews get no API URL; their API calls fail until a project adds a CORS rule for preview origins.
 
 8. Trigger the first production deployment and record its URL as `<prod-<app>-url>`:
    ```

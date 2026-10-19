@@ -214,7 +214,7 @@ Projects install the Renovate GitHub app themselves.
 
 ## Phase 1 — Tier 1 (every project needs these on day one)
 
-### 1.1 `[ ]` Auth + authorization
+### 1.1 `[x]` Auth + authorization
 **Problem:** No identity layer; `orgId` is client-supplied (honor-system tenancy).
 **Decided (2026-10-19, after reviewing the reference app's access design):** Clerk proves identity; our database
 alone grants access; staff use the same Clerk application with their own grants; invitations wait
@@ -270,8 +270,12 @@ for an email provider (1.6). Not taken: the reference app's product-specific rul
    Zod-validated `?q=` search, 403 → staff-required / second-factor screens. Found: a failing
    Clerk load made `getToken` throw, breaking even public API calls; now it falls back to signed
    out. E2E uses a placeholder Clerk key until task 6 (3 sign-in tests are `fixme`).
-6. E2E + provisioning: decide how E2E signs in (Clerk testing tokens vs a test-mode identity),
-   add Clerk to `/provision-*` and DEPLOYMENTS, update AGENTS.md and the new-feature skill.
+6. `[x]` E2E + provisioning: E2E signs in through a real Clerk development instance with
+   `@clerk/testing` (decided 2026-10-19): test users created by the global setup, the E2E API
+   verifies real tokens and grants the staff user per run; CI gets the development keys as secrets
+   and fails without them. IaC preserves `CLERK_SECRET_KEY`; provisioning sets keys per environment
+   (development instance for staging/previews, production instance for production); DEPLOYMENTS,
+   AGENTS.md and the new-feature skill updated. Template's own deploy: development keys (decided).
 
 **Accept:** unauthenticated → 401; a user without a grant in org B gets 403 there; another org's
 record is 404; a route without an access rule fails CI; staff routes refuse non-staff and staff
@@ -436,3 +440,4 @@ the board, plans go in `docs/plans/`.
 | 2026-10-18 | 0.4, 1.2–1.5 | Health split, routing, CRUD + pagination, real worker, graceful shutdown. Found: Railway draining defaults to 0s (SIGKILL), config-as-code deprecated (P.7) |
 | 2026-10-18 | 2.1, 2.2, 2.3, 2.5, 2.6 | Typed env, validate()/sendValidated(), pino-http + request ids, helmet/rate limit/trust proxy. Fixed: 500s leaked err.message; API tests' PGlite cold start could exceed vitest's 5s timeout under load (the earlier flake) |
 | 2026-10-18 | 2.9 (decided: out), 3.1–3.6 | API reference at /docs, full-stack E2E, VITE_API_URL validation, AGENTS.md + skills, docs/template + plan board. CI's coverage floor caught untested env additions |
+| 2026-10-19 | 1.1 (auth, tasks 1–6) | Reviewed the reference app's access design and took its general core; Clerk + own grant tables + permission policy + server-side org + route-access test; web workspace and staff-only admin; E2E through real Clerk in CI. Found: Clerk load failure broke public API calls; admin /health proxy; Vercel preview env needs an explicit branch arg |
