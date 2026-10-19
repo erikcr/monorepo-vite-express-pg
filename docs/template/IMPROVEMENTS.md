@@ -342,18 +342,27 @@ one in a production build logs a console error instead of silently calling the s
 origin. Not a hard failure when missing: PR previews deliberately have no API URL. Typed in each
 app's `ImportMetaEnv`. Live sites' values checked first (valid).
 
-### 3.4 `[ ]` (Decide) Shared UI package
+### 3.4 `[x]` (Decided: no action) Shared UI package
 Theme CSS + small components are duplicated between web and admin. Fine at 2 apps.
 **No action by default.**
+**Decision (2026-10-18):** no action; revisit at a third app.
 
-### 3.5 `[ ]` (Decide) Template changelog/versioning
+### 3.5 `[x]` (Decided) Template changelog/versioning
 `docs/TEMPLATE-CHANGELOG.md` so spun-up projects know what they're behind on. Also decide where
 template-only docs (like this plan) live so they aren't copied into new projects.
+**Decision:** no separate changelog — commit messages already describe each change. Template-only
+docs live in `docs/template/`, which `/new-project` deletes, and `PROJECT.md` records the template
+and the date it was created from (a commit hash wouldn't survive GitHub's "Use this template").
+`git log --since=<date>` in the template lists what a project is behind on.
 
-### 3.6 `[ ]` Agent setup
+### 3.6 `[x]` Agent setup
 **Change:** `AGENTS.md` holds the instructions with `CLAUDE.md` pointing to it; project skills
 for diagnosing bugs, executing a plan and adding a feature (written for the template, not copied);
 a `docs/plans/` + status-board layout that `/new-project` sets up.
+**Done:** `AGENTS.md` (8 KB; `CLAUDE.md` imports it); skills in `.agents/skills/` with
+`.claude/skills` linked to it: the four commands became skills, plus `new-feature`,
+`execute-plan`, `diagnosing-bugs` and `grilling`, written for this template. `docs/README.md` is
+the board, plans go in `docs/plans/`.
 
 ---
 
@@ -367,3 +376,4 @@ a `docs/plans/` + status-board layout that `/new-project` sets up.
 | 2026-10-18 | U.1–U.3 | Full toolchain upgrade (see U.1); Renovate. The flaky api-server test seen once under Orval 8 didn't recur in later runs |
 | 2026-10-18 | 0.4, 1.2–1.5 | Health split, routing, CRUD + pagination, real worker, graceful shutdown. Found: Railway draining defaults to 0s (SIGKILL), config-as-code deprecated (P.7) |
 | 2026-10-18 | 2.1, 2.2, 2.3, 2.5, 2.6 | Typed env, validate()/sendValidated(), pino-http + request ids, helmet/rate limit/trust proxy. Fixed: 500s leaked err.message; API tests' PGlite cold start could exceed vitest's 5s timeout under load (the earlier flake) |
+| 2026-10-18 | 2.9 (decided: out), 3.1–3.6 | API reference at /docs, full-stack E2E, VITE_API_URL validation, AGENTS.md + skills, docs/template + plan board. CI's coverage floor caught untested env additions |

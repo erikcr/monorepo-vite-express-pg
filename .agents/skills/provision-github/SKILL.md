@@ -1,3 +1,8 @@
+---
+name: provision-github
+description: Set up the GitHub side of the merge and promotion process: a staging branch and rulesets protecting staging and main. Use once per new project, before provision-railway.
+---
+
 Set up this repo's GitHub side of the merge and promotion process (see `docs/DEPLOYMENTS.md`): a `staging` branch and rulesets that protect `staging` and `main`. Work through the steps below in order, stopping and reporting clearly if any step fails. Run this once, before `/provision-railway` and `/provision-vercel`.
 
 ## Pre-flight Checks

@@ -39,7 +39,8 @@ Work on a feature branch and open a PR into `staging`; CI runs the full check su
 The API reference (from `lib/api-spec/openapi.yaml`) is at http://localhost:3000/docs; deployed,
 it's on in staging and off in production (`API_DOCS`).
 
-See `CLAUDE.md` for the full command reference.
+See [`AGENTS.md`](AGENTS.md) for conventions and the full command reference (shared by every coding
+agent; `CLAUDE.md` points to it), and [`docs/README.md`](docs/README.md) for the plan board.
 
 ---
 

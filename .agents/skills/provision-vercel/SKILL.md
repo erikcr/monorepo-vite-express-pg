@@ -1,3 +1,8 @@
+---
+name: provision-vercel
+description: Create the web and admin Vercel projects with per-environment API URLs, then set CORS_ORIGIN on Railway. Use once per new project, after provision-railway.
+---
+
 Provision two Vercel projects for this monorepo — one for `artifacts/web` and one for `artifacts/admin` — each with production deploying `main` against the production API and the `staging` branch deploying against the staging API (see `docs/DEPLOYMENTS.md`). Work through the steps below in order, stopping and reporting clearly if any step fails. Run `/provision-railway` first.
 
 ## Pre-flight Checks

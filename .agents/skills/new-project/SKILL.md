@@ -1,3 +1,8 @@
+---
+name: new-project
+description: Structured planning session that writes and commits docs/PROJECT.md (objective, users, V1 features, data model, success criteria, out of scope, brand color) and clears the template's own docs. Use when starting a new project from this template, before any code.
+---
+
 Guide the user through a structured project planning session and produce a committed `docs/PROJECT.md`. This must be run **before any code changes** when starting a new project from the template.
 
 ## Pre-flight Check
@@ -83,7 +88,7 @@ After collecting all six sections, create `docs/PROJECT.md` with this exact stru
 ```markdown
 # <Product Name> — Project Definition
 
-> Last updated: <today's date>
+> Last updated: <today's date> · Template: erikcr/monorepo-vite-express-pg as of <today's date>
 
 ## Objective
 <Section 1 answer — objective only, name is in the heading>
@@ -104,10 +109,17 @@ After collecting all six sections, create `docs/PROJECT.md` with this exact stru
 <Section 6 answer as a bulleted list>
 ```
 
+The template line records where the project came from: to see what the template has gained since, run `git log --since=<that date>` in the template repo.
+
+Remove the template's own maintenance docs, which don't apply to this project:
+```bash
+git rm -r -q docs/template
+```
+
 Then commit on a branch (the git hooks block commits on `main` and `staging`):
 ```bash
 git switch -c docs/project-definition   # skip if already on a feature branch
-git add docs/PROJECT.md
+git add docs/PROJECT.md docs/template
 git commit -m "docs: define project scope and V1 objectives for <Product Name>"
 ```
 
@@ -121,4 +133,4 @@ Otherwise tell the user to run `/provision-github` first, then push the branch a
 Confirm to the user:
 > "PROJECT.md committed on a branch. You now have a clear scope document at docs/PROJECT.md.
 >
-> When you're ready to start building, describe the first feature you want to implement and I'll write a plan before touching any code."
+> When you're ready to start building, describe the first feature you want to implement and I'll write a plan for it in `docs/plans/` (listed on the board in `docs/README.md`) before touching any code."
