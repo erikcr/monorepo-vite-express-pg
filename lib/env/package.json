@@ -10,9 +10,6 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
-  "dependencies": {
-    "dotenv": "catalog:"
-  },
   "devDependencies": {
     "@types/node": "catalog:",
     "typescript": "catalog:",

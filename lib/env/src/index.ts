@@ -1,8 +1,10 @@
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { config } from "dotenv";
 
-config({ path: resolve(process.cwd(), "../../.env") });
-config({ path: resolve(process.cwd(), ".env") });
+// Load .env from the repo root, then the package dir. Variables already set win.
+for (const path of [resolve(process.cwd(), "../../.env"), resolve(process.cwd(), ".env")]) {
+  if (existsSync(path)) process.loadEnvFile(path);
+}
 
 function require(key: string): string {
   const val = process.env[key];
