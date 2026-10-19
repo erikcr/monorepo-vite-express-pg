@@ -3,13 +3,14 @@ import { env } from "@repo/env";
 import cors from "cors";
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import type { JobQueue } from "./jobs/queue.js";
-import { logger } from "./logger.js";
+import { requestLogger } from "./middleware/request-logger.js";
 import { createExampleRouter } from "./routes/example.js";
 import { createHealthRouter } from "./routes/health.js";
 
 export function createApp(db: Db, queue: JobQueue): Express {
   const app = express();
 
+  app.use(requestLogger);
   app.use(
     cors({
       origin: env.CORS_ORIGIN,
@@ -26,12 +27,18 @@ export function createApp(db: Db, queue: JobQueue): Express {
     res.status(404).json({ error: "Not found" });
   });
 
-  // Global error handler — must be last and have 4 params
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  // Global error handler — must be last and have 4 params. Express 5 forwards rejected async
+  // handlers here. 4xx errors (e.g. malformed JSON) keep their message; anything else is logged
+  // with the request id and answered generically, so internals (SQL, stack details) never leak.
+  // To use an error tracker (Sentry, …), report `err` here.
+  app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
     const status = (err as { status?: number }).status ?? 500;
-    logger.error({ err, status }, "unhandled error");
-    res.status(status).json({ error: err.message ?? "Internal server error" });
+    if (status >= 500) {
+      req.log.error({ err }, "unhandled error");
+      res.status(status).json({ error: "Internal server error", requestId: req.id });
+      return;
+    }
+    res.status(status).json({ error: err.message });
   });
 
   return app;

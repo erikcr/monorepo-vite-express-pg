@@ -154,6 +154,10 @@ typed, coerced `req.params/query/body`, and every 400 is `{ error: { fieldErrors
 Send responses with `sendValidated(res, XResponse, data)` (`src/lib/send-validated.ts`): it strips
 anything the spec doesn't declare, so returning a full DB row can't leak a column.
 
+**Logging** — every request gets one pino-http line and a request id (`x-request-id` header,
+`req.id`); log from handlers with `req.log` so lines carry that id. Unexpected errors return
+`{ error: "Internal server error", requestId }` — never `err.message` — and are logged with it.
+
 **Lists are paginated** — list endpoints take `limit` (default 20, max 100) and an opaque `cursor`,
 and return `{ items, nextCursor }` ordered newest first. Use `toPage()`/`decodeCursor()` from
 `src/lib/pagination.ts` (keyset on `createdAt desc, id desc`; see `routes/example.ts`), and store

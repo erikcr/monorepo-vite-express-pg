@@ -270,7 +270,7 @@ draining time is 0 (immediate SIGKILL), so `railway.toml` sets `drainingSeconds 
 hand-rolled `safeParse` blocks; consistent 400 shape `{ error: { fieldErrors, formErrors } }`.
 **Files:** `artifacts/api-server/src/middleware/validate.ts` (new), routes, tests.
 
-### 2.2 `[ ]` Request logging + request IDs
+### 2.2 `[x]` Request logging + request IDs
 **Change:** `pino-http` with request-id generation (accept inbound `x-request-id`), wired to the
 existing pino logger. Logged URLs drop query strings; `authorization` and `cookie` headers redacted.
 **Files:** `app.ts`, `logger.ts`, `package.json`, tests for redaction.
