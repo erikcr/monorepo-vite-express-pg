@@ -286,11 +286,15 @@ rate-limited, logged server-side). QueryClient with explicit defaults (retry: 1,
 refetchOnWindowFocus false). Shared code lives in `@repo/api-client-react`.
 **Files:** both apps' `main.tsx`, `lib/api-client-react`, route + spec + codegen, tests.
 
-### 2.5 `[ ]` Typed server env
+### 2.5 `[x]` Typed server env
 **Change:** `@repo/env` becomes a Zod schema validated once at startup (`validateServerEnv()` in
 `index.ts`/`migrate.ts`), reporting every bad variable at once, with a list of variables required
 only in production. Replaces the per-getter checks.
-**Files:** `lib/env/src/`, `artifacts/api-server/src/index.ts`, tests.
+**Done:** one Zod schema; typed getters (`PORT` number, `CORS_ORIGIN` list, `RUN_WORKER` boolean);
+`validateServerEnv()` lists every problem, run first by each entry point via `validate-env.ts`.
+**Decided against "required only in production":** the only candidate, `CORS_ORIGIN`, can't be
+set until after the first deploy (Vercel URLs come later), so requiring it would fail every fresh
+provision. Instead production defaults to no allowed origins and the API logs a warning.
 
 ### 2.6 `[ ]` Validated responses
 **Change:** `sendValidated(res, schema, data)` parses each response through the generated Zod

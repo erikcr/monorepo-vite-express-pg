@@ -120,11 +120,15 @@ scripts/             One-off scripts (seed, migrate-and-start)
 { "@repo/db": "workspace:*" }
 ```
 
-**Env vars** — always via `@repo/env`, never raw `process.env`:
+**Env vars** — always via `@repo/env`, never raw `process.env`. Each variable is declared once in
+its Zod schema (`lib/env/src/index.ts`) and read typed; every API entry point imports
+`./validate-env.js` first, so a bad deploy fails at startup listing every problem:
 ```typescript
 import { env } from "@repo/env";
-const url = env.DATABASE_URL; // throws if missing
+const url = env.DATABASE_URL; // string; throws if missing
+const port = env.PORT;        // number, default 3000
 ```
+Add new variables to the schema, a getter, and `.env.example`.
 
 **orgId pattern** — every table includes `org_id TEXT NOT NULL`; always filter queries by orgId:
 ```typescript

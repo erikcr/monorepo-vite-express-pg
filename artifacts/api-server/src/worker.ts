@@ -1,5 +1,6 @@
 // Standalone worker, for running jobs in a separate service: set RUN_WORKER=false on the API
 // and start this with `node dist/worker.js` (same image).
+import "./validate-env.js";
 import { closeDb, db } from "@repo/db";
 import { env } from "@repo/env";
 import { startBoss } from "./jobs/queue.js";

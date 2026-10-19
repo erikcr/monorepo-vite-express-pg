@@ -1,3 +1,4 @@
+import "./validate-env.js";
 import { closeDb, db } from "@repo/db/client";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 

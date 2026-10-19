@@ -1,3 +1,4 @@
+import "./validate-env.js";
 import type { Server } from "node:http";
 import { closeDb, db } from "@repo/db";
 import { env } from "@repo/env";
@@ -11,8 +12,12 @@ const boss = await startBoss(env.DATABASE_URL);
 // The worker runs in this process unless RUN_WORKER=false (then run dist/worker.js separately).
 if (env.RUN_WORKER) await startWorker(boss, db);
 
+if (env.NODE_ENV === "production" && env.CORS_ORIGIN.length === 0) {
+  logger.warn("CORS_ORIGIN is not set: browsers on other origins can't call this API");
+}
+
 const app = createApp(db, createJobQueue(boss));
-const port = Number(env.PORT ?? 3000);
+const port = env.PORT;
 
 const server = app.listen(port, () => {
   logger.info({ port }, "api-server started");
