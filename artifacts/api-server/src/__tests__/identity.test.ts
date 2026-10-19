@@ -1,5 +1,3 @@
-import express from "express";
-import supertest from "supertest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const verifyToken = vi.fn();
@@ -10,7 +8,6 @@ vi.mock("@clerk/backend", () => ({
 }));
 
 const { verifySession } = await import("../lib/identity.js");
-const { authenticate } = await import("../middleware/authenticate.js");
 
 const test = (claims: object) => `test:${JSON.stringify(claims)}`;
 
@@ -89,31 +86,5 @@ describe("verifySession: Clerk tokens", () => {
     expect(await identity?.primaryVerifiedEmail()).toBe("primary@x.test");
     getUser.mockResolvedValueOnce(account("unverified"));
     expect(await identity?.primaryVerifiedEmail()).toBeNull();
-  });
-});
-
-describe("authenticate middleware", () => {
-  const app = express().get("/", authenticate, (req, res) => {
-    res.json({ clerkUserId: req.identity?.clerkUserId });
-  });
-
-  it("answers 401 without a valid bearer token", async () => {
-    expect((await supertest(app).get("/")).status).toBe(401);
-    expect((await supertest(app).get("/").set("authorization", "Basic abc")).status).toBe(401);
-    expect(
-      (
-        await supertest(app)
-          .get("/")
-          .set("authorization", `Bearer ${test({ sub: "u", sts: "pending" })}`)
-      ).status
-    ).toBe(401);
-  });
-
-  it("passes the identity on for a valid session", async () => {
-    const res = await supertest(app)
-      .get("/")
-      .set("authorization", `Bearer ${test({ sub: "user_1" })}`);
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ clerkUserId: "user_1" });
   });
 });

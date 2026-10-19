@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { apiReference } from "@scalar/express-api-reference";
 import { Router } from "express";
+import { publicRoute } from "../middleware/access.js";
 
 // The spec ships next to the bundle in the Docker image; in dev and tests it's read from lib/.
 const SPEC_PATHS = [
@@ -16,11 +17,12 @@ export function createDocsRouter(): Router {
   const spec = readFileSync(specPath, "utf8");
 
   const router = Router();
-  router.get("/openapi.yaml", (_req, res) => {
+  router.get("/openapi.yaml", publicRoute, (_req, res) => {
     res.type("application/yaml").send(spec);
   });
   router.get(
     "/",
+    publicRoute,
     (_req, res, next) => {
       // The reference page runs an inline bootstrap script and Scalar's CDN bundle, which the
       // app-wide CSP (helmet) blocks. Docs are off in production by default (API_DOCS).

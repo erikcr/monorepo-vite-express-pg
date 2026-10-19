@@ -5,6 +5,7 @@ import supertest from "supertest";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { requestLogOptions } from "../middleware/request-logger.js";
+import { bearer } from "../test-helpers/auth.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
 import { createFakeQueue } from "../test-helpers/fake-queue.js";
 
@@ -34,9 +35,10 @@ describe("unhandled errors", () => {
         throw new Error('relation "secret_table" does not exist');
       },
     } as unknown as Db;
-    const res = await supertest(createApp(db, createFakeQueue())).get(
-      "/api/example/123e4567-e89b-42d3-a456-426614174000?orgId=org_1"
-    );
+    // Signed in, so the request reaches the database, which fails with internals in the message.
+    const res = await supertest(createApp(db, createFakeQueue()))
+      .get("/api/example/123e4567-e89b-42d3-a456-426614174000")
+      .set(bearer({ sub: "user_x", email: "x@x.test" }));
     expect(res.status).toBe(500);
     expect(res.body).toEqual({
       error: "Internal server error",
@@ -71,7 +73,7 @@ describe("request log lines", () => {
       req: {
         id: "r1",
         method: "GET",
-        url: "/api/example?orgId=org_1&token=abc",
+        url: "/api/example?limit=5&token=abc",
         headers: {
           authorization: "Bearer secret",
           cookie: "session=secret",

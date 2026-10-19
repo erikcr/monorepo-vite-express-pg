@@ -1,12 +1,9 @@
 import { type ExamplePage, useGetHealth, useListExamplesInfinite } from "@repo/api-client-react";
-import { getRouteApi } from "@tanstack/react-router";
 
 // Shared with the route loader (router.tsx) so the prefetch and the hook use the same query.
 export const examplesPaging = {
   getNextPageParam: (page: ExamplePage) => page.nextCursor ?? undefined,
 };
-
-const route = getRouteApi("/");
 
 function StatusBadge({ ok, loading }: { ok: boolean | undefined; loading?: boolean }) {
   if (loading) return <span className="text-xs text-text-muted">checking…</span>;
@@ -44,10 +41,6 @@ const swatches: { label: string; bg: string; fg: string }[] = [
 ];
 
 export function DashboardPage() {
-  // The org filter lives in the URL (?orgId=…), validated by the route's search schema.
-  const { orgId } = route.useSearch();
-  const navigate = route.useNavigate();
-  const setOrgId = (value: string) => navigate({ search: { orgId: value }, replace: true });
   const { data: health, isLoading: healthLoading, isError: healthError } = useGetHealth();
   const {
     data: examplePages,
@@ -56,7 +49,7 @@ export function DashboardPage() {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-  } = useListExamplesInfinite({ orgId }, { query: { ...examplesPaging, enabled: orgId !== "" } });
+  } = useListExamplesInfinite({}, { query: examplesPaging });
   const examples = examplePages?.pages.flatMap((page) => page.items);
 
   const apiOk = !healthLoading && !healthError && health?.status === "ok";
@@ -94,7 +87,7 @@ export function DashboardPage() {
           <h2 className="text-xs font-semibold uppercase tracking-wide text-text-muted mb-3">
             Overview
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <StatCard
               label="API"
               value={<StatusBadge ok={apiOk} loading={healthLoading} />}
@@ -115,7 +108,6 @@ export function DashboardPage() {
               }
               sub="loaded from example table"
             />
-            <StatCard label="Org filter" value={orgId} sub="rows scoped to this org" />
           </div>
         </section>
 
@@ -125,15 +117,6 @@ export function DashboardPage() {
             <h2 className="text-xs font-semibold uppercase tracking-wide text-text-muted">
               Example records
             </h2>
-            <label className="flex items-center gap-2 text-xs text-text-muted">
-              Org
-              <input
-                value={orgId}
-                onChange={(e) => setOrgId(e.target.value)}
-                className="bg-surface border border-border rounded-input px-2 py-1 text-xs text-text font-mono"
-                aria-label="Org filter"
-              />
-            </label>
           </div>
           <div className="bg-surface-raised border border-border rounded-card overflow-hidden">
             {examplesLoading && <p className="text-sm text-text-muted p-4">Loading…</p>}

@@ -4,6 +4,7 @@ import { env } from "@repo/env";
 import { sql } from "drizzle-orm";
 import { Router } from "express";
 import { sendValidated } from "../lib/send-validated.js";
+import { publicRoute } from "../middleware/access.js";
 
 const READY_TIMEOUT_MS = 2_000;
 // Only successes are cached: probes can't hammer a healthy DB, and recovery shows up immediately.
@@ -28,7 +29,7 @@ export function createHealthRouter(db: Db): Router {
   let readyUntil = 0;
 
   // Liveness: 200 while the process is up. Reports DB status for dashboards, and the deployed commit.
-  router.get("/", async (_req, res) => {
+  router.get("/", publicRoute, async (_req, res) => {
     const dbOk = await pingDb(db, READY_TIMEOUT_MS);
     sendValidated(res, GetHealthResponse, {
       status: "ok",
@@ -39,7 +40,7 @@ export function createHealthRouter(db: Db): Router {
   });
 
   // Readiness: 503 when the DB is unreachable, so the platform holds traffic (Railway healthcheckPath).
-  router.get("/ready", async (_req, res) => {
+  router.get("/ready", publicRoute, async (_req, res) => {
     let dbOk = Date.now() < readyUntil;
     if (!dbOk) {
       dbOk = await pingDb(db, READY_TIMEOUT_MS);

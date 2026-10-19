@@ -9,7 +9,6 @@ import {
   Outlet,
   type RouterHistory,
 } from "@tanstack/react-router";
-import { z } from "zod";
 import { CrashScreen } from "./pages/CrashScreen.tsx";
 import { DashboardPage, examplesPaging } from "./pages/DashboardPage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
@@ -47,18 +46,13 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  // Search params are validated like any other input; links may omit orgId (it defaults).
-  validateSearch: z.object({ orgId: z.string().default("org_1") }),
-  loaderDeps: ({ search }) => ({ orgId: search.orgId }),
   // Prefetch the first page so the table renders with data. prefetch never throws: API errors
   // surface in the page's own error state.
-  loader: ({ context, deps }) =>
-    deps.orgId
-      ? context.queryClient.prefetchInfiniteQuery({
-          ...getListExamplesInfiniteQueryOptions({ orgId: deps.orgId }, { query: examplesPaging }),
-          initialPageParam: undefined,
-        })
-      : undefined,
+  loader: ({ context }) =>
+    context.queryClient.prefetchInfiniteQuery({
+      ...getListExamplesInfiniteQueryOptions({}, { query: examplesPaging }),
+      initialPageParam: undefined,
+    }),
   component: DashboardPage,
 });
 

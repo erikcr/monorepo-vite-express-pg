@@ -1,10 +1,18 @@
 import supertest from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../app.js";
+import { createMember } from "../test-helpers/auth.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
 import { createFakeQueue } from "../test-helpers/fake-queue.js";
 
 const app = async () => createApp(await createTestDb(), createFakeQueue());
+
+// A signed-in member and an app sharing their database, for routes behind requireOrg.
+async function memberApp() {
+  const db = await createTestDb();
+  const member = await createMember(db);
+  return { request: supertest(createApp(db, createFakeQueue())), headers: member.headers };
+}
 
 describe("security headers", () => {
   it("sets helmet's headers and hides x-powered-by", async () => {
@@ -21,16 +29,17 @@ describe("rate limiting", () => {
   });
 
   it("is off under tests by default", async () => {
-    const request = supertest(await app());
+    const { request, headers } = await memberApp();
     for (let i = 0; i < 5; i++) {
-      expect((await request.get("/api/example?orgId=org_1")).status).toBe(200);
+      expect((await request.get("/api/example").set(headers)).status).toBe(200);
     }
   });
 
   it("answers 429 past the limit, per client IP, and never limits health probes", async () => {
     vi.stubEnv("RATE_LIMIT_MAX", "2");
-    const request = supertest(await app());
-    const from = (ip: string) => request.get("/api/example?orgId=org_1").set("x-forwarded-for", ip);
+    const { request, headers } = await memberApp();
+    const from = (ip: string) =>
+      request.get("/api/example").set(headers).set("x-forwarded-for", ip);
 
     expect((await from("203.0.113.1")).status).toBe(200);
     expect((await from("203.0.113.1")).status).toBe(200);
@@ -46,9 +55,11 @@ describe("rate limiting", () => {
 
 describe("request body limit", () => {
   it("rejects JSON bodies over 100kb with 413", async () => {
-    const res = await supertest(await app())
+    const { request, headers } = await memberApp();
+    const res = await request
       .post("/api/example")
-      .send({ orgId: "org_1", name: "x".repeat(110_000) });
+      .set(headers)
+      .send({ name: "x".repeat(110_000) });
     expect(res.status).toBe(413);
   });
 });

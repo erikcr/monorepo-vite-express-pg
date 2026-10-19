@@ -2,7 +2,6 @@ import {
   CreateExampleBody,
   CreateExampleResponse,
   GetExampleParams,
-  GetExampleQueryParams,
   GetExampleResponse,
   ListExamplesQueryParams,
   ListExamplesResponse,
@@ -12,26 +11,33 @@ import {
 import type { Db } from "@repo/db";
 import { exampleTable } from "@repo/db/schema";
 import { and, desc, eq, lt, or } from "drizzle-orm";
-import { type Response, Router } from "express";
+import { type Request, type Response, Router } from "express";
 import type { JobQueue } from "../jobs/queue.js";
 import { exampleCreated } from "../jobs/registry.js";
 import { decodeCursor, toPage } from "../lib/pagination.js";
 import { sendValidated } from "../lib/send-validated.js";
+import type { Access } from "../middleware/access.js";
 import { validate } from "../middleware/validate.js";
 
-// Single-record routes: path id + orgId query. Tenant isolation: queries match both.
-const target = validate({ params: GetExampleParams, query: GetExampleQueryParams });
-const byIdAndOrg = (id: string, orgId: string) =>
-  and(eq(exampleTable.id, id), eq(exampleTable.orgId, orgId));
-
+const byId = validate({ params: GetExampleParams });
 const notFound = (res: Response) => res.status(404).json({ error: "Not found" });
 
-export function createExampleRouter(db: Db, queue: JobQueue): Router {
-  const router = Router();
+// The org comes from requireOrg (req.ctx), never from the request. Single records match both id
+// and org, so another org's record is indistinguishable from a missing one (404).
+const orgId = (req: Pick<Request, "ctx">) => {
+  if (!req.ctx) throw new Error("requireOrg must run before this handler");
+  return req.ctx.org.id;
+};
+const inOrg = (req: Pick<Request, "ctx">, id: string) =>
+  and(eq(exampleTable.id, id), eq(exampleTable.orgId, orgId(req)));
 
-  // orgId is mandatory (the schema requires it): never return rows across orgs.
-  router.get("/", validate({ query: ListExamplesQueryParams }), async (req, res) => {
-    const { orgId, limit, cursor } = req.query;
+export function createExampleRouter(db: Db, queue: JobQueue, access: Access): Router {
+  const router = Router();
+  const read = access.requireOrg("example.read");
+  const write = access.requireOrg("example.write");
+
+  router.get("/", read, validate({ query: ListExamplesQueryParams }), async (req, res) => {
+    const { limit, cursor } = req.query;
     const after = cursor ? decodeCursor(cursor) : null;
     if (cursor && !after) {
       res
@@ -44,7 +50,7 @@ export function createExampleRouter(db: Db, queue: JobQueue): Router {
       .from(exampleTable)
       .where(
         and(
-          eq(exampleTable.orgId, orgId),
+          eq(exampleTable.orgId, orgId(req)),
           after
             ? or(
                 lt(exampleTable.createdAt, after.createdAt),
@@ -58,36 +64,36 @@ export function createExampleRouter(db: Db, queue: JobQueue): Router {
     sendValidated(res, ListExamplesResponse, toPage(rows, limit));
   });
 
-  router.post("/", validate({ body: CreateExampleBody }), async (req, res) => {
-    const [row] = await db.insert(exampleTable).values(req.body).returning();
+  router.post("/", write, validate({ body: CreateExampleBody }), async (req, res) => {
+    const [row] = await db
+      .insert(exampleTable)
+      .values({ ...req.body, orgId: orgId(req) })
+      .returning();
     if (!row) throw new Error("insert returned no row"); // can't happen; narrows the type
     await queue.enqueue(exampleCreated, { exampleId: row.id, orgId: row.orgId });
     sendValidated(res, CreateExampleResponse, row, 201);
   });
 
-  router.get("/:id", target, async (req, res) => {
-    const [row] = await db
-      .select()
-      .from(exampleTable)
-      .where(byIdAndOrg(req.params.id, req.query.orgId));
+  router.get("/:id", read, byId, async (req, res) => {
+    const [row] = await db.select().from(exampleTable).where(inOrg(req, req.params.id));
     if (!row) return void notFound(res);
     sendValidated(res, GetExampleResponse, row);
   });
 
-  router.patch("/:id", target, validate({ body: UpdateExampleBody }), async (req, res) => {
+  router.patch("/:id", write, byId, validate({ body: UpdateExampleBody }), async (req, res) => {
     const [row] = await db
       .update(exampleTable)
       .set({ ...req.body, updatedAt: new Date() })
-      .where(byIdAndOrg(req.params.id, req.query.orgId))
+      .where(inOrg(req, req.params.id))
       .returning();
     if (!row) return void notFound(res);
     sendValidated(res, UpdateExampleResponse, row);
   });
 
-  router.delete("/:id", target, async (req, res) => {
+  router.delete("/:id", write, byId, async (req, res) => {
     const [row] = await db
       .delete(exampleTable)
-      .where(byIdAndOrg(req.params.id, req.query.orgId))
+      .where(inOrg(req, req.params.id))
       .returning({ id: exampleTable.id });
     if (!row) return void notFound(res);
     res.status(204).end();

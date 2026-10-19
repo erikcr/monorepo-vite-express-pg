@@ -256,9 +256,11 @@ for an email provider (1.6). Not taken: the reference app's product-specific rul
    `example.org_id` → uuid FK conversion moved to task 3, so each PR stays green on its own.
 2. `[x]` Identity module + `authenticate` + test tokens; env vars (`CLERK_SECRET_KEY`,
    `STAFF_MFA_REQUIRED`: on by default in production only).
-3. Policy, grants loader, `resolveTenant`, `requireOrg` / `signedIn` / `requireStaff`, route
+3. `[x]` Policy, grants loader, `resolveTenant`, `requireOrg` / `signedIn` / `requireStaff`, route
    coverage test; example routes on `req.ctx`; `example.org_id` → uuid FK to `orgs` (drops the
-   demo rows); seed creates a real org; spec + codegen.
+   demo rows); seed creates real orgs; spec + codegen. Admin's org filter removed (task 5 moves
+   admin to staff endpoints and brings back a validated search param); the two admin E2E data
+   tests are `fixme` until tasks 5–6.
 4. `/api/me`, `POST /api/orgs`, `staff:grant` script; admin API stub (`GET /api/admin/orgs`).
 5. Frontends: Clerk providers, token + org header in `apiFetch`, sign-in, org picker, admin gate.
 6. E2E + provisioning: decide how E2E signs in (Clerk testing tokens vs a test-mode identity),

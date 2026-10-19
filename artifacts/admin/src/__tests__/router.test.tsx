@@ -10,10 +10,10 @@ const listQueryOptions = vi.fn();
 vi.mock("@repo/api-client-react", () => ({
   useGetHealth: () => ({ data: undefined, isLoading: true, isError: false }),
   useListExamplesInfinite: (params: unknown) => listExamples(params),
-  getListExamplesInfiniteQueryOptions: (params: { orgId: string }) => {
+  getListExamplesInfiniteQueryOptions: (params: object) => {
     listQueryOptions(params);
     return {
-      queryKey: ["examples", params.orgId],
+      queryKey: ["examples"],
       queryFn: async () => ({ items: [], nextCursor: null }),
     };
   },
@@ -21,7 +21,7 @@ vi.mock("@repo/api-client-react", () => ({
 
 const row = (id: string, name: string) => ({
   id,
-  orgId: "org_1",
+  orgId: "123e4567-e89b-42d3-a456-426614174001",
   name,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
@@ -50,24 +50,11 @@ describe("routes (admin)", () => {
     expect(screen.getByText("Overview")).toBeTruthy();
   });
 
-  it("defaults the org filter to org_1 and prefetches its first page", async () => {
+  it("prefetches the first page of records in the route loader", async () => {
     renderAt("/");
-    expect(((await screen.findByLabelText("Org filter")) as HTMLInputElement).value).toBe("org_1");
-    expect(listExamples).toHaveBeenCalledWith({ orgId: "org_1" });
-    expect(listQueryOptions).toHaveBeenCalledWith({ orgId: "org_1" });
-  });
-
-  it("reads the org filter from the URL", async () => {
-    renderAt("/?orgId=org_9");
-    expect(((await screen.findByLabelText("Org filter")) as HTMLInputElement).value).toBe("org_9");
-    expect(listExamples).toHaveBeenCalledWith({ orgId: "org_9" });
-    expect(listQueryOptions).toHaveBeenCalledWith({ orgId: "org_9" });
-  });
-
-  it("writes the org filter back to the URL as you type", async () => {
-    const router = renderAt("/");
-    fireEvent.change(await screen.findByLabelText("Org filter"), { target: { value: "org_7" } });
-    await vi.waitFor(() => expect(router.state.location.search).toEqual({ orgId: "org_7" }));
+    await screen.findByText("Overview");
+    expect(listQueryOptions).toHaveBeenCalledWith({});
+    expect(listExamples).toHaveBeenCalledWith({});
   });
 
   it("lists rows from every loaded page and loads the next one on request", async () => {

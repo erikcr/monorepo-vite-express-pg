@@ -1,15 +1,36 @@
 import type { Db } from "@repo/db";
 import { env } from "@repo/env";
 import cors from "cors";
-import express, { type Express, type NextFunction, type Request, type Response } from "express";
+import express, {
+  type Express,
+  type NextFunction,
+  type Request,
+  type Response,
+  type Router,
+} from "express";
 import { rateLimit } from "express-rate-limit";
 import helmet from "helmet";
 import type { JobQueue } from "./jobs/queue.js";
+import { createAccess } from "./middleware/access.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { createClientErrorsRouter } from "./routes/client-errors.js";
 import { createDocsRouter } from "./routes/docs.js";
 import { createExampleRouter } from "./routes/example.js";
 import { createHealthRouter } from "./routes/health.js";
+
+/**
+ * Every router the API mounts, by path. Each route in them declares one access rule
+ * (src/middleware/access.ts); src/__tests__/route-access.test.ts walks this list to prove it.
+ */
+export function createRouters(db: Db, queue: JobQueue): Record<string, Router> {
+  const access = createAccess(db);
+  return {
+    "/health": createHealthRouter(db),
+    "/api/example": createExampleRouter(db, queue, access),
+    "/api/client-errors": createClientErrorsRouter(),
+    ...(env.API_DOCS ? { "/docs": createDocsRouter() } : {}),
+  };
+}
 
 export function createApp(db: Db, queue: JobQueue): Express {
   const app = express();
@@ -41,10 +62,7 @@ export function createApp(db: Db, queue: JobQueue): Express {
   // Explicit body size cap (Express's default, stated): larger bodies get 413.
   app.use(express.json({ limit: "100kb" }));
 
-  app.use("/health", createHealthRouter(db));
-  app.use("/api/example", createExampleRouter(db, queue));
-  app.use("/api/client-errors", createClientErrorsRouter());
-  if (env.API_DOCS) app.use("/docs", createDocsRouter());
+  for (const [path, router] of Object.entries(createRouters(db, queue))) app.use(path, router);
 
   // 404
   app.use((_req, res) => {

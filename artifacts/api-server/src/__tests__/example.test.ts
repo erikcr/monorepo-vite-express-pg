@@ -3,6 +3,7 @@ import { exampleTable } from "@repo/db/schema";
 import supertest from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
+import { createMember, createOrg } from "../test-helpers/auth.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
 import { createFakeQueue } from "../test-helpers/fake-queue.js";
 
@@ -19,55 +20,87 @@ describe("/api/example", () => {
     request = supertest(createApp(db, queue));
   });
 
-  const create = async (orgId: string, name: string): Promise<Row> =>
-    (await request.post("/api/example").send({ orgId, name })).body;
+  const create = async (headers: Record<string, string>, name: string): Promise<Row> =>
+    (await request.post("/api/example").set(headers).send({ name })).body;
+
+  describe("access", () => {
+    it("requires a signed-in member", async () => {
+      expect((await request.get("/api/example")).status).toBe(401);
+      expect((await request.post("/api/example").send({ name: "x" })).status).toBe(401);
+    });
+
+    it("lets a member act only in orgs they belong to", async () => {
+      const m = await createMember(db);
+      const other = await createOrg(db);
+      expect((await request.get("/api/example").set(m.as(other))).status).toBe(403);
+    });
+  });
 
   describe("POST /", () => {
-    it("creates a record and returns 201", async () => {
-      const res = await request.post("/api/example").send({ orgId: "org_test", name: "Alpha" });
+    it("creates a record in the member's org and returns 201", async () => {
+      const m = await createMember(db);
+      const res = await request.post("/api/example").set(m.headers).send({ name: "Alpha" });
       expect(res.status).toBe(201);
-      expect(res.body).toMatchObject({ orgId: "org_test", name: "Alpha" });
-      expect(typeof res.body.id).toBe("string");
+      expect(res.body).toMatchObject({ orgId: m.orgs[0]?.id, name: "Alpha" });
+    });
+
+    it("ignores an org id in the body: the org comes from the session", async () => {
+      const m = await createMember(db);
+      const other = await createOrg(db);
+      const res = await request
+        .post("/api/example")
+        .set(m.headers)
+        .send({ name: "Sneaky", orgId: other.id });
+      expect(res.status).toBe(201);
+      expect(res.body.orgId).toBe(m.orgs[0]?.id);
     });
 
     it("enqueues an example-created job for the new record", async () => {
-      const row = await create("org_job", "Queued");
+      const m = await createMember(db);
+      const row = await create(m.headers, "Queued");
       expect(queue.enqueued).toContainEqual({
         name: "example-created",
-        data: { exampleId: row.id, orgId: "org_job" },
+        data: { exampleId: row.id, orgId: m.orgs[0]?.id },
       });
     });
 
     it("returns 400 when the body is invalid", async () => {
-      const res = await request.post("/api/example").send({ orgId: "", name: "" });
+      const m = await createMember(db);
+      const res = await request.post("/api/example").set(m.headers).send({ name: "" });
       expect(res.status).toBe(400);
-      expect(res.body.error).toBeDefined();
+      expect(res.body.error.fieldErrors.name).toBeDefined();
     });
   });
 
   describe("GET / (list)", () => {
-    it("returns 400 without orgId (tenant isolation)", async () => {
-      const res = await request.get("/api/example");
-      expect(res.status).toBe(400);
-      expect(res.body.error).toBeDefined();
-    });
-
     it("returns an empty page for an org with no rows", async () => {
-      const res = await request.get("/api/example?orgId=org_empty");
+      const m = await createMember(db);
+      const res = await request.get("/api/example").set(m.headers);
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ items: [], nextCursor: null });
     });
 
     it("never returns rows from another org", async () => {
-      await create("org_a", "Item A");
-      await create("org_b", "Item B");
-      const res = await request.get("/api/example?orgId=org_a");
-      expect(res.body.items.length).toBeGreaterThanOrEqual(1);
-      expect(res.body.items.every((r: Row) => r.orgId === "org_a")).toBe(true);
+      const a = await createMember(db);
+      const b = await createMember(db);
+      await create(a.headers, "Item A");
+      await create(b.headers, "Item B");
+      const res = await request.get("/api/example").set(a.headers);
+      expect(res.body.items.map((r: Row) => r.name)).toEqual(["Item A"]);
+    });
+
+    it("lists the org chosen with X-Org-Id for someone in several orgs", async () => {
+      const [one, two] = [await createOrg(db), await createOrg(db)];
+      const m = await createMember(db, { orgs: [one, two] });
+      await create(m.as(two), "In two");
+      expect((await request.get("/api/example").set(m.as(one))).body.items).toEqual([]);
+      expect((await request.get("/api/example").set(m.as(two))).body.items).toHaveLength(1);
     });
 
     it("pages newest first and visits every row exactly once, including timestamp ties", async () => {
-      const orgId = "org_pages";
+      const m = await createMember(db);
+      const orgId = m.orgs[0]?.id;
+      if (!orgId) throw new Error("expected an org");
       // Five rows sharing one createdAt (ties are broken by id), plus two older ones.
       const tie = new Date("2026-01-02T00:00:00.000Z");
       await db
@@ -81,8 +114,8 @@ describe("/api/example", () => {
       const seen: Row[] = [];
       let cursor: string | null = null;
       do {
-        const query = new URLSearchParams({ orgId, limit: "2", ...(cursor ? { cursor } : {}) });
-        const res = await request.get(`/api/example?${query}`);
+        const query = new URLSearchParams({ limit: "2", ...(cursor ? { cursor } : {}) });
+        const res = await request.get(`/api/example?${query}`).set(m.headers);
         expect(res.status).toBe(200);
         expect(res.body.items.length).toBeLessThanOrEqual(2);
         seen.push(...res.body.items);
@@ -97,22 +130,25 @@ describe("/api/example", () => {
     });
 
     it("defaults to 20 per page", async () => {
-      const orgId = "org_default_limit";
+      const m = await createMember(db);
+      const orgId = m.orgs[0]?.id;
+      if (!orgId) throw new Error("expected an org");
       await db
         .insert(exampleTable)
         .values(Array.from({ length: 21 }, (_, i) => ({ orgId, name: `row ${i}` })));
-      const res = await request.get(`/api/example?orgId=${orgId}`);
+      const res = await request.get("/api/example").set(m.headers);
       expect(res.body.items).toHaveLength(20);
       expect(res.body.nextCursor).toEqual(expect.any(String));
     });
 
     it.each(["0", "101", "abc"])("returns 400 for limit=%s", async (limit) => {
-      const res = await request.get(`/api/example?orgId=org_a&limit=${limit}`);
-      expect(res.status).toBe(400);
+      const m = await createMember(db);
+      expect((await request.get(`/api/example?limit=${limit}`).set(m.headers)).status).toBe(400);
     });
 
     it("returns 400 for a cursor it didn't issue", async () => {
-      const res = await request.get("/api/example?orgId=org_a&cursor=not-a-cursor");
+      const m = await createMember(db);
+      const res = await request.get("/api/example?cursor=not-a-cursor").set(m.headers);
       expect(res.status).toBe(400);
       expect(res.body.error.fieldErrors.cursor).toEqual(["Invalid cursor"]);
     });
@@ -120,35 +156,35 @@ describe("/api/example", () => {
 
   describe("GET /:id", () => {
     it("returns the record", async () => {
-      const row = await create("org_get", "Get me");
-      const res = await request.get(`/api/example/${row.id}?orgId=org_get`);
+      const m = await createMember(db);
+      const row = await create(m.headers, "Get me");
+      const res = await request.get(`/api/example/${row.id}`).set(m.headers);
       expect(res.status).toBe(200);
       expect(res.body).toEqual(row);
     });
 
-    it("returns 404 for a missing id", async () => {
-      const res = await request.get(`/api/example/${missingId}?orgId=org_get`);
-      expect(res.status).toBe(404);
+    it("returns 404 for a missing id or another org's record", async () => {
+      const owner = await createMember(db);
+      const intruder = await createMember(db);
+      const row = await create(owner.headers, "Private");
+      expect((await request.get(`/api/example/${missingId}`).set(owner.headers)).status).toBe(404);
+      expect((await request.get(`/api/example/${row.id}`).set(intruder.headers)).status).toBe(404);
     });
 
-    it("returns 404 for another org's record", async () => {
-      const row = await create("org_owner", "Private");
-      const res = await request.get(`/api/example/${row.id}?orgId=org_intruder`);
-      expect(res.status).toBe(404);
-    });
-
-    it("returns 400 for a malformed id or missing orgId", async () => {
-      expect((await request.get("/api/example/not-a-uuid?orgId=org_get")).status).toBe(400);
-      expect((await request.get(`/api/example/${missingId}`)).status).toBe(400);
+    it("returns 400 for a malformed id", async () => {
+      const m = await createMember(db);
+      expect((await request.get("/api/example/not-a-uuid").set(m.headers)).status).toBe(400);
     });
   });
 
   describe("PATCH /:id", () => {
     it("updates the name and touches updatedAt", async () => {
-      const row = await create("org_patch", "Before");
+      const m = await createMember(db);
+      const row = await create(m.headers, "Before");
       await new Promise((r) => setTimeout(r, 5));
       const res = await request
-        .patch(`/api/example/${row.id}?orgId=org_patch`)
+        .patch(`/api/example/${row.id}`)
+        .set(m.headers)
         .send({ name: "After" });
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({ id: row.id, name: "After", createdAt: row.createdAt });
@@ -158,35 +194,41 @@ describe("/api/example", () => {
     });
 
     it("returns 404 for another org's record, leaving it unchanged", async () => {
-      const row = await create("org_owner", "Keep");
+      const owner = await createMember(db);
+      const intruder = await createMember(db);
+      const row = await create(owner.headers, "Keep");
       const res = await request
-        .patch(`/api/example/${row.id}?orgId=org_intruder`)
+        .patch(`/api/example/${row.id}`)
+        .set(intruder.headers)
         .send({ name: "Hijacked" });
       expect(res.status).toBe(404);
-      const after = await request.get(`/api/example/${row.id}?orgId=org_owner`);
+      const after = await request.get(`/api/example/${row.id}`).set(owner.headers);
       expect(after.body.name).toBe("Keep");
     });
 
     it("returns 400 for an invalid body", async () => {
-      const row = await create("org_patch", "Valid");
-      const res = await request.patch(`/api/example/${row.id}?orgId=org_patch`).send({ name: "" });
+      const m = await createMember(db);
+      const row = await create(m.headers, "Valid");
+      const res = await request.patch(`/api/example/${row.id}`).set(m.headers).send({ name: "" });
       expect(res.status).toBe(400);
     });
   });
 
   describe("DELETE /:id", () => {
     it("deletes the record: 204, then 404", async () => {
-      const row = await create("org_delete", "Doomed");
-      const res = await request.delete(`/api/example/${row.id}?orgId=org_delete`);
-      expect(res.status).toBe(204);
-      expect((await request.get(`/api/example/${row.id}?orgId=org_delete`)).status).toBe(404);
+      const m = await createMember(db);
+      const row = await create(m.headers, "Doomed");
+      expect((await request.delete(`/api/example/${row.id}`).set(m.headers)).status).toBe(204);
+      expect((await request.get(`/api/example/${row.id}`).set(m.headers)).status).toBe(404);
     });
 
     it("returns 404 for another org's record, leaving it in place", async () => {
-      const row = await create("org_owner", "Survivor");
-      const res = await request.delete(`/api/example/${row.id}?orgId=org_intruder`);
+      const owner = await createMember(db);
+      const intruder = await createMember(db);
+      const row = await create(owner.headers, "Survivor");
+      const res = await request.delete(`/api/example/${row.id}`).set(intruder.headers);
       expect(res.status).toBe(404);
-      expect((await request.get(`/api/example/${row.id}?orgId=org_owner`)).status).toBe(200);
+      expect((await request.get(`/api/example/${row.id}`).set(owner.headers)).status).toBe(200);
     });
   });
 });

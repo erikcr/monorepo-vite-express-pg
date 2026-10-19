@@ -2,7 +2,18 @@ openapi: "3.1.0"
 info:
   title: Monorepo API
   version: "1.0.0"
-  description: Template API
+  description: |
+    Template API.
+
+    **Authentication:** send the Clerk session token as `Authorization: Bearer <token>` (operations
+    marked public need none).
+
+    **Organization:** org-scoped operations act in the org named by the `X-Org-Id` header, which
+    the server checks against your memberships (403 if you don't belong to it). If you belong to
+    exactly one org it may be omitted; with several, omitting it answers 400 `org_required`.
+
+security:
+  - bearerAuth: []
 
 servers:
   - url: http://localhost:3000
@@ -12,6 +23,7 @@ paths:
   /health:
     get:
       operationId: getHealth
+      security: []
       summary: Liveness check (always 200 while the process is up)
       tags: [system]
       responses:
@@ -25,6 +37,7 @@ paths:
   /health/ready:
     get:
       operationId: getReady
+      security: []
       summary: Readiness check (503 when the database is unreachable)
       tags: [system]
       responses:
@@ -44,6 +57,7 @@ paths:
   /api/client-errors:
     post:
       operationId: reportClientError
+      security: []
       summary: Record a crash or unhandled error from a browser app
       tags: [system]
       requestBody:
@@ -64,7 +78,6 @@ paths:
       summary: List example records, newest first, one page at a time
       tags: [example]
       parameters:
-        - $ref: "#/components/parameters/OrgId"
         - name: limit
           in: query
           required: false
@@ -88,6 +101,10 @@ paths:
                 $ref: "#/components/schemas/ExamplePage"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
     post:
       operationId: createExample
@@ -108,11 +125,14 @@ paths:
                 $ref: "#/components/schemas/Example"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /api/example/{id}:
     parameters:
       - $ref: "#/components/parameters/ExampleId"
-      - $ref: "#/components/parameters/OrgId"
     get:
       operationId: getExample
       summary: Get one example record
@@ -126,6 +146,10 @@ paths:
                 $ref: "#/components/schemas/Example"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -148,6 +172,10 @@ paths:
                 $ref: "#/components/schemas/Example"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -160,19 +188,21 @@ paths:
           description: Deleted
         "400":
           $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Clerk session token
+
   parameters:
-    OrgId:
-      name: orgId
-      in: query
-      required: true
-      description: Tenant the records belong to (moves to the authenticated session with auth)
-      schema:
-        type: string
-        minLength: 1
     ExampleId:
       name: id
       in: path
@@ -184,6 +214,18 @@ components:
   responses:
     BadRequest:
       description: Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Not signed in (missing, invalid or expired session token)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Signed in, but no access (not a member of that org, or lacking the permission)
       content:
         application/json:
           schema:
@@ -202,6 +244,9 @@ components:
       properties:
         error:
           description: A message, or field-level validation errors
+        code:
+          description: Machine-readable reason, e.g. org_required, forbidden, no_org
+          type: string
 
     ClientErrorReport:
       type: object
@@ -279,6 +324,7 @@ components:
           format: uuid
         orgId:
           type: string
+          format: uuid
         name:
           type: string
         createdAt:
@@ -290,11 +336,8 @@ components:
 
     CreateExampleInput:
       type: object
-      required: [orgId, name]
+      required: [name]
       properties:
-        orgId:
-          type: string
-          minLength: 1
         name:
           type: string
           minLength: 1

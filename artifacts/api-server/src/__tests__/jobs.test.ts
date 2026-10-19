@@ -7,6 +7,7 @@ import { createJobQueue } from "../jobs/queue.js";
 import { exampleCreated, exampleDailyCount } from "../jobs/registry.js";
 import { startWorker } from "../jobs/worker.js";
 import { logger } from "../logger.js";
+import { createOrg } from "../test-helpers/auth.js";
 import { createTestBoss } from "../test-helpers/create-test-boss.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
 
@@ -59,9 +60,10 @@ describe("worker (pg-boss on PGlite)", () => {
 describe("exampleDailyCount", () => {
   it("counts example rows", async () => {
     const db = await createTestDb();
+    const [one, two] = [await createOrg(db), await createOrg(db)];
     await db.insert(exampleTable).values([
-      { orgId: "org_1", name: "A" },
-      { orgId: "org_2", name: "B" },
+      { orgId: one.id, name: "A" },
+      { orgId: two.id, name: "B" },
     ]);
     const info = vi.spyOn(logger, "info");
     await exampleDailyCount.handler({}, { db, jobId: "job_1" });

@@ -35,7 +35,7 @@ describe("GetHealthResponse", () => {
 
 const validExample = {
   id: validUuid,
-  orgId: "org_1",
+  orgId: "123e4567-e89b-42d3-a456-426614174001",
   name: "Test",
   createdAt: validTs,
   updatedAt: validTs,
@@ -71,30 +71,32 @@ describe("ListExamplesResponse (a page)", () => {
 
 describe("ListExamplesQueryParams", () => {
   it("coerces limit from the query string and defaults it to 20", () => {
-    expect(ListExamplesQueryParams.parse({ orgId: "org_1", limit: "5" }).limit).toBe(5);
-    expect(ListExamplesQueryParams.parse({ orgId: "org_1" }).limit).toBe(20);
+    expect(ListExamplesQueryParams.parse({ limit: "5" }).limit).toBe(5);
+    expect(ListExamplesQueryParams.parse({}).limit).toBe(20);
   });
 
   it("rejects limits outside 1–100", () => {
-    expect(ListExamplesQueryParams.safeParse({ orgId: "org_1", limit: "0" }).success).toBe(false);
-    expect(ListExamplesQueryParams.safeParse({ orgId: "org_1", limit: "101" }).success).toBe(false);
+    expect(ListExamplesQueryParams.safeParse({ limit: "0" }).success).toBe(false);
+    expect(ListExamplesQueryParams.safeParse({ limit: "101" }).success).toBe(false);
   });
 });
 
 describe("CreateExampleBody", () => {
   it("accepts valid input", () => {
-    expect(CreateExampleBody.safeParse({ orgId: "org_1", name: "Test" }).success).toBe(true);
+    expect(CreateExampleBody.safeParse({ name: "Test" }).success).toBe(true);
   });
 
   it("rejects empty name", () => {
-    expect(CreateExampleBody.safeParse({ orgId: "org_1", name: "" }).success).toBe(false);
+    expect(CreateExampleBody.safeParse({ name: "" }).success).toBe(false);
   });
 
-  it("rejects empty orgId", () => {
-    expect(CreateExampleBody.safeParse({ orgId: "", name: "Test" }).success).toBe(false);
+  it("drops an org id from the body: the org comes from the session", () => {
+    expect(CreateExampleBody.parse({ name: "Test", orgId: "someone-else" })).toEqual({
+      name: "Test",
+    });
   });
 
-  it("rejects missing fields", () => {
-    expect(CreateExampleBody.safeParse({ name: "Test" }).success).toBe(false);
+  it("rejects a missing name", () => {
+    expect(CreateExampleBody.safeParse({}).success).toBe(false);
   });
 });

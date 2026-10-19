@@ -74,7 +74,9 @@ export const platformStaffTable = pgTable(
 
 export const exampleTable = pgTable("example", {
   id: uuid("id").primaryKey().defaultRandom(),
-  orgId: text("org_id").notNull(),
+  orgId: uuid("org_id")
+    .notNull()
+    .references(() => orgsTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   createdAt: createdAt(),
   updatedAt: timestamp("updated_at", { withTimezone: true, precision: 3 }).notNull().defaultNow(),

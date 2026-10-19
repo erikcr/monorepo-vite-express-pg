@@ -37,16 +37,18 @@ docs/                 PROJECT.md, ARCHITECTURE.md, DEPLOYMENTS.md, board + plans
 
 `lib/api-spec/openapi.yaml` is the source of truth. After editing it run `pnpm codegen` and commit the output; `lib/api-zod/src/index.ts` and `lib/api-client-react/src/index.ts` are generated, never hand-edited (CI fails if stale). React apps use the generated hooks, never raw `fetch`; hand-written client code is in `lib/api-client-react/src/{client,errors,query-client}` (subpath exports). To add a feature end to end, use the `new-feature` skill.
 
-## Database and tenancy
+## Database, tenancy and access
 
 - Edit `lib/db/src/schema.ts`, run `pnpm db:generate` (no DB needed), commit schema and migration together; CI fails on drift. Deploys run migrations before the new API starts. **Migrations are additive**: never drop or rename what the running API reads in the same release.
-- Every table has `org_id TEXT NOT NULL`, and every query filters by it. Single-record queries match `id` **and** `orgId`, so another org's record is a 404. (`orgId` is client-supplied: there's no auth yet, so add it before handling real tenants.)
+- Clerk proves who someone is (`src/lib/identity.ts`, the only server file that knows Clerk); **our tables alone grant access**: `org_users` (role per org) and `platform_staff`. Roles map to permissions in `src/lib/authz/policy.ts`; code checks permissions, never role names.
+- **Every route declares one access rule as its first handler**: `access.requireOrg("example.write")`, `access.signedIn`, `access.requireStaff("platform.orgs.read")` or `publicRoute`. `src/__tests__/route-access.test.ts` lists every route's rule and fails for one without.
+- Every org-scoped table has `org_id uuid NOT NULL` referencing `orgs`. Read the org from `req.ctx.org` (set by `requireOrg`), **never from the request**: the client's `X-Org-Id` is only ever checked against the person's grants. Filter every query by it; single-record queries match `id` **and** org, so another org's record is a 404.
 - Timestamps use `precision: 3` so they round-trip through JS Dates (cursors depend on it).
 
 ## Code patterns
 
 - **Env:** read config via `env` from `@repo/env`, never `process.env`. Declare each variable once in its Zod schema (`lib/env/src/index.ts`) with a getter, and add it to `.env.example`. API entry points import `./validate-env.js` first, so a bad deploy fails at startup listing every problem.
-- **App factory:** `createApp(db, queue)`; tests pass a PGlite db and `createFakeQueue()`.
+- **App factory:** `createApp(db, queue)` mounts `createRouters()`; tests pass a PGlite db and `createFakeQueue()`, and sign in with `createMember()` / `bearer()` from `src/test-helpers/auth.ts` (test tokens work only under `NODE_ENV=test`).
 - **Validation:** routes validate with `validate({ params, query, body })` using the generated schemas (handlers get typed, coerced values; every 400 is `{ error: { fieldErrors, formErrors } }`) and respond with `sendValidated(res, XResponse, data)`, which strips anything the spec doesn't declare.
 - **Errors and logs:** log from handlers with `req.log` (carries the request id). Unexpected errors answer `{ error: "Internal server error", requestId }`, never `err.message`. Never log secrets, tokens or query strings.
 - **Lists:** `limit` (default 20, max 100) + opaque `cursor` → `{ items, nextCursor }`, newest first, via `src/lib/pagination.ts`. React pages with the generated `use…Infinite` hook (enable per operation in `orval.config.ts`).
