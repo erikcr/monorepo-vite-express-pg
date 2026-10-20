@@ -6,7 +6,11 @@ import { DEPLOY_TARGETS } from "../deploy-targets.ts";
 
 const fetchText: FetchText = async (url, headers) => {
   const res = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });
-  return { status: res.status, text: await res.text() };
+  return {
+    status: res.status,
+    text: await res.text(),
+    headers: Object.fromEntries(res.headers.entries()),
+  };
 };
 
 const wanted = process.env.ENVIRONMENT ?? "all";
@@ -37,7 +41,7 @@ for (const environment of environments) {
       }
     } else {
       console.log(
-        `${environment} ${site} (${url}): built for ${target.api}, pk_${target.clerkKey}, no secrets.`
+        `${environment} ${site} (${url}): built for ${target.api}, pk_${target.clerkKey}, no secrets, security headers and CSP in place.`
       );
     }
   }

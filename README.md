@@ -10,6 +10,7 @@ Production-ready pnpm monorepo: Express 5 API + React 19 web/admin apps + Postgr
 | Web / Admin | React 19 + Vite 8 + Tailwind CSS 4, deployed to Vercel |
 | Database | PostgreSQL + Drizzle ORM |
 | Background jobs | pg-boss |
+| Errors | Sentry (optional: on when `SENTRY_DSN` is set) |
 | Package manager | pnpm 12 workspace monorepo |
 
 ## Local development
@@ -111,6 +112,10 @@ CORS_ORIGIN=https://your-web-app.vercel.app,https://your-admin-app.vercel.app
 It differs per environment, so the file keeps whatever Railway has (`preserve()`), and
 `/provision-vercel` sets it once the site URLs exist. Without it, browsers block cross-origin
 requests from Vercel to Railway with a CORS error even though the API is reachable.
+
+`SENTRY_DSN` turns on error tracking (the API's errors and the sites' crash reports); like
+`CLERK_SECRET_KEY` it's `preserve()`d, set per environment by `/provision-railway`. Unset, errors
+are only logged.
 
 ---
 

@@ -54,8 +54,12 @@ const fields = {
     .enum(["true", "false"])
     .optional()
     .transform((v) => (v === undefined ? undefined : v === "true")),
+  /** Sentry project DSN. Unset: errors are only logged (see src/lib/error-tracker.ts). */
+  SENTRY_DSN: z.url().optional(),
   /** Deployed git commit; set by Railway. */
   RAILWAY_GIT_COMMIT_SHA: z.string().optional(),
+  /** Railway environment ("production", "staging"); set by Railway. */
+  RAILWAY_ENVIRONMENT_NAME: z.string().optional(),
 };
 
 type Fields = typeof fields;
@@ -133,6 +137,13 @@ export const env = {
   },
   get STAFF_MFA_REQUIRED() {
     return read("STAFF_MFA_REQUIRED") ?? read("NODE_ENV") === "production";
+  },
+  get SENTRY_DSN() {
+    return read("SENTRY_DSN");
+  },
+  /** Where this runs: the Railway environment's name, or NODE_ENV off Railway. */
+  get DEPLOY_ENVIRONMENT() {
+    return read("RAILWAY_ENVIRONMENT_NAME") ?? read("NODE_ENV");
   },
   /** Deployed git commit, or null when not running on Railway. */
   get COMMIT_SHA() {

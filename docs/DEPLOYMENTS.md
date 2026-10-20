@@ -13,7 +13,8 @@ Run these once, in order, after creating the GitHub repo from this template:
 2. `/provision-github` — creates `staging` and the rulesets that protect `staging` and `main`, and
    stores the development instance's keys as the E2E job's secrets.
 3. `/provision-railway` — API + Postgres in `production` (deploys `main`) and `staging` (deploys
-   `staging`), with each environment's Clerk secret key.
+   `staging`), with each environment's Clerk secret key, scheduled backups, the Sentry DSN and an
+   uptime monitor.
 4. `/provision-vercel` — web + admin, production on `main`, staging on the `staging` branch, with the
    matching Clerk publishable keys and the deploy hooks that release them after the API; sets
    `CORS_ORIGIN` on Railway.
@@ -63,7 +64,7 @@ needs it finds it. `plan` is always safe; `apply` marks anything destructive and
 | 3 | Migrations | Railway pre-deploy (`node dist/migrate.js`) | Railway **Wait for CI** holds the deploy until the commit's workflows finish and skips it if one failed |
 | 4 | API | Railway | Starts only if migrations succeeded; traffic switches once `/health/ready` returns 200 (the database answers) |
 | 5 | Sites | `deploy-sites.yml`, then Vercel | When Railway reports the API deploy successful, the workflow waits until `/health` reports the deployed commit (`sha`), then triggers each site's deploy hook. Vercel's automatic deploys of `main` and `staging` are off (`git.deploymentEnabled` in each `vercel.json`) |
-| 6 | Deploy check | `deploy-check.yml`, after each site deploys | Reads the live site's JavaScript: the environment's API address over https, the right Clerk key type, no secret keys (expectations in `lib/ci/src/deploy-targets.ts`). Alerts; the site is already live |
+| 6 | Deploy check | `deploy-check.yml`, after each site deploys | Reads the live site's JavaScript: the environment's API address over https, the right Clerk key type, no secret keys (expectations in `lib/ci/src/deploy-targets.ts`); and its page: the security headers from `vercel.json` and a Content-Security-Policy that allows the API. Alerts; the site is already live |
 
 The same order runs on `staging` (every merged PR) and `main` (every promotion): a site never
 goes live before the API it was built for, and never if the migrations or the API failed. Every
@@ -79,18 +80,54 @@ The API goes live a minute or two before the sites, and migrations run while the
 - **Migrations are additive.** Expand first (add the column, table or index), deploy, and contract (drop or rename) in a later release. Never drop or rename something the running API reads in the same release.
 - **The API keeps working for the previous frontend** for one release. Add fields and endpoints; remove them a release after the frontend stops using them.
 
+## Watching production
+
+- **Errors:** with `SENTRY_DSN` set on the API (`/provision-railway`), Sentry receives the API's
+  unexpected errors (500s, failed jobs, crashes) and the sites' crashes, which the browser sends to
+  `POST /api/client-errors`. Each event carries the environment, the commit, and a request id or
+  job id to find in the logs; never request headers, bodies or query strings
+  (`src/lib/error-tracker.ts`). Without a DSN they're only in Railway's logs. An error handled in
+  code (caught, not rethrown) that still shouldn't happen goes to `trackError(err, { tags })`.
+  Browser stacks point into minified bundles; read them with the build's source next to you.
+- **Uptime:** a monitor on the production API's `/health/ready` (Sentry or any uptime service)
+  emails when it stops answering 200. It answers 503 when the database is unreachable.
+- **Dependency advisories:** CI's **Dependency audit** job fails on a high or critical advisory in
+  a production dependency; GitHub's Dependabot alerts list every advisory, dev dependencies included.
+
+## Backups and restoring the database
+
+Railway takes volume backups of each Postgres on a schedule (`/provision-railway` sets production
+to daily, kept 6 days, and weekly, kept a month). IaC can't declare schedules yet, so check them
+with `railway postgres pitr schedule list --service Postgres --environment production`.
+
+- **Before a risky migration or a data fix**, take one by hand:
+  `railway postgres pitr backup create --service Postgres --environment production --name before-<change>`.
+- **To restore** (a bad migration, deleted rows): a restore replaces the whole database with the
+  backup, so everything written since is lost.
+  1. Take a backup of the current state first (above), so the restore can itself be undone.
+  2. `railway postgres pitr backup list --service Postgres --environment production` and pick one.
+  3. `railway postgres pitr backup restore <id> --service Postgres --environment production`.
+  4. Check `<api>/health/ready` answers 200, and that the data is back.
+  5. The schema is the backup's: if migrations ran after it, redeploy the API (its pre-deploy step
+     runs them again).
+- **Losing less than a day:** Railway's point-in-time recovery (`railway postgres pitr enable`)
+  restores to any moment, into a new service. Turn it on once production holds data that matters.
+- Restores are destructive and need the user's go-ahead (`AGENTS.md`); practise one on staging
+  before you need it in production.
+
 ## When a step fails
 
 | Fails at | What's live afterwards | What to do |
 |----------|------------------------|------------|
 | Hooks | Nothing changes | Fix locally; `--no-verify` exists but bypasses the checks, so don't |
+| Dependency audit | Nothing deploys, on any branch, until it passes | Update the package (`pnpm update <name>`, or an `overrides` entry in `pnpm-workspace.yaml` for a transitive one). If no fixed version exists and the advisory doesn't apply to how you use the package, waive it: append `--ignore <GHSA id>` to the `deps:audit` script in `package.json`, with the reason in the commit message |
 | CI on a PR | Nothing changes | Fix the PR |
 | CI on the merged commit | Nothing deploys (Wait for CI skips it) | Fix forward with a new PR |
 | Migration | Previous API keeps serving | Read the pre-deploy log; fix the migration in a new PR (migrations only go forward) |
 | API health check | Previous API keeps serving; no site changes | Read the deploy log |
 | Deploy sites | The new API is live; the sites keep their previous build | Read the run. If `/health` serves the commit now, re-run it. If there's no run (Railway never reported success, below), run **Deploy sites** by hand (Actions → Deploy sites → Run workflow, on the branch) |
 | A site's build | That site keeps its previous build, against an API that still supports it | Fix forward |
-| Deploy check | Everything is live, but a site was built wrong | The failed run names the site and problem (never a key's value). Fix the Vercel variable, then redeploy that site (run **Deploy sites** by hand). A secret key in a bundle is public: rotate it |
+| Deploy check | Everything is live, but a site was built or served wrong | The failed run names the site and problem (never a key's value). Fix the Vercel variable or `vercel.json`, then redeploy that site (run **Deploy sites** by hand). A secret key in a bundle is public: rotate it |
 
 **Rollback:** Railway's rollback for the API, Vercel's instant rollback for a site. A database can't be rolled back by redeploying, which is why migrations stay additive.
 
@@ -110,3 +147,8 @@ The API goes live a minute or two before the sites, and migrations run while the
   test accounts. A user who signs up in staging doesn't exist in production.
 - **PR previews on Vercel have no API.** Only the `staging` branch gets `VITE_API_URL`, because `CORS_ORIGIN` lists exact origins and preview URLs change per PR.
 - **Rulesets on private repos need a paid GitHub plan.** Without one, the hooks and the Promotion source job still apply, but GitHub doesn't enforce the PR requirement.
+- **The sites' Content-Security-Policy is built in, not configured.** `lib/csp` adds it to each
+  site's `index.html` at build time, from the same `VITE_API_URL` and Clerk key the site uses, so
+  it follows the environment by itself. A new script, API, image or frame host goes in
+  `lib/csp/src/index.ts`; until then the browser blocks it (and E2E fails). Headers a `<meta>` tag
+  can't carry (`frame-ancestors`, HSTS, …) are in each `vercel.json`.

@@ -13,11 +13,14 @@ export interface DeployTarget {
   sites: Record<string, string>;
 }
 
-/** Fetches a URL's body, or reports its status (sent with the protection bypass header, if any). */
+/**
+ * Fetches a URL's status, body and response headers (names lowercased), sending `headers` (the
+ * protection bypass header, if any).
+ */
 export type FetchText = (
   url: string,
   headers: Record<string, string>
-) => Promise<{ status: number; text: string }>;
+) => Promise<{ status: number; text: string; headers: Record<string, string> }>;
 
 export type SiteResult = { site: string; url: string } & (
   | { problems: string[] }
@@ -67,6 +70,38 @@ export function clerkInstance(key: string): { type: "test" | "live"; host: strin
   const decoded = Buffer.from(String(match[2]), "base64").toString("utf8");
   if (!/^[a-z0-9.-]+\$$/.test(decoded)) return null;
   return { type: match[1] as "test" | "live", host: decoded.slice(0, -1) };
+}
+
+/**
+ * What's wrong with the page's security headers (vercel.json) and its Content-Security-Policy
+ * (the <meta> tag lib/csp adds at build time).
+ */
+export function checkPage(
+  html: string,
+  headers: Record<string, string>,
+  target: DeployTarget
+): string[] {
+  const problems: string[] = [];
+  const frameAncestors = /frame-ancestors 'none'/.test(headers["content-security-policy"] ?? "");
+  if (headers["x-frame-options"] !== "DENY" && !frameAncestors) {
+    problems.push("can be framed by other sites (no X-Frame-Options: DENY)");
+  }
+  if (headers["x-content-type-options"] !== "nosniff") {
+    problems.push("lacks X-Content-Type-Options: nosniff");
+  }
+  if (!headers["strict-transport-security"]) problems.push("lacks Strict-Transport-Security");
+
+  const meta = /<meta http-equiv="Content-Security-Policy" content="([^"]*)"/.exec(html);
+  if (!meta) {
+    problems.push("has no Content-Security-Policy <meta> tag (the csp() Vite plugin)");
+  } else {
+    const policy = String(meta[1]).replaceAll("&#39;", "'");
+    const connect = (/(?:^|;\s*)connect-src ([^;]*)/.exec(policy)?.[1] ?? "").split(" ");
+    if (!connect.includes(target.api)) {
+      problems.push(`has a Content-Security-Policy that blocks calls to ${target.api}`);
+    }
+  }
+  return problems;
 }
 
 /** What's wrong with a site's built JavaScript for `target`; `otherApis` are other environments'. */
@@ -123,9 +158,10 @@ export async function checkSite(
     };
   }
   if (page.status !== 200) return { site, url, problems: [`answers ${page.status}`] };
+  const pageProblems = checkPage(page.text, page.headers, target);
 
   const queue = scriptUrls(page.text, url);
-  if (queue.length === 0) return { site, url, problems: ["loads no scripts"] };
+  if (queue.length === 0) return { site, url, problems: [...pageProblems, "loads no scripts"] };
   const seen = new Set<string>();
   let js = "";
   while (queue.length > 0) {
@@ -133,9 +169,11 @@ export async function checkSite(
     if (seen.has(next)) continue;
     seen.add(next);
     const script = await fetchText(next, headers);
-    if (script.status !== 200) return { site, url, problems: [`${next} answers ${script.status}`] };
+    if (script.status !== 200) {
+      return { site, url, problems: [...pageProblems, `${next} answers ${script.status}`] };
+    }
     js += `${script.text}\n`;
     queue.push(...chunkUrls(script.text, url));
   }
-  return { site, url, problems: checkBundle(js, target, otherApis) };
+  return { site, url, problems: [...pageProblems, ...checkBundle(js, target, otherApis)] };
 }

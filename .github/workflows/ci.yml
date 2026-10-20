@@ -105,6 +105,17 @@ jobs:
         env:
           DATABASE_URL: postgres://ignored
 
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0 (version from packageManager)
+      # Known high or critical advisories in what ships (dependencies, not devDependencies), from
+      # the lockfile; nothing is installed. A new advisory fails every branch until it's fixed or
+      # waived with --ignore <GHSA id> in the deps:audit script (docs/DEPLOYMENTS.md).
+      - run: pnpm deps:audit
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -148,6 +159,15 @@ jobs:
           # A Clerk *development* instance: the signed-in tests sign test users in through it.
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+      # A failed run's HTML report and traces (screenshots, DOM, network), for
+      # `pnpm --filter @repo/e2e exec playwright show-report <unzipped folder>`. Private repos only:
+      # traces hold the test users' Clerk session cookies, and a public repo's artifacts are public.
+      - if: failure() && github.event.repository.private
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          retention-days: 14
 
   tests-with-code:
     name: Tests with code
@@ -198,7 +218,7 @@ jobs:
     name: CI passed
     runs-on: ubuntu-latest
     needs:
-      [lint, typecheck, db-check, codegen-check, test, knip, build, e2e, tests-with-code, promotion-source]
+      [lint, typecheck, db-check, codegen-check, test, knip, audit, build, e2e, tests-with-code, promotion-source]
     # The one check branch rulesets require. It must run even when a job it
     # needs fails or is skipped: a *skipped* required check counts as passing.
     # So it always runs, and fails unless every needed job succeeded.

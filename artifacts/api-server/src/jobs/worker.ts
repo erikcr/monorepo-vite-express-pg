@@ -1,5 +1,6 @@
 import type { Db } from "@repo/db";
 import type { PgBoss } from "pg-boss";
+import { trackError } from "../lib/error-tracker.js";
 import { logger } from "../logger.js";
 import { jobs } from "./registry.js";
 
@@ -13,6 +14,7 @@ export async function startWorker(boss: PgBoss, db: Db): Promise<void> {
         } catch (err) {
           // Log with context, then rethrow so pg-boss records the failure and retries.
           logger.error({ err, job: job.name, jobId: id }, "job failed");
+          trackError(err, { tags: { job: job.name, jobId: id } });
           throw err;
         }
       }

@@ -13,20 +13,22 @@
 
 /* ─── Semantic surface / text / border ───────────────────────────────────── */
 /* Light mode defaults. Dark mode overrides are at the bottom of this file.   */
+/* Text tokens keep WCAG AA contrast (4.5:1) on every surface; the E2E suite  */
+/* checks it with axe in both modes. Re-check when you change one.            */
 @theme {
   --color-surface: oklch(98.5% 0 0);
   --color-surface-raised: oklch(100% 0 0);
   --color-border: oklch(91% 0 0);
   --color-border-subtle: oklch(95% 0 0);
   --color-text: oklch(14% 0 0);
-  --color-text-muted: oklch(56% 0 0);
+  --color-text-muted: oklch(52% 0 0);
 }
 
 /* ─── Status ─────────────────────────────────────────────────────────────── */
 @theme {
-  --color-destructive: oklch(60% 0.22 25);
+  --color-destructive: oklch(55% 0.2 25);
   --color-destructive-fg: oklch(99% 0.005 25);
-  --color-success: oklch(65% 0.18 145);
+  --color-success: oklch(52% 0.15 145);
   --color-success-fg: oklch(99% 0.005 145);
   --color-warning: oklch(78% 0.17 75);
   --color-warning-fg: oklch(20% 0.05 75);
@@ -43,11 +45,12 @@
 }
 
 /* ─── Dark mode ──────────────────────────────────────────────────────────── */
-/* Overrides @theme surface/text/border values. Brand lightness is bumped up  */
-/* so it remains accessible against dark backgrounds.                         */
+/* Overrides @theme surface/text/border values. Brand and status colors get  */
+/* lighter, with dark text on them, so both stay readable on dark surfaces.   */
 @media (prefers-color-scheme: dark) {
   :root {
     --color-brand: oklch(68% 0.06 256);
+    --color-brand-fg: oklch(15% 0.02 256);
     --color-brand-subtle: oklch(22% 0.04 256);
     --color-surface: oklch(13% 0 0);
     --color-surface-raised: oklch(17% 0 0);
@@ -55,6 +58,10 @@
     --color-border-subtle: oklch(22% 0 0);
     --color-text: oklch(95% 0 0);
     --color-text-muted: oklch(60% 0 0);
+    --color-destructive: oklch(70% 0.17 25);
+    --color-destructive-fg: oklch(18% 0.03 25);
+    --color-success: oklch(72% 0.17 145);
+    --color-success-fg: oklch(18% 0.03 145);
   }
 }
 

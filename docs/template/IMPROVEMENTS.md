@@ -500,6 +500,59 @@ already waits for the API to serve the commit. No daily schedule: a site's build
 changes when it deploys. Both live sites pass. Staging sites need a Vercel bypass secret
 (`VERCEL_BYPASS_<SITE>`), otherwise skipped with a warning.
 
+## Phase O — Operations and hardening (2026-10-20)
+
+What a real project needs once people use it: hearing about errors and outages, getting data back,
+and the browser-side protections the API already had. **Decisions (Erik, 2026-10-20):** do
+O.1–O.3 and O.5–O.7; feature switches (the `ship it switched off` pattern for `VITE_*` builds)
+wait for a project that needs them.
+
+### O.1 `[x]` Error tracking and uptime
+**Done:** Sentry on the API only (`src/lib/error-tracker.ts`, `@sentry/node` 11), on when
+`SENTRY_DSN` is set. The sites already sent their crashes to `POST /api/client-errors`, which now
+forwards them, so one DSN covers the API, jobs and both sites and no SDK ships to browsers. 500s,
+failed jobs, uncaught crashes; tagged with environment, commit, request or job id. Sentry's
+defaults attached the request (body, query string, IP): the test caught it, so the SDK runs with
+an explicit integration list and `dataCollection` off. Bundling it broke the API build (Sentry
+imports `createRequire`, which the esbuild banner also declared); `build.ts` now parses every
+bundle with `node --check`, which fails the build on that bug (proven). Uptime monitor and the DSN
+are `/provision-railway` steps; `SENTRY_DSN` is `preserve()`d in `railway.ts`.
+
+### O.2 `[x]` Database backups and restore runbook
+**Done:** Railway's IaC can't declare backup schedules (checked `railway@3.16.0`'s types), so
+`/provision-railway` sets them with `railway postgres pitr schedule set`; the restore runbook is in
+`docs/DEPLOYMENTS.md`. The template's own database has no schedule (one manual backup from
+2026-08-22); not changed. The restore steps haven't been run.
+
+### O.3 `[x]` Security headers and Content-Security-Policy on the sites
+**Done:** `vercel.json` headers (frame-ancestors/X-Frame-Options, nosniff, Referrer-Policy,
+Permissions-Policy, HSTS). The CSP is generated at build time by `lib/csp` (a Vite plugin) from the
+site's own `VITE_API_URL` and Clerk key (decoded to its Frontend API host), so nothing per
+project or environment is edited by hand. No `unsafe-inline`/`unsafe-eval` for scripts. The deploy
+check verifies the headers and that the CSP allows the environment's API.
+
+### O.4 `[ ]` Feature switches (deferred)
+A switch the API and both sites read at runtime (e.g. via `/me`), since `VITE_*` variables are
+fixed per build. Add when a project first ships something switched off.
+
+### O.5 `[x]` Accessibility checks
+**Done:** `expectAccessible(page)` (axe, WCAG 2.1 A/AA, light and dark mode) on every page the E2E
+suite visits. Its first run failed every page on contrast: muted text 4.47:1, success 3.0:1,
+destructive 4.26:1, and in dark mode the brand button 2.8:1. Tokens fixed in both apps (all ≥ 4.6:1).
+E2E now runs production builds (`vite build` + `vite preview`) calling the API cross-origin, and
+fails on any CSP violation (both proven red).
+
+### O.6 `[x]` Security scanning
+**Done:** CI's `Dependency audit` job (`pnpm deps:audit`: high/critical advisories in production
+dependencies, from the lockfile; proven against a vulnerable lodash); `/provision-github` turns on
+Dependabot alerts and secret scanning + push protection. On this repo, secret scanning and push
+protection were already on; Dependabot alerts were turned on (0 alerts).
+
+### O.7 `[x]` Playwright reports in CI
+**Done:** in CI, an HTML report with each failure's trace, uploaded as an artifact on failure,
+**private repos only**: traces record the test users' Clerk session cookies, and a public repo's
+artifacts are public. So this repo (public) never uploads them.
+
 ---
 
 ## Session Log
@@ -515,3 +568,4 @@ changes when it deploys. Both live sites pass. Staging sites need a Vercel bypas
 | 2026-10-18 | 2.9 (decided: out), 3.1–3.6 | API reference at /docs, full-stack E2E, VITE_API_URL validation, AGENTS.md + skills, docs/template + plan board. CI's coverage floor caught untested env additions |
 | 2026-10-19 | 1.1 (auth, tasks 1–6) | Reviewed the reference app's access design and took its general core; Clerk + own grant tables + permission policy + server-side org + route-access test; web workspace and staff-only admin; E2E through real Clerk in CI. Found: Clerk load failure broke public API calls; admin /health proxy; Vercel preview env needs an explicit branch arg |
 | 2026-10-19 | P.6, T.1–T.6 | Deploy sequencing (CI → migrations → API → sites), live-verified twice; Railway leaves a setting removed from railway.ts in place (clear with its empty value). Testing framework: TESTING.md, workflows, `testing` skill, Tests-with-code CI check, post-deploy check. Ratchet found floors 10–20 points under actual; proving tests red found two that passed without the code they covered. First CI run of T: `lib/env`'s coverage depended on the machine having a `.env` (ratcheted locally to 100%, 97.7% in CI); `loadEnvFiles()` is now tested against temp dirs |
+| 2026-10-20 | O.1–O.3, O.5–O.7 | Sentry (API-only, request data off), backups runbook, CSP + headers, axe in E2E (found contrast failures on every page), dependency audit, report upload. Found: Sentry's bundle broke the API build (now caught by `node --check`); Sentry 11 collects request bodies by default |

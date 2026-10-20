@@ -30,7 +30,7 @@ In **audit** mode, compare that list with the tests the diff actually adds, and 
 ## 3. Write them
 
 - **Start from the nearest existing test** for the layer and copy its setup: `example.test.ts` (API, list paging, cross-org), `jobs.test.ts`, `app-page.test.tsx` (component with mocked hooks), `e2e/tests/web.spec.ts` (signed-in flow).
-- **Helpers:** API: `createMember(db, { orgs, role })` gives a person, their org and `headers` (`as(org)` for another org), `createOrg`, `bearer`, `grantStaff`, `createTestDb`, `createTestDbAt(tag)`, `createTestBoss`, `createFakeQueue`. Frontend: `renderAt(path)`, `clerk.signedIn`, generated hooks mocked with `vi.mock("@repo/api-client-react", …)`. E2E: `requireClerk()`, `signIn(page, E2E_USERS.member)`, `sessionToken(page)` for API setup.
+- **Helpers:** API: `createMember(db, { orgs, role })` gives a person, their org and `headers` (`as(org)` for another org), `createOrg`, `bearer`, `grantStaff`, `createTestDb`, `createTestDbAt(tag)`, `createTestBoss`, `createFakeQueue`. Frontend: `renderAt(path)`, `clerk.signedIn`, generated hooks mocked with `vi.mock("@repo/api-client-react", …)`. E2E: import `test`, `expect` and `expectAccessible` from `./fixtures` (never `@playwright/test`: the fixture fails a test on any CSP violation), `requireClerk()`, `signIn(page, E2E_USERS.member)`, `sessionToken(page)` for API setup, and `expectAccessible(page)` once each page's content shows.
 - One behaviour per test, named after it. Assert exact bodies and the side effect (the row, the enqueued job, the other org's record untouched).
 - For a bug: write the test **before** the fix and see it fail on the current code.
 

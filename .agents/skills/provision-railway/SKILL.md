@@ -86,16 +86,42 @@ Provision a new Railway project for this monorepo's API server from `.railway/ra
     ```
     `.railway/railway.ts` declares the variable with `preserve()`, so `railway config apply` keeps these values. Until a key is set, the API answers 401 to everything that needs a session. If the user has no production instance yet, set only staging and list production as a follow-up.
 
+## Backups
+
+15. Schedule backups of each database (daily kept 6 days, weekly kept a month; the restore runbook is in `docs/DEPLOYMENTS.md`). Railway's IaC can't declare these yet, so they're set with the CLI:
+    ```
+    railway postgres pitr schedule set --daily --weekly --service Postgres --environment production
+    railway postgres pitr schedule set --daily --service Postgres --environment staging
+    railway postgres pitr schedule list --service Postgres --environment production
+    ```
+    The list shows the schedules. If Railway refuses (for example, the account's plan doesn't include backups), tell the user and list it as a follow-up: without them, a bad migration or a deleted row can't be undone.
+
+## Error tracking and uptime
+
+16. Ask the user whether to set up Sentry now (free Developer plan: one user, a monthly error quota):
+    > "Errors are only logged until a Sentry DSN is set. Create a Node.js project at sentry.io (one project covers the API, its jobs and both sites' crash reports) and paste its DSN, or say 'later'."
+
+    If they paste one, check it looks like `https://<key>@<host>/<project id>` and set it in both environments (each redeploys its API; Sentry tags every event with the environment and commit):
+    ```
+    railway variable set --service api --environment staging SENTRY_DSN=<dsn>
+    railway variable set --service api --environment production SENTRY_DSN=<dsn>
+    ```
+    `.railway/railway.ts` declares it with `preserve()`, like the Clerk key.
+
+17. Ask the user to add an **uptime monitor** on `<prod-api-url>/health/ready` (in Sentry: Alerts → Create alert → Uptime monitor; or any uptime service), alerting them by email. It answers 503 when the database is unreachable, so the monitor catches both a down API and a down database. Nothing else tells anyone the API is down.
+
 ## Summary
 
-15. Tell the user to commit the `REPO` change in `.railway/railway.ts` on a feature branch and open a PR into `staging`.
+18. Tell the user to commit the `REPO` change in `.railway/railway.ts` on a feature branch and open a PR into `staging`.
 
-16. Print a success summary in this format:
+19. Print a success summary in this format:
     ```
     ✓ Railway project created: <project-name>
     ✓ production: Postgres + api (deploys main)    → <prod-api-url>
     ✓ staging:    Postgres + api (deploys staging) → <staging-api-url>
     ✓ Clerk secret keys set (staging: development instance, production: production instance)
+    ✓ Backups: production daily + weekly, staging daily (or: follow-up)
+    ✓ Sentry DSN set in both environments (or: follow-up); uptime monitor on /health/ready (or: follow-up)
     ✓ Settings come from .railway/railway.ts (change the file, then `railway config apply`)
 
     Your local .env keeps pointing at local Postgres (docker compose); the

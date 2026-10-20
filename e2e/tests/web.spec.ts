@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { E2E_USERS } from "../clerk-env";
+import { expect, expectAccessible, test } from "./fixtures";
 import { requireClerk, signIn } from "./signed-in";
 
 test("shows the real API and database as healthy", async ({ page }) => {
@@ -16,6 +16,7 @@ test("shows the real API and database as healthy", async ({ page }) => {
   await expect(page.getByRole("img", { name: "API server: ok" })).toBeVisible();
   await expect(page.getByRole("img", { name: "Database: ok" })).toBeVisible();
   expect(errors).toEqual([]);
+  await expectAccessible(page);
 });
 
 test("navigates client-side, deep-links, and shows a 404 page", async ({ page }) => {
@@ -23,12 +24,14 @@ test("navigates client-side, deep-links, and shows a 404 page", async ({ page })
   await page.getByRole("link", { name: "About" }).click();
   await expect(page).toHaveURL(/\/about$/);
   await expect(page.getByRole("heading", { name: "About" })).toBeVisible();
+  await expectAccessible(page);
 
   await page.goto("/about"); // a direct load, not client-side navigation
   await expect(page.getByRole("heading", { name: "About" })).toBeVisible();
 
   await page.goto("/no-such-page");
   await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
+  await expectAccessible(page);
 });
 
 test.describe("signed in", () => {
@@ -38,6 +41,8 @@ test.describe("signed in", () => {
     await signIn(page, E2E_USERS.member);
     // The E2E database is fresh on every run, so the member starts with no org.
     await page.goto("/app");
+    await expect(page.getByLabel("Organization name")).toBeVisible();
+    await expectAccessible(page);
     await page.getByLabel("Organization name").fill("Alpha Co");
     await page.getByRole("button", { name: "Create" }).click();
     await expect(page.getByRole("heading", { name: "Alpha Co" })).toBeVisible();
@@ -45,6 +50,7 @@ test.describe("signed in", () => {
     await page.getByLabel("Record name").fill("First record");
     await page.getByRole("button", { name: "Add" }).click();
     await expect(page.getByText("First record")).toBeVisible();
+    await expectAccessible(page);
 
     // A second org: its records are separate, and the picker switches between them.
     await page.getByRole("button", { name: "New organization" }).click();

@@ -95,6 +95,23 @@ describe("env getters", () => {
     expect(env.STAFF_MFA_REQUIRED).toBe(true);
   });
 
+  it("SENTRY_DSN is optional but must be a URL", () => {
+    vi.stubEnv("SENTRY_DSN", undefined);
+    expect(env.SENTRY_DSN).toBeUndefined();
+    vi.stubEnv("SENTRY_DSN", "https://key@o1.ingest.sentry.io/2");
+    expect(env.SENTRY_DSN).toBe("https://key@o1.ingest.sentry.io/2");
+    vi.stubEnv("SENTRY_DSN", "key@o1");
+    expect(() => env.SENTRY_DSN).toThrow("Invalid env var SENTRY_DSN");
+  });
+
+  it("DEPLOY_ENVIRONMENT is Railway's environment, or NODE_ENV off Railway", () => {
+    vi.stubEnv("RAILWAY_ENVIRONMENT_NAME", undefined);
+    vi.stubEnv("NODE_ENV", "development");
+    expect(env.DEPLOY_ENVIRONMENT).toBe("development");
+    vi.stubEnv("RAILWAY_ENVIRONMENT_NAME", "staging");
+    expect(env.DEPLOY_ENVIRONMENT).toBe("staging");
+  });
+
   it("COMMIT_SHA is Railway's commit, or null", () => {
     vi.stubEnv("RAILWAY_GIT_COMMIT_SHA", undefined);
     expect(env.COMMIT_SHA).toBeNull();

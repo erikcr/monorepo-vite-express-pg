@@ -81,9 +81,23 @@ Use `<repo>` below for the `nameWithOwner` value.
 
 8. Verify: `gh api repos/<repo>/rulesets --jq '.[] | .name + " " + .enforcement'` lists both rulesets as `active`.
 
+## Security alerts
+
+9. Turn on Dependabot alerts (GitHub flags dependencies with known advisories, dev dependencies included) and secret scanning with push protection (a push containing a recognised credential is refused):
+   ```bash
+   gh api -X PUT repos/<repo>/vulnerability-alerts
+   gh api -X PATCH repos/<repo> --silent --input - <<'JSON'
+   {"security_and_analysis": {"secret_scanning": {"status": "enabled"},
+     "secret_scanning_push_protection": {"status": "enabled"}}}
+   JSON
+   ```
+   Leave Dependabot *security updates* off: Renovate opens update PRs into `staging`, and Dependabot's would target `main`. On a private repo, secret scanning needs GitHub's Secret Protection; if the PATCH answers 422 or 403, tell the user and continue (CI's `Dependency audit` job and the deploy check's secret scan still apply).
+
+   Verify: `gh api repos/<repo>/vulnerability-alerts --silent && echo on` prints `on`, and `gh api repos/<repo> --jq .security_and_analysis` shows both secret scanning settings `enabled` (unless skipped above).
+
 ## E2E secrets
 
-9. The E2E job signs in through a Clerk **development** instance. Ask the user for its keys (dashboard.clerk.com → API keys: `sk_test_…` and `pk_test_…`; never a production instance's), check the prefixes, and store them without printing them back:
+10. The E2E job signs in through a Clerk **development** instance. Ask the user for its keys (dashboard.clerk.com → API keys: `sk_test_…` and `pk_test_…`; never a production instance's), check the prefixes, and store them without printing them back:
    ```bash
    gh secret set CLERK_SECRET_KEY --repo <repo>            # paste sk_test_… when prompted
    gh secret set VITE_CLERK_PUBLISHABLE_KEY --repo <repo>  # paste pk_test_…
@@ -92,12 +106,13 @@ Use `<repo>` below for the `nameWithOwner` value.
 
 ## Summary
 
-10. Print a success summary in this format:
+11. Print a success summary in this format:
    ```
    ✓ staging branch created from main (or: already existed)
    ✓ Merge settings: merge commits + squash, branches deleted on merge
    ✓ Ruleset "Protect main": PR + CI passed, merge commits only, no bypass
    ✓ Ruleset "Protect staging": PR + CI passed, squash only, no bypass
+   ✓ Dependabot alerts on; secret scanning + push protection on (or: needs Secret Protection)
    ✓ E2E secrets: Clerk development instance keys (or: follow-up)
 
    From now on:

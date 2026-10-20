@@ -5,9 +5,11 @@ import { env } from "@repo/env";
 import { createApp } from "./app.js";
 import { createJobQueue, startBoss } from "./jobs/queue.js";
 import { startWorker } from "./jobs/worker.js";
+import { flushErrorTracker, initErrorTracker } from "./lib/error-tracker.js";
 import { logger } from "./logger.js";
 import { onShutdown } from "./shutdown.js";
 
+initErrorTracker();
 const boss = await startBoss(env.DATABASE_URL);
 // The worker runs in this process unless RUN_WORKER=false (then run dist/worker.js separately).
 if (env.RUN_WORKER) await startWorker(boss, db);
@@ -33,4 +35,5 @@ onShutdown([
   () => closeServer(server),
   () => boss.stop({ graceful: true, timeout: 20_000 }),
   closeDb,
+  flushErrorTracker,
 ]);

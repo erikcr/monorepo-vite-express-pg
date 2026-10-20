@@ -11,6 +11,7 @@ import express, {
 import { rateLimit } from "express-rate-limit";
 import helmet from "helmet";
 import type { JobQueue } from "./jobs/queue.js";
+import { trackError } from "./lib/error-tracker.js";
 import { createAccess } from "./middleware/access.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { createMeRouter, createOrgsRouter } from "./routes/account.js";
@@ -76,12 +77,15 @@ export function createApp(db: Db, queue: JobQueue): Express {
 
   // Global error handler — must be last and have 4 params. Express 5 forwards rejected async
   // handlers here. 4xx errors (e.g. malformed JSON) keep their message; anything else is logged
-  // with the request id and answered generically, so internals (SQL, stack details) never leak.
-  // To use an error tracker (Sentry, …), report `err` here.
+  // with the request id (and reported to Sentry, if on) and answered generically, so internals
+  // (SQL, stack details) never leak.
   app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
     const status = (err as { status?: number }).status ?? 500;
     if (status >= 500) {
       req.log.error({ err }, "unhandled error");
+      trackError(err, {
+        tags: { requestId: String(req.id), method: req.method, path: req.path },
+      });
       res.status(status).json({ error: "Internal server error", requestId: req.id });
       return;
     }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   checkBundle,
+  checkPage,
   checkSite,
   chunkUrls,
   clerkInstance,
@@ -83,6 +84,55 @@ describe("checkBundle", () => {
   });
 });
 
+// A page as Vercel serves it: vercel.json's headers, and lib/csp's <meta> tag (quotes escaped, as
+// Vite writes them).
+const SECURE_HEADERS = {
+  "content-security-policy": "frame-ancestors 'none'",
+  "x-frame-options": "DENY",
+  "x-content-type-options": "nosniff",
+  "strict-transport-security": "max-age=63072000; includeSubDomains",
+};
+const page = (body: string, connectSrc = `'self' ${PROD.api}`) =>
+  `<html><head><meta http-equiv="Content-Security-Policy" content="default-src &#39;self&#39;; connect-src ${connectSrc.replaceAll("'", "&#39;")}; object-src &#39;none&#39;">${body}</head></html>`;
+
+describe("checkPage", () => {
+  it("passes a page with the security headers and a policy that allows the API", () => {
+    expect(checkPage(page(""), SECURE_HEADERS, PROD)).toEqual([]);
+  });
+
+  it("accepts frame-ancestors 'none' alone against framing", () => {
+    const { "x-frame-options": _, ...headers } = SECURE_HEADERS;
+    expect(checkPage(page(""), headers, PROD)).toEqual([]);
+  });
+
+  it("catches each missing header", () => {
+    expect(checkPage(page(""), {}, PROD)).toEqual([
+      "can be framed by other sites (no X-Frame-Options: DENY)",
+      "lacks X-Content-Type-Options: nosniff",
+      "lacks Strict-Transport-Security",
+    ]);
+  });
+
+  it("catches a page without the policy, or with one that blocks the API", () => {
+    expect(checkPage("<html></html>", SECURE_HEADERS, PROD)).toEqual([
+      "has no Content-Security-Policy <meta> tag (the csp() Vite plugin)",
+    ]);
+    expect(checkPage(page("", `'self' ${STAGING_API}`), SECURE_HEADERS, PROD)).toEqual([
+      "has a Content-Security-Policy that blocks calls to https://api.example.com",
+    ]);
+    // The API named in another directive doesn't count.
+    const elsewhere = `<meta http-equiv="Content-Security-Policy" content="img-src ${PROD.api}; connect-src &#39;self&#39;">`;
+    expect(checkPage(elsewhere, SECURE_HEADERS, PROD)).toEqual([
+      "has a Content-Security-Policy that blocks calls to https://api.example.com",
+    ]);
+    // Without connect-src, default-src 'self' applies.
+    const noConnect = `<meta http-equiv="Content-Security-Policy" content="default-src &#39;self&#39;">`;
+    expect(checkPage(noConnect, SECURE_HEADERS, PROD)).toEqual([
+      "has a Content-Security-Policy that blocks calls to https://api.example.com",
+    ]);
+  });
+});
+
 describe("clerkInstance", () => {
   it("decodes a publishable key's type and host", () => {
     expect(clerkInstance(TEST_KEY)).toEqual({
@@ -120,11 +170,15 @@ describe("scriptUrls and chunkUrls", () => {
 describe("checkSite", () => {
   const serve =
     (files: Record<string, string>, status: Record<string, number> = {}): FetchText =>
-    async (url) => ({ status: status[url] ?? (url in files ? 200 : 404), text: files[url] ?? "" });
+    async (url) => ({
+      status: status[url] ?? (url in files ? 200 : 404),
+      text: files[url] ?? "",
+      headers: SECURE_HEADERS,
+    });
 
   it("checks every script the page loads, including on-demand chunks", async () => {
     const fetchText = serve({
-      "https://example.com": `<script type="module" src="/assets/index.js"></script>`,
+      "https://example.com": page(`<script type="module" src="/assets/index.js"></script>`),
       "https://example.com/assets/index.js": `${build(PROD.api, LIVE_KEY)}import("./assets/Page.js")`,
       "https://example.com/assets/Page.js": `const leak="${fake("whsec_", 24)}"`,
     });
@@ -138,7 +192,7 @@ describe("checkSite", () => {
   it("fetches each script once, even when chunks import each other", async () => {
     const fetched: string[] = [];
     const files: Record<string, string> = {
-      "https://example.com": `<script type="module" src="/assets/index.js"></script>`,
+      "https://example.com": page(`<script type="module" src="/assets/index.js"></script>`),
       "https://example.com/assets/index.js": `${build(PROD.api, LIVE_KEY)}import("./assets/a.js")`,
       "https://example.com/assets/a.js": `import("./assets/b.js")`,
       "https://example.com/assets/b.js": `import("./assets/a.js");import("./assets/index.js")`,
@@ -146,7 +200,7 @@ describe("checkSite", () => {
     const fetchText: FetchText = async (url) => {
       fetched.push(url);
       if (fetched.length > 10) throw new Error(`fetching in a loop: ${fetched.join(", ")}`);
-      return { status: 200, text: files[url] ?? "" };
+      return { status: 200, text: files[url] ?? "", headers: SECURE_HEADERS };
     };
     expect(await checkSite("web", "https://example.com", PROD, APIS, fetchText)).toMatchObject({
       problems: [],
@@ -158,7 +212,7 @@ describe("checkSite", () => {
     const seen: Record<string, string>[] = [];
     const fetchText: FetchText = async (_url, headers) => {
       seen.push(headers);
-      return { status: 401, text: "" };
+      return { status: 401, text: "", headers: {} };
     };
     expect(await checkSite("web", "https://example.com", PROD, APIS, fetchText)).toMatchObject({
       skipped: "protected (401); set its Vercel protection bypass secret",
@@ -171,12 +225,30 @@ describe("checkSite", () => {
     expect(seen).toEqual([{}, { "x-vercel-protection-bypass": "s3" }]);
   });
 
+  it("reports the page's problems along with the scripts'", async () => {
+    const fetchText: FetchText = async (url) => ({
+      status: 200,
+      text: url.endsWith(".js")
+        ? build(PROD.api, TEST_KEY)
+        : `<script src="/assets/index.js"></script>`,
+      headers: SECURE_HEADERS,
+    });
+    expect(await checkSite("web", "https://example.com", PROD, APIS, fetchText)).toMatchObject({
+      problems: [
+        "has no Content-Security-Policy <meta> tag (the csp() Vite plugin)",
+        "signs in through a pk_test Clerk instance (clean-mole-12.clerk.accounts.dev), expected pk_live",
+      ],
+    });
+  });
+
   it("fails a page with no scripts, or a script that doesn't load", async () => {
-    const noScripts = serve({ "https://example.com": "<p>Maintenance</p>" });
+    const noScripts = serve({ "https://example.com": page("<p>Maintenance</p>") });
     expect(await checkSite("web", "https://example.com", PROD, APIS, noScripts)).toMatchObject({
       problems: ["loads no scripts"],
     });
-    const missing = serve({ "https://example.com": `<script src="/assets/gone.js"></script>` });
+    const missing = serve({
+      "https://example.com": page(`<script src="/assets/gone.js"></script>`),
+    });
     expect(await checkSite("web", "https://example.com", PROD, APIS, missing)).toMatchObject({
       problems: ["https://example.com/assets/gone.js answers 404"],
     });

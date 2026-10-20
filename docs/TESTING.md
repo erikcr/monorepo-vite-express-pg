@@ -26,9 +26,9 @@ and people follow the same rules; the `testing` skill applies them to a change.
 | **API** | vitest + supertest + PGlite | `artifacts/api-server/src/__tests__/` | Every endpoint: access, validation, tenancy, responses, rows written. **The main layer** |
 | **Job** | vitest + pg-boss on PGlite | `artifacts/api-server/src/__tests__/jobs.test.ts` | Handlers' effects, retries, schedules |
 | **Component** | vitest + Testing Library + jsdom | `artifacts/{web,admin}/src/__tests__/` | Pages through the real router: guards, search params, loading/empty/error/success states, interactions |
-| **E2E** | Playwright, real API on in-process Postgres, real Clerk dev instance | `e2e/tests/` | The main flows a person walks through, across both apps and the API |
+| **E2E** | Playwright, real API on in-process Postgres, production builds of both sites, real Clerk dev instance | `e2e/tests/` | The main flows a person walks through, across both apps and the API; with them, every page's accessibility (axe, light and dark mode) and the Content-Security-Policy |
 | **Structural** | vitest | `route-access.test.ts`, `contract.test.ts`, `tenancy-schema.test.ts` | Rules that hold for every route or table at once: each route declares an access rule; the server implements exactly the spec; every table but the global ones belongs to an org |
-| **Post-deploy** | `.github/workflows/deploy-check.yml` | `lib/ci/src/deploy-check.ts`, expectations in `deploy-targets.ts` | What CI can't see: how each live site was built (the environment's API address over https, the right Clerk key type, no secret keys), after every site deploy |
+| **Post-deploy** | `.github/workflows/deploy-check.yml` | `lib/ci/src/deploy-check.ts`, expectations in `deploy-targets.ts` | What CI can't see: how each live site was built (the environment's API address over https, the right Clerk key type, no secret keys) and served (security headers, a CSP that allows its API), after every site deploy |
 
 **What is faked, and how:**
 - **Clerk** (identity). API tests sign in with test tokens (`createMember()`, `bearer()`), which
@@ -60,8 +60,10 @@ explains why in its **Tests** section (below).
 | **Job** | The handler's effect on the database; that the route enqueues it with the right payload (fake queue); a failure is logged with the job's name and id |
 | **Scheduled job** | The schedule is registered; the handler with a fixed clock |
 | **Env variable** | `lib/env` test: parsed value, default, and the error for an invalid value |
-| **Page or route** | Through `renderAt(path)`: loading, empty, error and success states; the guard (signed out, wrong role); search params it reads; each interaction's effect (the mutation called, navigation) |
-| **User-facing flow** (a person can now do something new) | An E2E test in `e2e/tests/`, one org per test, data set up through the API |
+| **Page or route** | Through `renderAt(path)`: loading, empty, error and success states; the guard (signed out, wrong role); search params it reads; each interaction's effect (the mutation called, navigation). Where an E2E test reaches the page, `expectAccessible(page)` once its content shows |
+| **User-facing flow** (a person can now do something new) | An E2E test in `e2e/tests/`, one org per test, data set up through the API, with `expectAccessible(page)` on each new page it reaches |
+| **New external origin** (a script, API, image or frame host the sites load) | Its directive in `lib/csp/src/index.ts`, with a case in its test; the E2E suite fails on any request the policy blocks |
+| **Error handling** (an error caught and handled rather than thrown) | If it's unexpected, it's still reported: `trackError(err, { tags })` (`src/lib/error-tracker.ts`), asserted the way `error-tracker.test.ts` does |
 | **Bug fix** | A regression test at the seam where the bug happened, **shown failing before the fix** |
 | **V1 success criterion** (`docs/PROJECT.md`) | An E2E acceptance test named after it |
 | **Deployed configuration** (new site, environment, or build-time variable) | The post-deploy check's expectations table, `lib/ci/src/deploy-targets.ts`; a new kind of secret or build-time check gets a fixture in `lib/ci/src/__tests__/deploy-check.test.ts` |
@@ -79,14 +81,15 @@ unchanged).
 - **Determinism:** no `sleep`s, no real clock, no network beyond the test's own servers, no
   randomness without a seed, and nothing from the machine running them: set variables with
   `vi.stubEnv`, and give code that reads files (like `.env`) a temporary directory. A test or
-  coverage floor that passes locally but not in CI depends on your machine. Wait for a condition (`findBy…`, `expect.poll`, Playwright's
-  auto-waiting assertions), never for time.
+  coverage floor that passes locally but not in CI depends on your machine. Wait for a condition
+  (`findBy…`, `expect.poll`, Playwright's auto-waiting assertions), never for time.
 - **Assert exactly:** `toEqual` on response bodies and rows over `toBeDefined`. Check the side
   effect too: the row written, the job enqueued, the other org's record untouched.
 - **Helpers before copies:** API: `createMember`, `createOrg`, `bearer`, `grantStaff`
   (`src/test-helpers/auth.ts`), `createTestDb`, `createTestDbAt(tag)`, `createTestBoss`, `createFakeQueue`. Frontend:
   `renderAt(path)` (`src/test-helpers/render.tsx`), `clerk-mock.tsx`. E2E: `signIn`,
-  `sessionToken`, `requireClerk` (`e2e/tests/signed-in.ts`). When a test needs setup a second
+  `sessionToken`, `requireClerk` (`e2e/tests/signed-in.ts`); every spec imports `test`, `expect` and
+  `expectAccessible` from `e2e/tests/fixtures.ts`, never `@playwright/test`. When a test needs setup a second
   test will also need, add it to a helper.
 - **Test files mirror the code:** `routes/orders.ts` → `__tests__/orders.test.ts`.
 
@@ -129,8 +132,9 @@ A test that sometimes fails is a bug, in the test or the code. **Never retry it 
 | `route-access.test.ts` | A route has no access rule as its first handler, or its rule changed without the table |
 | `contract.test.ts` | The server and `openapi.yaml` disagree about which operations exist |
 | `tenancy-schema.test.ts` | A table isn't tied to an org and isn't listed as global |
-| **E2E** | A flow breaks in the browser, or a test is flaky |
-| **Deploy check** (after each site deploys; alerts, doesn't block) | A live site is built with a missing, insecure or other environment's API address, the wrong Clerk key type, or ships a secret key. Fix the Vercel variable and redeploy the site |
+| **E2E** | A flow breaks in the browser, a page has an accessibility problem axe can see (contrast, labels, names, roles) in light or dark mode, the Content-Security-Policy blocks something, or a test is flaky. On private repos a failed run uploads the HTML report with traces (`playwright-report` artifact) |
+| **Dependency audit** | A high or critical advisory affects a production dependency (`pnpm deps:audit`) |
+| **Deploy check** (after each site deploys; alerts, doesn't block) | A live site is built with a missing, insecure or other environment's API address, the wrong Clerk key type, or ships a secret key; or it lacks its security headers or a CSP that allows its API. Fix the Vercel variable (or `vercel.json`) and redeploy the site |
 
 The **Tests** section of every PR (`.github/pull_request_template.md`) lists the tests added and
 how each was proven, or the one-line reason none are needed. The reason is for a reviewer to

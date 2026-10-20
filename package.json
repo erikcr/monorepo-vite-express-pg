@@ -24,6 +24,7 @@
     "test:coverage": "pnpm -r test:coverage",
     "coverage:ratchet": "COVERAGE_RATCHET=1 pnpm -r test:coverage",
     "knip": "knip",
+    "deps:audit": "pnpm audit --prod --audit-level high",
     "staff:grant": "pnpm --filter @repo/api-server staff:grant",
     "staff:revoke": "pnpm --filter @repo/api-server staff:revoke",
     "org:grant": "pnpm --filter @repo/api-server org:grant"

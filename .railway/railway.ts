@@ -45,6 +45,9 @@ export default defineRailway((ctx) => {
       // Clerk secret: a development instance's (sk_test_) in staging, the production instance's
       // (sk_live_) in production. Set by /provision-railway; never written into this file.
       CLERK_SECRET_KEY: preserve(),
+      // Sentry DSN (error tracking), set per environment when a Sentry project exists; unset,
+      // errors are only logged. Set by /provision-railway.
+      SENTRY_DSN: preserve(),
     },
   });
 

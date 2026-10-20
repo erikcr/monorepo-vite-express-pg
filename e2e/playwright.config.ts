@@ -11,10 +11,15 @@ const keys = clerkKeys();
 // Without keys (local runs only; CI requires them), a well-formed but fake key lets the apps
 // render: public pages work, and the signed-in tests skip themselves.
 const PLACEHOLDER_CLERK_KEY = "pk_test_ZTJlLXBsYWNlaG9sZGVyLmNsZXJrLmFjY291bnRzLmRldiQ=";
+// The sites run as production builds (with their Content-Security-Policy) calling the API
+// directly, cross-origin, as they do when deployed.
 const frontendEnv = {
-  API_PROXY_TARGET: API,
+  VITE_API_URL: API,
   VITE_CLERK_PUBLISHABLE_KEY: keys?.publishableKey ?? PLACEHOLDER_CLERK_KEY,
 };
+const site = (filter: string, port: number) =>
+  `pnpm --filter ${filter} exec vite build --outDir dist-e2e --logLevel warn && ` +
+  `pnpm --filter ${filter} exec vite preview --outDir dist-e2e --port ${port} --strictPort`;
 
 export default defineConfig({
   testDir: "./tests",
@@ -26,7 +31,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   failOnFlakyTests: !!process.env.CI,
   workers: process.env.CI ? 1 : undefined,
-  reporter: process.env.CI ? "github" : "list",
+  // In CI, also an HTML report with each failure's trace (uploaded by ci.yml on private repos).
+  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: { trace: "on-first-retry" },
   projects: [
     { name: "web", testMatch: "web.spec.ts", use: { ...devices["Desktop Chrome"], baseURL: WEB } },
@@ -52,16 +58,18 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
-      command: "pnpm --filter @repo/web exec vite --port 5174 --strictPort",
+      command: site("@repo/web", 5174),
       url: WEB,
       env: frontendEnv,
       reuseExistingServer: false,
+      timeout: 120_000,
     },
     {
-      command: "pnpm --filter @repo/admin exec vite --port 3002 --strictPort",
+      command: site("@repo/admin", 3002),
       url: ADMIN,
       env: frontendEnv,
       reuseExistingServer: false,
+      timeout: 120_000,
     },
   ],
 });
