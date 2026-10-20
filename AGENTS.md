@@ -95,5 +95,5 @@ CI must pass: lint, typecheck, migration drift, codegen check, tests with covera
 ## Infrastructure and operations
 
 - Railway is defined by `.railway/railway.ts`: never change it in the dashboard. After editing, `railway config plan` then `apply`, staging first, production after promotion (`docs/DEPLOYMENTS.md`). New projects set up GitHub, Railway and Vercel with the `provision-github`, `provision-railway` and `provision-vercel` skills, in that order.
-- Deploys run in order: CI → migrations → API → sites. Vercel never deploys `main` or `staging` by itself; `.github/workflows/deploy-sites.yml` triggers the sites once the API serves their commit. Don't turn Vercel's automatic deploys back on.
+- Deploys run in order: CI → migrations → API → sites → deploy check. Vercel never deploys `main` or `staging` by itself; `.github/workflows/deploy-sites.yml` triggers the sites once the API serves their commit. Don't turn Vercel's automatic deploys back on. A changed API address, Clerk instance or site updates `lib/ci/src/deploy-targets.ts` in the same PR.
 - **Agents don't change deployed infrastructure or data** (Railway/Vercel variables, GitHub settings, databases) without the user's explicit go-ahead. Verify read-only afterwards: deploy status, health endpoints, variable names (never print secret values).

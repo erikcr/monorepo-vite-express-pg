@@ -1,0 +1,70 @@
+name: Deploy check
+
+# After each site deploys, read its live JavaScript and check how it was built: the environment's
+# API address over https, the right Clerk key type, and no secret keys (lib/ci/src/deploy-check.ts,
+# expectations in lib/ci/src/deploy-targets.ts). Vite bakes these in at build time from Vercel's
+# settings, so no test in CI can see them. It alerts and doesn't block: the site is already live,
+# and a failed run is the signal to fix the variable and redeploy (docs/TESTING.md).
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment whose sites to check
+        type: choice
+        options: [all, production, staging]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Deploy check
+    # Vercel's deployments only ("Production – <project>", "Preview – <project>"); Railway's and
+    # failed ones are skipped.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+        (startsWith(github.event.deployment.environment, 'Production – ') ||
+          startsWith(github.event.deployment.environment, 'Preview – ')))
+    runs-on: ubuntu-latest
+    steps:
+      - id: target
+        name: Pick the environment and site
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOYMENT_ENVIRONMENT: ${{ github.event.deployment.environment }}
+          SHA: ${{ github.event.deployment.sha }}
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          if [ -n "$INPUT_ENVIRONMENT" ]; then
+            echo "environment=$INPUT_ENVIRONMENT" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Projects are named <repo>-<site> (/provision-vercel), so the site is the last part.
+          project="${DEPLOYMENT_ENVIRONMENT#* – }"
+          echo "site=${project##*-}" >> "$GITHUB_OUTPUT"
+          case "$DEPLOYMENT_ENVIRONMENT" in
+            "Production – "*) echo "environment=production" >> "$GITHUB_OUTPUT" ;;
+            # Previews are staging only when built from staging's head (Vercel reports the commit,
+            # not the branch); PR previews have no API and aren't checked.
+            *)
+              head=$(gh api "repos/$GITHUB_REPOSITORY/commits/staging" --jq .sha 2>/dev/null || true)
+              if [ "$head" = "$SHA" ]; then echo "environment=staging" >> "$GITHUB_OUTPUT"; fi
+              ;;
+          esac
+      - if: steps.target.outputs.environment != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: steps.target.outputs.environment != ''
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - name: Check the live sites
+        if: steps.target.outputs.environment != ''
+        env:
+          ENVIRONMENT: ${{ steps.target.outputs.environment }}
+          SITE: ${{ steps.target.outputs.site }}
+          VERCEL_BYPASS_WEB: ${{ secrets.VERCEL_BYPASS_WEB }}
+          VERCEL_BYPASS_ADMIN: ${{ secrets.VERCEL_BYPASS_ADMIN }}
+        run: node lib/ci/src/bin/deploy-check.ts

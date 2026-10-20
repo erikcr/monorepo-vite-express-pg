@@ -28,7 +28,7 @@ and people follow the same rules; the `testing` skill applies them to a change.
 | **Component** | vitest + Testing Library + jsdom | `artifacts/{web,admin}/src/__tests__/` | Pages through the real router: guards, search params, loading/empty/error/success states, interactions |
 | **E2E** | Playwright, real API on in-process Postgres, real Clerk dev instance | `e2e/tests/` | The main flows a person walks through, across both apps and the API |
 | **Structural** | vitest | `route-access.test.ts`, `contract.test.ts`, `tenancy-schema.test.ts` | Rules that hold for every route or table at once: each route declares an access rule; the server implements exactly the spec; every table but the global ones belongs to an org |
-| **Post-deploy** | `.github/workflows/deploy-check.yml` | `.github/scripts/deploy-check/` | What CI can't see: each live site's built config (API address, Clerk key type, no secret keys) and the API's readiness |
+| **Post-deploy** | `.github/workflows/deploy-check.yml` | `lib/ci/src/deploy-check.ts`, expectations in `deploy-targets.ts` | What CI can't see: how each live site was built (the environment's API address over https, the right Clerk key type, no secret keys), after every site deploy |
 
 **What is faked, and how:**
 - **Clerk** (identity). API tests sign in with test tokens (`createMember()`, `bearer()`), which
@@ -64,7 +64,7 @@ explains why in its **Tests** section (below).
 | **User-facing flow** (a person can now do something new) | An E2E test in `e2e/tests/`, one org per test, data set up through the API |
 | **Bug fix** | A regression test at the seam where the bug happened, **shown failing before the fix** |
 | **V1 success criterion** (`docs/PROJECT.md`) | An E2E acceptance test named after it |
-| **Deployed configuration** (new site, environment, or build-time variable) | The post-deploy check's expectations table |
+| **Deployed configuration** (new site, environment, or build-time variable) | The post-deploy check's expectations table, `lib/ci/src/deploy-targets.ts`; a new kind of secret or build-time check gets a fixture in `lib/ci/src/__tests__/deploy-check.test.ts` |
 
 No test is needed for: docs, comments, formatting, dependency bumps that CI already exercises,
 and pure refactors that keep behaviour (the existing tests are the proof; they must still pass
@@ -128,7 +128,7 @@ A test that sometimes fails is a bug, in the test or the code. **Never retry it 
 | `contract.test.ts` | The server and `openapi.yaml` disagree about which operations exist |
 | `tenancy-schema.test.ts` | A table isn't tied to an org and isn't listed as global |
 | **E2E** | A flow breaks in the browser, or a test is flaky |
-| **Deploy check** (after deploys; alerts, doesn't block) | A live site is built with the wrong API address or Clerk key, or ships a secret key; the API isn't ready |
+| **Deploy check** (after each site deploys; alerts, doesn't block) | A live site is built with a missing, insecure or other environment's API address, the wrong Clerk key type, or ships a secret key. Fix the Vercel variable and redeploy the site |
 
 The **Tests** section of every PR (`.github/pull_request_template.md`) lists the tests added and
 how each was proven, or the one-line reason none are needed. The reason is for a reviewer to

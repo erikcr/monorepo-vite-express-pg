@@ -486,10 +486,19 @@ only; not exercised on a live PR (the template repo has no `staging`), but its A
 against the repo's PRs #1 and #2. Proving the tests red found that the HTML-comment case passed
 without the stripping it was meant to test; fixed.
 
-### T.6 `[ ]` Post-deploy check
+### T.6 `[x]` Post-deploy check
 After **Deploy sites**: each live site's JavaScript has the environment's API address (https),
 the right Clerk key type, and no secret keys; the API's `/health/ready` passes. Alerts, doesn't
 block. Tested with fixtures of known misconfigurations.
+**Done:** `lib/ci/src/deploy-check.ts` (+ `deploy-targets.ts`, `bin/deploy-check.ts`) and
+`.github/workflows/deploy-check.yml`, on each Vercel production deploy (staging: a preview built
+from `staging`'s head), checking only the site that deployed. Fixtures for common build
+misconfigurations (missing / http / other environment's API, wrong Clerk instance, secret key in
+the publishable key's variable) plus other secret kinds; Clerk keys are recognised by decoding
+them, so Clerk's own prefix strings don't count. Dropped the `/health/ready` part: Deploy sites
+already waits for the API to serve the commit. No daily schedule: a site's build config only
+changes when it deploys. Both live sites pass. Staging sites need a Vercel bypass secret
+(`VERCEL_BYPASS_<SITE>`), otherwise skipped with a warning.
 
 ---
 
@@ -505,3 +514,4 @@ block. Tested with fixtures of known misconfigurations.
 | 2026-10-18 | 2.1, 2.2, 2.3, 2.5, 2.6 | Typed env, validate()/sendValidated(), pino-http + request ids, helmet/rate limit/trust proxy. Fixed: 500s leaked err.message; API tests' PGlite cold start could exceed vitest's 5s timeout under load (the earlier flake) |
 | 2026-10-18 | 2.9 (decided: out), 3.1–3.6 | API reference at /docs, full-stack E2E, VITE_API_URL validation, AGENTS.md + skills, docs/template + plan board. CI's coverage floor caught untested env additions |
 | 2026-10-19 | 1.1 (auth, tasks 1–6) | Reviewed the reference app's access design and took its general core; Clerk + own grant tables + permission policy + server-side org + route-access test; web workspace and staff-only admin; E2E through real Clerk in CI. Found: Clerk load failure broke public API calls; admin /health proxy; Vercel preview env needs an explicit branch arg |
+| 2026-10-19 | P.6, T.1–T.6 | Deploy sequencing (CI → migrations → API → sites), live-verified twice; Railway leaves a setting removed from railway.ts in place (clear with its empty value). Testing framework: TESTING.md, workflows, `testing` skill, Tests-with-code CI check, post-deploy check. Ratchet found floors 10–20 points under actual; proving tests red found two that passed without the code they covered |

@@ -95,6 +95,17 @@ Do steps 5–9 for `web`, then repeat them for `admin`. `<app>` is `web` or `adm
     gh variable set API_URL_STAGING --body <staging-api-url>
     ```
 
+    Finally, fill in `lib/ci/src/deploy-targets.ts` with both environments (API URL, site URLs,
+    and `clerkKey`: `"live"` for production, `"test"` for staging) and commit it on a branch: the
+    post-deploy check (`.github/workflows/deploy-check.yml`) reads each live site against it.
+    The staging sites are Vercel previews, which Vercel protects by default; for the check to read
+    them, ask the user to create a **Protection Bypass for Automation** secret in each project
+    (Settings → Deployment Protection) and store it without printing it:
+    ```
+    gh secret set VERCEL_BYPASS_WEB     # and VERCEL_BYPASS_ADMIN
+    ```
+    Without one, the check skips that staging site with a warning.
+
 ## Summary
 
 13. Print a success summary in this format:
@@ -108,6 +119,7 @@ Do steps 5–9 for `web`, then repeat them for `admin`. `<app>` is `web` or `adm
     ✓ CORS_ORIGIN set on both Railway environments
     ✓ Deploy hooks stored (VERCEL_HOOK_*), API_URL_PRODUCTION / API_URL_STAGING set:
       sites deploy only after the API serves their commit
+    ✓ lib/ci/src/deploy-targets.ts filled in: every site deploy is checked against it
 
     Next steps:
     - Add custom domains in Vercel (and update CORS_ORIGIN) if needed.

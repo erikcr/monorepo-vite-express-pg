@@ -63,6 +63,7 @@ needs it finds it. `plan` is always safe; `apply` marks anything destructive and
 | 3 | Migrations | Railway pre-deploy (`node dist/migrate.js`) | Railway **Wait for CI** holds the deploy until the commit's workflows finish and skips it if one failed |
 | 4 | API | Railway | Starts only if migrations succeeded; traffic switches once `/health/ready` returns 200 (the database answers) |
 | 5 | Sites | `deploy-sites.yml`, then Vercel | When Railway reports the API deploy successful, the workflow waits until `/health` reports the deployed commit (`sha`), then triggers each site's deploy hook. Vercel's automatic deploys of `main` and `staging` are off (`git.deploymentEnabled` in each `vercel.json`) |
+| 6 | Deploy check | `deploy-check.yml`, after each site deploys | Reads the live site's JavaScript: the environment's API address over https, the right Clerk key type, no secret keys (expectations in `lib/ci/src/deploy-targets.ts`). Alerts; the site is already live |
 
 The same order runs on `staging` (every merged PR) and `main` (every promotion): a site never
 goes live before the API it was built for, and never if the migrations or the API failed. Every
@@ -89,6 +90,7 @@ The API goes live a minute or two before the sites, and migrations run while the
 | API health check | Previous API keeps serving; no site changes | Read the deploy log |
 | Deploy sites | The new API is live; the sites keep their previous build | Read the run. If `/health` serves the commit now, re-run it. If there's no run (Railway never reported success, below), run **Deploy sites** by hand (Actions → Deploy sites → Run workflow, on the branch) |
 | A site's build | That site keeps its previous build, against an API that still supports it | Fix forward |
+| Deploy check | Everything is live, but a site was built wrong | The failed run names the site and problem (never a key's value). Fix the Vercel variable, then redeploy that site (run **Deploy sites** by hand). A secret key in a bundle is public: rotate it |
 
 **Rollback:** Railway's rollback for the API, Vercel's instant rollback for a site. A database can't be rolled back by redeploying, which is why migrations stay additive.
 
