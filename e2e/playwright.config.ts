@@ -21,7 +21,10 @@ export default defineConfig({
   globalSetup: "./global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // A test that passes only on retry is flaky, and fails the run (docs/TESTING.md): the one
+  // retry exists to record a trace of the failure, not to get to green.
+  retries: process.env.CI ? 1 : 0,
+  failOnFlakyTests: !!process.env.CI,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "github" : "list",
   use: { trace: "on-first-retry" },

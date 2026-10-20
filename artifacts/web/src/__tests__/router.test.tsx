@@ -1,8 +1,6 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createAppRouter } from "../router.tsx";
+import { renderAt } from "../test-helpers/render.tsx";
 import { clerk } from "./clerk-mock.tsx";
 
 vi.mock("@clerk/react", () => import("./clerk-mock.tsx"));
@@ -13,17 +11,6 @@ const reportError = vi.fn();
 vi.mock("@repo/api-client-react/errors", () => ({
   reportError: (...a: unknown[]) => reportError(...a),
 }));
-
-function renderAt(path: string) {
-  const queryClient = new QueryClient();
-  const router = createAppRouter(queryClient, createMemoryHistory({ initialEntries: [path] }));
-  render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  );
-  return router;
-}
 
 describe("routes (web)", () => {
   beforeEach(() => {
@@ -48,7 +35,7 @@ describe("routes (web)", () => {
   });
 
   it("navigates client-side through the nav links", async () => {
-    const router = renderAt("/");
+    const { router } = renderAt("/");
     fireEvent.click(await screen.findByRole("link", { name: "About" }));
     expect(await screen.findByRole("heading", { name: "About" })).toBeTruthy();
     expect(router.state.location.pathname).toBe("/about");

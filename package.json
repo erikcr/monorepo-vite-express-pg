@@ -22,6 +22,7 @@
     "test": "pnpm -r test",
     "prepare": "git config core.hooksPath .githooks || true",
     "test:coverage": "pnpm -r test:coverage",
+    "coverage:ratchet": "COVERAGE_RATCHET=1 pnpm -r test:coverage",
     "knip": "knip",
     "staff:grant": "pnpm --filter @repo/api-server staff:grant",
     "staff:revoke": "pnpm --filter @repo/api-server staff:revoke",

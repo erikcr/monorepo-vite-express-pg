@@ -1,8 +1,6 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createAppRouter } from "../router.tsx";
+import { renderAt } from "../test-helpers/render.tsx";
 import { clerk } from "./clerk-mock.tsx";
 
 vi.mock("@clerk/react", () => import("./clerk-mock.tsx"));
@@ -25,17 +23,6 @@ const page = (items: object[], extra: object = {}) => ({
   error: null,
   ...extra,
 });
-
-function renderAt(path: string) {
-  const queryClient = new QueryClient();
-  const router = createAppRouter(queryClient, createMemoryHistory({ initialEntries: [path] }));
-  render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  );
-  return router;
-}
 
 describe("routes (admin)", () => {
   beforeEach(() => {
@@ -70,7 +57,7 @@ describe("routes (admin)", () => {
   });
 
   it("writes the search to the URL once typing pauses", async () => {
-    const router = renderAt("/");
+    const { router } = renderAt("/");
     const box = await screen.findByLabelText("Search organizations");
     vi.useFakeTimers();
     fireEvent.change(box, { target: { value: "glob" } });

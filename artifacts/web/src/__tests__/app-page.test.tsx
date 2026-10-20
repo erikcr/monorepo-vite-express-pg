@@ -1,9 +1,7 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getSelectedOrgId, selectOrg } from "../org.ts";
-import { createAppRouter } from "../router.tsx";
+import { renderAt } from "../test-helpers/render.tsx";
 import { clerk } from "./clerk-mock.tsx";
 
 vi.mock("@clerk/react", () => import("./clerk-mock.tsx"));
@@ -28,17 +26,6 @@ const ORG_B = org("bbbbbbbb-0000-4000-8000-000000000002", "Beta");
 const signedInAs = (orgs: object[]) =>
   me.mockReturnValue({ data: { user: { id: "u", email: "e", name: "" }, orgs }, isLoading: false });
 
-function renderApp() {
-  const queryClient = new QueryClient();
-  const router = createAppRouter(queryClient, createMemoryHistory({ initialEntries: ["/app"] }));
-  render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  );
-  return queryClient;
-}
-
 beforeEach(() => {
   clerk.signedIn = true;
   selectOrg(null);
@@ -52,14 +39,14 @@ beforeEach(() => {
 describe("/app", () => {
   it("sends signed-out visitors to sign-in", async () => {
     clerk.signedIn = false;
-    renderApp();
+    renderAt("/app");
     expect(await screen.findByText("redirecting to sign-in")).toBeTruthy();
     expect(me).not.toHaveBeenCalled();
   });
 
   it("asks someone without an org to create one", async () => {
     signedInAs([]);
-    renderApp();
+    renderAt("/app");
     expect(await screen.findByRole("heading", { name: "Create your organization" })).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Organization name"), { target: { value: "Acme" } });
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
@@ -68,7 +55,7 @@ describe("/app", () => {
 
   it("works in the person's only org and remembers it", async () => {
     signedInAs([ORG_A]);
-    renderApp();
+    renderAt("/app");
     expect(await screen.findByRole("heading", { name: "Alpha" })).toBeTruthy();
     expect(getSelectedOrgId()).toBe(ORG_A.id);
     expect(await screen.findByText("No records yet.")).toBeTruthy();
@@ -77,14 +64,14 @@ describe("/app", () => {
   it("drops a remembered org the person no longer belongs to", async () => {
     selectOrg("cccccccc-0000-4000-8000-000000000003");
     signedInAs([ORG_A, ORG_B]);
-    renderApp();
+    renderAt("/app");
     await screen.findByLabelText("Organization");
     expect(getSelectedOrgId()).toBe(ORG_A.id);
   });
 
   it("switches orgs, clearing every cached response except /me", async () => {
     signedInAs([ORG_A, ORG_B]);
-    const queryClient = renderApp();
+    const { queryClient } = renderAt("/app");
     queryClient.setQueryData(["/api/me"], { kept: true });
     queryClient.setQueryData(["infinite", "/api/example"], { stale: "from Alpha" });
     fireEvent.change(await screen.findByLabelText("Organization"), { target: { value: ORG_B.id } });
@@ -115,7 +102,7 @@ describe("/app", () => {
       hasNextPage: true,
       fetchNextPage: vi.fn(),
     });
-    renderApp();
+    renderAt("/app");
     expect(await screen.findByText("First record")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Record name"), { target: { value: "Second" } });

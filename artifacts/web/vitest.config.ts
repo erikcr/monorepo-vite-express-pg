@@ -12,8 +12,15 @@ export default defineConfig({
       // Count every source file, not just the ones a test happened to import.
       include: ["src/**"],
       exclude: ["src/__tests__/**", "src/test-helpers/**", "src/main.tsx", "src/vite-env.d.ts"],
-      // Floors just below current coverage: CI fails if it drops. Raise them as tests improve.
-      thresholds: { statements: 70, branches: 50, functions: 80, lines: 70 },
+      // Floors just below current coverage: CI fails if it drops. `pnpm coverage:ratchet` raises
+      // them to the current (rounded-down) coverage; commit the result with the tests.
+      thresholds: {
+        statements: 85,
+        branches: 69,
+        functions: 80,
+        lines: 85,
+        autoUpdate: process.env.COVERAGE_RATCHET === "1" ? (n: number) => Math.floor(n) : false,
+      },
     },
   },
 });

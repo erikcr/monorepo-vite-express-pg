@@ -23,8 +23,15 @@ export default defineConfig({
         "src/e2e-server.ts",
         "src/scripts/**",
       ],
-      // Floors just below current coverage: CI fails if it drops. Raise them as tests improve.
-      thresholds: { statements: 80, branches: 80, functions: 75, lines: 80 },
+      // Floors just below current coverage: CI fails if it drops. `pnpm coverage:ratchet` raises
+      // them to the current (rounded-down) coverage; commit the result with the tests.
+      thresholds: {
+        statements: 95,
+        branches: 92,
+        functions: 95,
+        lines: 97,
+        autoUpdate: process.env.COVERAGE_RATCHET === "1" ? (n: number) => Math.floor(n) : false,
+      },
     },
   },
 });

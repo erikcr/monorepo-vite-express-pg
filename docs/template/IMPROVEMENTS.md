@@ -436,6 +436,52 @@ the board, plans go in `docs/plans/`.
 
 ---
 
+## Phase T — Testing framework (2026-10-19)
+
+The layers exist (API on PGlite, jobs, components, real-Clerk E2E, coverage floors, the
+route-access table), but what a change must test was one line in each of three places, plans had
+no test lines, and nothing noticed code arriving without tests. The template writes tests with the code from the
+first commit, rather than adding them in waves afterwards.
+
+**Decisions (Erik, 2026-10-19):** CI enforces tests-with-code, with an explicit opt-out line in
+the PR description; a post-deploy check layer is included.
+
+### T.1 `[x]` Test infrastructure gaps
+- Contract parity: every `openapi.yaml` operation has a mounted route, and every mounted route is in the spec.
+- Shared component render helper per app (`src/test/render.tsx`), used by the existing tests.
+- `pnpm test:coverage` summary of current coverage against each floor, to make raising floors routine.
+- Playwright: no retries in CI (they hide flakes); fail on a flaky pass.
+**Done:** `contract.test.ts` (spec ↔ mounted routes, sharing `test-helpers/mounted-routes.ts`
+with the route-access test); `src/test-helpers/render.tsx` (`renderAt(path)`) in web and admin;
+`pnpm coverage:ratchet` (Vitest's `autoUpdate`, rounded down) — its first run raised every floor,
+which had drifted 10–20 points below actual (API 80→95 statements); Playwright keeps one CI retry
+only to record a trace, with `failOnFlakyTests`.
+
+### T.2 `[ ]` `docs/TESTING.md`
+The one standard: layers and what each is for, what is never mocked, the required-tests matrix by
+change type, conventions (helpers, isolation, determinism, naming), proving tests, coverage
+ratchet, flaky-test policy.
+
+### T.3 `[ ]` Tests in every workflow
+`AGENTS.md` testing section; plan template with a **Tests:** line per task; `execute-plan`
+(tests in the task's commit), `new-feature` (tests at each layer, not last), `new-project`
+(success criteria map to E2E acceptance tests), `diagnosing-bugs` (link); PR template.
+
+### T.4 `[ ]` `testing` skill
+Choose the tests a change needs from the matrix, write them with the template's helpers, prove
+them red, and audit a diff or branch for missing tests.
+
+### T.5 `[ ]` CI: tests come with the code
+A PR job: a package whose source changed without its tests changing fails, unless the PR
+description has `Tests: none needed — <reason>`. Part of **CI passed**.
+
+### T.6 `[ ]` Post-deploy check
+After **Deploy sites**: each live site's JavaScript has the environment's API address (https),
+the right Clerk key type, and no secret keys; the API's `/health/ready` passes. Alerts, doesn't
+block. Tested with fixtures of known misconfigurations.
+
+---
+
 ## Session Log
 
 | Date | Items completed | Notes |
