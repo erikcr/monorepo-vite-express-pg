@@ -471,7 +471,7 @@ hand during 1.1). Both proven red.
 (tests in the task's commit), `new-feature` (tests at each layer, not last), `new-project`
 (success criteria map to E2E acceptance tests), `diagnosing-bugs` (link); PR template.
 
-### T.4 `[ ]` `testing` skill
+### T.4 `[x]` `testing` skill
 Choose the tests a change needs from the matrix, write them with the template's helpers, prove
 them red, and audit a diff or branch for missing tests.
 
