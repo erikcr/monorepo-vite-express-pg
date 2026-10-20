@@ -176,7 +176,7 @@ both, so one mechanism and no Vercel token:
   hook. Skips if the branch has moved on (a hook builds the head). `workflow_dispatch` releases by
   hand when Railway never reports success.
 - `vercel.json`: `git.deploymentEnabled` off for `main` and `staging`; PR previews unchanged.
-- `.railway/railway.ts`: no `watchPatterns`, so every commit has an API deploy for the sites to follow.
+- `.railway/railway.ts`: no `watchPatterns` (clearing the live ones took one apply of `[]`), so every commit has an API deploy for the sites to follow.
 - `/provision-vercel` creates the hooks and stores them (secrets `VERCEL_HOOK_*`) with the
   `API_URL_*` repository variables.
 

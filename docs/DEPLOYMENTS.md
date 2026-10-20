@@ -99,6 +99,7 @@ The API goes live a minute or two before the sites, and migrations run while the
 - **Deploy sites only deploys the branch's latest commit.** A deploy hook builds the branch head, so if the branch has moved on, the run stops and leaves the release to the newer commit's API deploy. If that newer commit fails CI, nothing deploys until a commit passes.
 - **Railway doesn't always report a deploy to GitHub.** If the deploy shows SUCCESS in Railway and `/health` serves the commit but no **Deploy sites** run started, run it by hand (above). It still checks the API first.
 - **The deploy hooks are secrets** (`VERCEL_HOOK_{WEB,ADMIN}_{PRODUCTION,STAGING}`), alongside the repository variables `API_URL_PRODUCTION` and `API_URL_STAGING`. Anyone with a hook URL can trigger a deploy of that branch.
+- **Removing a setting from `.railway/railway.ts` doesn't clear it on the service**: the plan shows `→ null` and apply leaves the old value. To clear one, apply its empty value once (`watchPatterns: []`), then remove the line; Railway stores the empty value as unset, so keeping it shows a `null → []` change on every plan.
 - **Railway settings live in `.railway/railway.ts`, not the dashboard.** A dashboard edit lasts only until the next `railway config apply`. Vercel's build settings stay blank so `vercel.json` controls them.
 - **`CORS_ORIGIN` also decides whose sign-ins the API accepts**: Clerk session tokens must come
   from one of those origins (`authorizedParties`). Set it in production; until it is, the API
