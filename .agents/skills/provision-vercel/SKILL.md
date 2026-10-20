@@ -1,6 +1,6 @@
 ---
 name: provision-vercel
-description: Create the web and admin Vercel projects with per-environment API URLs, then set CORS_ORIGIN on Railway. Use once per new project, after provision-railway.
+description: Create the web and admin Vercel projects with per-environment API URLs and Clerk keys, the deploy hooks that release them after the API, CORS_ORIGIN on Railway, and the deploy check's targets. Use once per new project, after provision-railway.
 ---
 
 Provision two Vercel projects for this monorepo — one for `artifacts/web` and one for `artifacts/admin` — each with production deploying `main` against the production API and the `staging` branch deploying against the staging API (see `docs/DEPLOYMENTS.md`). Work through the steps below in order, stopping and reporting clearly if any step fails. Run `/provision-railway` first.
@@ -95,9 +95,12 @@ Do steps 5–9 for `web`, then repeat them for `admin`. `<app>` is `web` or `adm
     gh variable set API_URL_STAGING --body <staging-api-url>
     ```
 
-    Finally, fill in `lib/ci/src/deploy-targets.ts` with both environments (API URL, site URLs,
-    and `clerkKey`: `"live"` for production, `"test"` for staging) and commit it on a branch: the
-    post-deploy check (`.github/workflows/deploy-check.yml`) reads each live site against it.
+    Finally, replace the template's entries in `lib/ci/src/deploy-targets.ts`: set `DEPLOY_REPO`
+    to `<repo>` (`gh repo view --json nameWithOwner --jq .nameWithOwner`) and fill in both
+    environments (API URL, site URLs, and `clerkKey`: `"live"` for production, `"test"` for
+    staging). Commit it on a branch, in a PR into `staging`: the post-deploy check
+    (`.github/workflows/deploy-check.yml`) reads each live site against it, and fails on every
+    deploy until `DEPLOY_REPO` names this repo.
     The staging sites are Vercel previews, which Vercel protects by default; for the check to read
     them, ask the user to create a **Protection Bypass for Automation** secret in each project
     (Settings → Deployment Protection) and store it without printing it:
@@ -122,7 +125,10 @@ Do steps 5–9 for `web`, then repeat them for `admin`. `<app>` is `web` or `adm
     ✓ lib/ci/src/deploy-targets.ts filled in: every site deploy is checked against it
 
     Next steps:
-    - Add custom domains in Vercel (and update CORS_ORIGIN) if needed.
+    - Add custom domains in Vercel if needed; then update CORS_ORIGIN on Railway,
+      lib/ci/src/deploy-targets.ts, and the Clerk instance's allowed origins.
+    - The sites' Content-Security-Policy follows VITE_API_URL and the Clerk key by itself
+      (lib/csp); a new third-party script or API host goes in lib/csp/src/index.ts.
     - Feature work goes through PRs into staging; promote staging → main to release.
       See docs/DEPLOYMENTS.md.
     ```

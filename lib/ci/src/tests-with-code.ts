@@ -11,8 +11,13 @@ const TEST_HOMES: Record<string, string[]> = {
   "artifacts/admin": ["artifacts/admin", "e2e"],
 };
 
-// Generated from openapi.yaml: tested through the code that uses them.
-const GENERATED = new Set(["lib/api-zod/src/index.ts", "lib/api-client-react/src/index.ts"]);
+// Not code to test: generated from openapi.yaml (tested through the code that uses them), and the
+// deploy check's table of live URLs (data, validated on every run by deploy-targets.test.ts).
+const NOT_SOURCE = new Set([
+  "lib/api-zod/src/index.ts",
+  "lib/api-client-react/src/index.ts",
+  "lib/ci/src/deploy-targets.ts",
+]);
 
 const isTest = (file: string) =>
   file.includes("/__tests__/") || /\.test\.tsx?$/.test(file) || file.startsWith("e2e/tests/");
@@ -20,7 +25,7 @@ const isTest = (file: string) =>
 /** The package (`artifacts/web`, `lib/env`…) whose source `file` is, or null if it isn't source. */
 function sourcePackage(file: string): string | null {
   const match = /^((?:artifacts|lib)\/[^/]+)\/src\//.exec(file);
-  if (!match?.[1] || isTest(file) || file.includes("/test-helpers/") || GENERATED.has(file)) {
+  if (!match?.[1] || isTest(file) || file.includes("/test-helpers/") || NOT_SOURCE.has(file)) {
     return null;
   }
   return match[1];

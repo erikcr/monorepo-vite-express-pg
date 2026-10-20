@@ -1,6 +1,6 @@
 ---
 name: provision-railway
-description: Create the Railway project and apply .railway/railway.ts (Infrastructure as Code) to production and staging. Use once per new project, after provision-github.
+description: Create the Railway project and apply .railway/railway.ts (Infrastructure as Code) to production and staging, with Clerk keys, database backups, the Sentry DSN and an uptime monitor. Use once per new project, after provision-github.
 ---
 
 Provision a new Railway project for this monorepo's API server from `.railway/railway.ts` (Railway Infrastructure as Code): a `production` environment deploying `main` and a `staging` environment deploying `staging`, each with its own Postgres (see `docs/DEPLOYMENTS.md`). Work through the steps below in order, stopping and reporting clearly if any step fails.

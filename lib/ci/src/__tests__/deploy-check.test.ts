@@ -7,6 +7,7 @@ import {
   clerkInstance,
   type DeployTarget,
   type FetchText,
+  foreignTargets,
   scriptUrls,
 } from "../deploy-check.ts";
 
@@ -130,6 +131,20 @@ describe("checkPage", () => {
     expect(checkPage(noConnect, SECURE_HEADERS, PROD)).toEqual([
       "has a Content-Security-Policy that blocks calls to https://api.example.com",
     ]);
+  });
+});
+
+describe("foreignTargets", () => {
+  it("accepts the targets' own repo, or no repo (a local run)", () => {
+    expect(foreignTargets("acme/app", "acme/app")).toBeNull();
+    expect(foreignTargets(undefined, "acme/app")).toBeNull();
+  });
+
+  it("refuses another repo's targets, so a new project never checks the template's sites", () => {
+    expect(foreignTargets("acme/new-app", "acme/template")).toBe(
+      "lib/ci/src/deploy-targets.ts describes acme/template's sites, not acme/new-app's: " +
+        "fill it in with this project's (/provision-vercel) and set DEPLOY_REPO"
+    );
   });
 });
 

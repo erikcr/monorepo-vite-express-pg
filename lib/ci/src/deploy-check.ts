@@ -37,6 +37,15 @@ const SECRETS: [kind: string, pattern: RegExp][] = [
   ["a private key", /-----BEGIN [A-Z ]*PRIVATE KEY-----/],
 ];
 
+/** Why the targets table can't be used in `repo` (it describes another repo's sites), or null. */
+export function foreignTargets(repo: string | undefined, targetsRepo: string): string | null {
+  if (!repo || repo === targetsRepo) return null;
+  return (
+    `lib/ci/src/deploy-targets.ts describes ${targetsRepo}'s sites, not ${repo}'s: ` +
+    "fill it in with this project's (/provision-vercel) and set DEPLOY_REPO"
+  );
+}
+
 /** The page's own scripts (same origin), as absolute URLs. */
 export function scriptUrls(html: string, pageUrl: string): string[] {
   const srcs = [...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map((m) => String(m[1]));

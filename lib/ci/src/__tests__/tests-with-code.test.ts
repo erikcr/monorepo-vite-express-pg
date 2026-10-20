@@ -42,7 +42,7 @@ describe("untestedPackages", () => {
     ).toEqual([]);
   });
 
-  it("ignores what isn't source: docs, config, generated code, test helpers", () => {
+  it("ignores what isn't source: docs, config, generated code, deploy targets, test helpers", () => {
     expect(
       untestedPackages([
         "docs/TESTING.md",
@@ -51,6 +51,7 @@ describe("untestedPackages", () => {
         "lib/api-spec/openapi.yaml",
         "lib/api-zod/src/index.ts",
         "lib/api-client-react/src/index.ts",
+        "lib/ci/src/deploy-targets.ts",
         "artifacts/api-server/src/test-helpers/auth.ts",
         ".github/workflows/ci.yml",
       ])

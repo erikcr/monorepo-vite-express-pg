@@ -6,6 +6,8 @@ description: Disciplined loop for hard bugs, flaky tests and performance regress
 # Diagnose a bug
 
 ## 1. Build a feedback loop first
+For a report from a deployed environment, start from what it recorded: the Sentry event (environment, commit, request or job id, stack) and the API's logs for that request id (`railway logs --service api --environment <env>`; every line carries `req.id`).
+
 Before reading code to form a theory, get **one command** that goes red on *this* bug and you've already run: a failing vitest test (supertest + PGlite for the API, Testing Library for UI), a curl against `pnpm dev`, a Playwright script, or a throwaway harness. It must assert the user's exact symptom, be deterministic, and take seconds. For flaky bugs, raise the reproduction rate (loop it 100×, run the full suite in parallel, add load) until it's debuggable. If you can't build a loop, stop and say what you tried and what you need (logs, a captured request, access).
 
 ## 2. Reproduce, then minimise

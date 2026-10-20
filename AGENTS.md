@@ -12,7 +12,7 @@ Instructions for every coding agent in this repo (Claude Code reads this via `CL
 
 ## Start of a session
 
-Read `docs/PROJECT.md` (objective, V1 scope, data model, success criteria) and evaluate every change against it. If it doesn't exist and the user is starting a project, suggest the `new-project` skill before writing code. Planned work lives in `docs/plans/` with the board in `docs/README.md`; execute a plan with the `execute-plan` skill.
+Read `docs/PROJECT.md` (objective, V1 scope, data model, success criteria) and evaluate every change against it. If it doesn't exist and the user is starting a project, walk them through "Setting up a new project" in `docs/DEPLOYMENTS.md` (ending with the `new-project` skill) before writing code. Planned work lives in `docs/plans/` with the board in `docs/README.md`; execute a plan with the `execute-plan` skill.
 
 ## Branching
 

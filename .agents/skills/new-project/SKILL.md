@@ -13,7 +13,7 @@ Then stop.
 
 ## Instructions
 
-Work through the six sections below **one at a time**. Ask each question, wait for the user's response, then proceed to the next. Do not batch questions. Record answers exactly as given — do not paraphrase.
+Work through the seven sections below **one at a time**. Ask each question, wait for the user's response, then proceed to the next. Do not batch questions. Record answers exactly as given — do not paraphrase.
 
 ---
 
@@ -74,10 +74,11 @@ Ask:
 > "What is your brand color? Provide a hex code (e.g. `#3B82F6`) or a color name (indigo, teal, rose, orange…). Press Enter to keep the neutral slate placeholder and update it later."
 
 If the user provides a color:
-- Convert it to an oklch value. Use your knowledge of color science to find the closest perceptually accurate oklch equivalent. Aim for `lightness ~50%, chroma ~0.18–0.25` for saturated colors, lower chroma for muted tones.
-- Derive a light-mode dark variant (same hue, `lightness ~68%, chroma slightly higher`) for the dark mode override.
-- Derive `--color-brand-subtle` (same hue, `lightness ~94%, chroma ~0.02–0.03`) for light mode and (`lightness ~22%, chroma ~0.04`) for dark mode.
-- Edit both `artifacts/web/src/index.css` and `artifacts/admin/src/index.css` and replace the three `--color-brand*` values in the `@theme` block and the corresponding dark mode overrides.
+- Convert it to oklch and keep its hue and roughly its chroma (`~0.18–0.25` for saturated colors, lower for muted ones), but set the lightness to **~50%** even if their color is lighter: buttons put near-white text (`--color-brand-fg`) on it, and that needs 4.5:1 contrast.
+- Dark mode: the same hue at **~68%** lightness, with the dark `--color-brand-fg` override (`~15%`) kept for the text on it.
+- `--color-brand-subtle`: same hue, `~94%` lightness and `~0.02–0.03` chroma in light mode; `~22%` and `~0.04` in dark mode.
+- Edit both `artifacts/web/src/index.css` and `artifacts/admin/src/index.css`: the `--color-brand*` values in the `@theme` block and in the dark mode overrides.
+- Check it: `pnpm --filter @repo/e2e e2e` checks every page's contrast with axe in both modes. If it reports `color-contrast` on brand elements, move the lightness further from the text color (darker in light mode, lighter in dark mode) and re-run.
 
 If the user skips: leave the slate placeholder in place. Note that they can update it anytime by editing the `--color-brand` line in each app's `src/index.css`.
 
@@ -85,7 +86,7 @@ If the user skips: leave the slate placeholder in place. Note that they can upda
 
 ## Write the Output
 
-After collecting all six sections, create `docs/PROJECT.md` with this exact structure:
+After collecting all seven sections, create `docs/PROJECT.md` with this exact structure:
 
 ```markdown
 # <Product Name> — Project Definition
@@ -114,22 +115,23 @@ Each one is proven by an E2E acceptance test of the same name in `e2e/tests/` (s
 
 The template line records where the project came from: to see what the template has gained since, run `git log --since=<that date>` in the template repo.
 
-Remove the template's own maintenance docs, which don't apply to this project:
-```bash
-git rm -r -q docs/template
-```
+Make the repo this project's rather than the template's:
+- `README.md`: replace the first heading and the sentence under it with the product name and its one-line objective. Keep the rest (setup and deploy notes still apply).
+- Remove the template's own maintenance docs, which don't apply to this project: `git rm -r -q docs/template`.
 
 Then commit on a branch (the git hooks block commits on `main` and `staging`):
 ```bash
 git switch -c docs/project-definition   # skip if already on a feature branch
-git add docs/PROJECT.md docs/template
+git add docs README.md artifacts/web/src/index.css artifacts/admin/src/index.css
 git commit -m "docs: define project scope and V1 objectives for <Product Name>"
 ```
 
-If the `staging` branch exists on GitHub (`/provision-github` has run), push and open a PR into it:
+If the `staging` branch exists on GitHub (`/provision-github` has run), push and open a PR into it. The brand color is a source change with no tests of its own (the E2E contrast checks cover it), so the description carries the line CI's **Tests with code** check reads; leave it out if the color wasn't changed:
 ```bash
 git push -u origin docs/project-definition
-gh pr create --base staging --fill
+gh pr create --base staging --title "docs: project definition for <Product Name>" --body "Defines the project scope in docs/PROJECT.md and removes the template's maintenance docs.
+
+Tests: none needed — brand color tokens only; the E2E accessibility checks verify their contrast"
 ```
 Otherwise tell the user to run `/provision-github` first, then push the branch and open the PR into `staging`.
 

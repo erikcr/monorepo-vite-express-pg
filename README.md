@@ -13,6 +13,15 @@ Production-ready pnpm monorepo: Express 5 API + React 19 web/admin apps + Postgr
 | Errors | Sentry (optional: on when `SENTRY_DSN` is set) |
 | Package manager | pnpm 12 workspace monorepo |
 
+## Starting a project from this template
+
+Create a repo from this one (GitHub's **Use this template**), clone it, and follow
+[Setting up a new project](docs/DEPLOYMENTS.md#setting-up-a-new-project): Clerk keys, then
+`/provision-github`, `/provision-railway`, `/provision-vercel` and `/new-project`, in that order.
+Each is a skill a coding agent runs with you (Claude Code: type the command; other agents: ask for
+the skill by name, from `.agents/skills/`). `/new-project` writes `docs/PROJECT.md` and replaces
+this README's heading with your product's.
+
 ## Local development
 
 Requires Node 24 (`nvm use` reads `.nvmrc`), pnpm 12 (`npm install -g pnpm@12`), and Docker (for local Postgres).
@@ -161,6 +170,7 @@ If Build Command or Output Directory are manually set in the Vercel dashboard th
 
 ### Environment variables
 
+`/provision-vercel` sets these per environment: `VITE_API_URL` and `VITE_CLERK_PUBLISHABLE_KEY`.
 Set `VITE_API_URL` on each Vercel project to your Railway API server URL:
 
 ```

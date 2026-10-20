@@ -1,8 +1,14 @@
 // Run by .github/workflows/deploy-check.yml: checks the live sites of ENVIRONMENT (production,
 // staging, or all; only SITE when set) against src/deploy-targets.ts. VERCEL_BYPASS_<SITE> lets
 // it past Vercel's deployment protection (staging sites are previews, protected by default).
-import { checkSite, type Environment, type FetchText } from "../deploy-check.ts";
-import { DEPLOY_TARGETS } from "../deploy-targets.ts";
+import { checkSite, type Environment, type FetchText, foreignTargets } from "../deploy-check.ts";
+import { DEPLOY_REPO, DEPLOY_TARGETS } from "../deploy-targets.ts";
+
+const foreign = foreignTargets(process.env.GITHUB_REPOSITORY, DEPLOY_REPO);
+if (foreign) {
+  console.log(`::error::${foreign}`);
+  process.exit(1);
+}
 
 const fetchText: FetchText = async (url, headers) => {
   const res = await fetch(url, { headers, signal: AbortSignal.timeout(15_000) });

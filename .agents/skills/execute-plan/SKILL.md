@@ -28,7 +28,7 @@ Steps tagged for a person (infrastructure, provider settings, production data): 
 1. Push and open a PR into **`staging`**. The description follows the PR template: what changed, the **Tests** section (each test added and how it was proven), and what's left for a person.
 2. Wait for CI. A failing check is information: read the log and fix the cause, never bypass it.
 3. If `.railway/railway.ts` changed, run `railway config plan` against staging and show the user before anyone applies it.
-4. After the merge, confirm the staging API deploy is healthy (`/health/ready`, and `/health` reports the new commit).
+4. After the merge, confirm the staging deploy: `/health/ready` answers 200, `/health` reports the new commit, and the **Deploy sites** and **Deploy check** runs for it pass (`gh run list --commit <sha>`).
 
 ## Finish
 When every exit criterion holds, each backed by a passing test or check, **delete the plan file** in the completing PR, mark the board row `done`, and move leftovers into an open plan or a new one. Git is the archive.

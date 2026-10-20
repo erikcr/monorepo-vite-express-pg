@@ -35,7 +35,7 @@ feature branch ──PR (squash)──▶ staging ──check on staging──�
 | `main` | production | Promotion PRs from `staging`, merged with a merge commit |
 
 - **`staging` holds release candidates, not parked work.** Merge only what you'd ship as soon as it checks out on staging. Each promotion carries one or two features, and its PR lists exactly what it carries. Small promotions are quick to verify and quick to roll back.
-- **Waiting on someone? Ship it switched off.** A feature that needs sign-off goes to production behind a switch (an environment variable such as `FEATURE_X_ENABLED`), and turning it on is the release. Parked on `staging`, it would block every promotion after it.
+- **Waiting on someone? Ship it switched off.** A feature that needs sign-off goes to production behind a switch (an environment variable such as `FEATURE_X_ENABLED`), and turning it on is the release. On the API that's a Railway variable (setting it redeploys); a site's `VITE_*` variable is fixed per build, so flipping it means redeploying the site (**Deploy sites** by hand). Parked on `staging`, it would block every promotion after it.
 - **Big features ship in phases**, each backward compatible on its own (rules below), so each can be promoted without the next.
 - **Hotfixes take the same path, quickly:** a branch off `staging`, a PR into `staging`, then an immediate promotion. That only stays fast if `staging` has nothing else waiting.
 - **No third branch** (`develop`) and no merging one branch into both `staging` and `main`: the first adds a promotion step with the same batching one level up, the second puts on `main` a combination `staging` never ran.
