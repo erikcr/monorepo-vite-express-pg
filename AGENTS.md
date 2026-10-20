@@ -7,7 +7,8 @@ Instructions for every coding agent in this repo (Claude Code reads this via `CL
 - **Think before coding.** State assumptions; if a request has several readings, say so instead of picking silently; if something is unclear, stop and ask.
 - **Simplicity first.** The minimum code that solves the problem: no speculative features, abstractions or configurability, no handling for impossible cases.
 - **Surgical changes.** Touch only what the task needs and match the surrounding style. Remove what *your* change orphaned; mention other dead code rather than deleting it.
-- **Goal-driven.** Turn tasks into verifiable checks ("write a failing test, then make it pass") and loop until they pass. For multi-step work, state a short plan with a verify step per item. When a test is meant to catch a bug, prove it: break the code, watch it fail, restore.
+- **Goal-driven.** Turn tasks into verifiable checks ("write a failing test, then make it pass") and loop until they pass. For multi-step work, state a short plan with a verify step per item.
+- **Tests are half the work.** Code without its tests isn't done: write them with each layer, in the same commit, and prove each one red (see Testing below).
 
 ## Start of a session
 
@@ -30,7 +31,7 @@ lib/api-client-react  generated React Query hooks + hand-written client, errors,
 lib/env               typed, validated server env (@repo/env)
 e2e/                  Playwright full-stack tests
 .railway/railway.ts   Railway infrastructure (IaC)
-docs/                 PROJECT.md, ARCHITECTURE.md, DEPLOYMENTS.md, board + plans/
+docs/                 PROJECT.md, ARCHITECTURE.md, DEPLOYMENTS.md, TESTING.md, board + plans/
 ```
 
 ## API contract
@@ -70,16 +71,26 @@ pnpm staff:grant <email> <role> | staff:revoke <email> | org:grant <email> <org 
 pnpm lint | format             # Biome
 pnpm typecheck                 # strict TS everywhere (incl. .railway)
 pnpm test | test:coverage      # vitest; test:coverage enforces coverage floors (CI runs it)
+pnpm coverage:ratchet          # raise coverage floors to current coverage; commit the result
 pnpm knip                      # unused files, exports, dependencies
 pnpm --filter @repo/e2e e2e    # Playwright: real API (in-process Postgres) + both apps
 pnpm build
 ```
 
-## Quality gates and testing
+## Testing
 
-CI must pass: lint, typecheck, migration drift, codegen check, tests with coverage floors, knip, build, E2E, and the promotion-source rule; `CI passed` is the one required check. Use `biome-ignore` only with a reason.
+`docs/TESTING.md` is the standard: its **required-tests table** says what each kind of change must test; the `testing` skill applies it. In short:
+- Every behaviour change ships with its tests in the same commit. For a bug, write the failing test first.
+- **Prove every new test:** break the behaviour, watch the test fail for the right reason, restore.
+- Layers: API tests (supertest + PGlite with the real migrations; the main layer), job tests (pg-boss on PGlite), component tests (`renderAt(path)` through the real router, generated hooks mocked), E2E (Playwright + real Clerk dev instance, one org per test). Never mock the database or our own modules.
+- Every endpoint: happy path, 401, 403, the cross-org 404, the 400s. Every page: loading, empty, error, success.
+- Structural tests hold for everything at once: `route-access`, `contract` (server = spec), `tenancy-schema` (every table belongs to an org). Update them deliberately, never loosen them to pass.
+- Coverage floors only go up: after adding tests, `pnpm coverage:ratchet` and commit the result. A flaky test is a bug; never retry it to green.
+- PRs fill in the **Tests** section of the template. CI fails a PR whose package source changed without its tests, unless the description says `Tests: none needed — <reason>`.
 
-Tests are vitest in each package's `src/__tests__/`. API tests use supertest against `createApp()` with PGlite (in-process Postgres running the real migrations) and pg-boss on the same PGlite for job tests. Component tests use Testing Library + jsdom, rendering through the router with memory history and mocking generated hooks at the module boundary. E2E tests seed data through the API, one org per test. Coverage floors live in each `vitest.config.ts` and only go up.
+## Quality gates
+
+CI must pass: lint, typecheck, migration drift, codegen check, tests with coverage floors, knip, build, E2E, tests-with-code, and the promotion-source rule; `CI passed` is the one required check. Use `biome-ignore` only with a reason.
 
 ## Infrastructure and operations
 

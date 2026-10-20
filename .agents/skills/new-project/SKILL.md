@@ -57,6 +57,8 @@ Ask:
 
 Example: "A user can sign up, create a record, and share it with a teammate — all without errors in a staging environment."
 
+Each criterion becomes an end-to-end acceptance test (`e2e/tests/`, named after the criterion), so it must describe something a person does and sees, not a feeling. If an answer is vague ("it feels fast", "users like it"), ask what a person would do and see that proves it, and rewrite it with them.
+
 ---
 
 ### Section 6 — Out of Scope
@@ -103,6 +105,7 @@ After collecting all six sections, create `docs/PROJECT.md` with this exact stru
 <Section 4 answer — one entity per line>
 
 ## Success Criteria
+Each one is proven by an E2E acceptance test of the same name in `e2e/tests/` (see `docs/TESTING.md`).
 <Section 5 answer as a numbered list>
 
 ## Out of Scope (V1)
@@ -133,4 +136,4 @@ Otherwise tell the user to run `/provision-github` first, then push the branch a
 Confirm to the user:
 > "PROJECT.md committed on a branch. You now have a clear scope document at docs/PROJECT.md.
 >
-> When you're ready to start building, describe the first feature you want to implement and I'll write a plan for it in `docs/plans/` (listed on the board in `docs/README.md`) before touching any code."
+> When you're ready to start building, describe the first feature you want to implement and I'll write a plan for it in `docs/plans/` (listed on the board in `docs/README.md`) before touching any code. Every task in a plan names its tests, and each success criterion above gets an end-to-end test as the feature that delivers it is built (`docs/TESTING.md`)."

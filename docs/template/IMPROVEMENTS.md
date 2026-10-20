@@ -466,7 +466,7 @@ ratchet, flaky-test policy.
 `createTestDbAt(tag)` (a migration run on old-shape data; covers 0003, which was only checked by
 hand during 1.1). Both proven red.
 
-### T.3 `[ ]` Tests in every workflow
+### T.3 `[x]` Tests in every workflow
 `AGENTS.md` testing section; plan template with a **Tests:** line per task; `execute-plan`
 (tests in the task's commit), `new-feature` (tests at each layer, not last), `new-project`
 (success criteria map to E2E acceptance tests), `diagnosing-bugs` (link); PR template.

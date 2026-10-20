@@ -44,7 +44,9 @@ The API reference (from `lib/api-spec/openapi.yaml`) is at http://localhost:3000
 it's on in staging and off in production (`API_DOCS`).
 
 See [`AGENTS.md`](AGENTS.md) for conventions and the full command reference (shared by every coding
-agent; `CLAUDE.md` points to it), and [`docs/README.md`](docs/README.md) for the plan board.
+agent; `CLAUDE.md` points to it), [`docs/README.md`](docs/README.md) for the plan board, and
+[`docs/TESTING.md`](docs/TESTING.md) for what every change must test: tests ship with the code,
+and CI checks that they do.
 
 ---
 

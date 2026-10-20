@@ -18,7 +18,7 @@ Write 3–5 ranked, falsifiable hypotheses ("if X is the cause, changing Y makes
 One probe per prediction, one variable at a time. Tag temporary logs with a unique prefix (`[DEBUG-a4f2]`) so cleanup is one grep. For performance, measure a baseline first, then bisect.
 
 ## 5. Fix with a regression test
-Turn the minimised repro into a test at the seam where the bug actually occurs, watch it fail, fix, watch it pass, and re-run the original loop. If there's no honest seam for the test, say so: that's a finding.
+Turn the minimised repro into a test at the seam where the bug actually occurs (the layers and helpers are in `docs/TESTING.md`), watch it fail, fix, watch it pass, and re-run the original loop. The test ships in the same commit as the fix. If there's no honest seam for the test, say so: that's a finding.
 
 ## 6. Clean up
 Remove tagged logs and throwaway scripts, state the confirmed cause in the commit message, and ask what would have prevented it (a type, a test, a lint rule, a simpler design). Suggest that after the fix, not before.

@@ -19,11 +19,17 @@ Name it `plans/NN-short-topic.md` (next free number) and start it with:
 Why this exists, in two or three sentences.
 
 ### 1. <task>
-What changes, which files, and how it's verified.
+What changes, and which files.
+**Tests:** the tests this task adds, from the required-tests table in `TESTING.md` (e.g. "API:
+401/403/cross-org 404/400s for `POST /api/orders`; component: the orders page's four states;
+E2E: placing an order"), or "none — <reason>".
 
 ## Exit criteria
-Checkable statements that are true when the plan is done.
+Checkable statements that are true when the plan is done, each backed by a named test or check.
 ```
+
+Every task has a **Tests:** line, written when the plan is, so the tests are designed with the
+feature and reviewed with the plan, not invented after the code.
 
 **Statuses:** `proposal` (waiting for approval) → `not-started` → `in-progress` → **deleted when
 done**: git is the archive, and the board row becomes `done`. `(deferred)` marks a backlog plan
@@ -35,3 +41,4 @@ leave them alone.
 - [`PROJECT.md`](PROJECT.md): scope, V1 features, success criteria (from `/new-project`).
 - [`ARCHITECTURE.md`](ARCHITECTURE.md): stack decisions and why.
 - [`DEPLOYMENTS.md`](DEPLOYMENTS.md): branches, promotion, deploy gates, migration rules.
+- [`TESTING.md`](TESTING.md): test layers, required tests by change, conventions, what CI enforces.
