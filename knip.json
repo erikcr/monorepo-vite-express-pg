@@ -3,6 +3,9 @@
   "workspaces": {
     "artifacts/api-server": {
       "entry": ["src/worker.ts", "src/migrate.ts"]
+    },
+    "lib/ci": {
+      "entry": ["src/bin/*.ts"]
     }
   }
 }

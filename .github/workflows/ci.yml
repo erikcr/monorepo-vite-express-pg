@@ -149,6 +149,35 @@ jobs:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
 
+  tests-with-code:
+    name: Tests with code
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      # PRs into staging only: a promotion into main carries commits staging already checked.
+      # Always runs and passes otherwise, so CI passed never sees it skipped.
+      - if: github.event_name == 'pull_request' && github.base_ref != 'main'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: github.event_name == 'pull_request' && github.base_ref != 'main'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      # A package whose source changed needs test changes too, or a "Tests: none needed — <reason>"
+      # line in the PR description (docs/TESTING.md). The description is fetched rather than taken
+      # from the event, so editing it and re-running this job picks up the change.
+      - name: Source changes come with tests
+        if: github.event_name == 'pull_request' && github.base_ref != 'main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          CHANGED_FILES=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[].filename')
+          PR_BODY=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '.body // ""')
+          export CHANGED_FILES PR_BODY
+          node lib/ci/src/bin/tests-with-code.ts
+
   promotion-source:
     name: Promotion source
     runs-on: ubuntu-latest
@@ -168,7 +197,8 @@ jobs:
   ci-passed:
     name: CI passed
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, db-check, codegen-check, test, knip, build, e2e, promotion-source]
+    needs:
+      [lint, typecheck, db-check, codegen-check, test, knip, build, e2e, tests-with-code, promotion-source]
     # The one check branch rulesets require. It must run even when a job it
     # needs fails or is skipped: a *skipped* required check counts as passing.
     # So it always runs, and fails unless every needed job succeeded.

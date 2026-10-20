@@ -50,4 +50,4 @@ It must fail, **with a message pointing at that behaviour** (a crash in setup do
 
 ## When "Tests with code" fails
 
-It means a package's source changed and none of its tests did. Either the change has untested behaviour (go to step 1), or it genuinely needs none: then add one line to the PR description, `Tests: none needed — <reason>` (e.g. "comment and log wording only", "rename, covered by the existing example tests"), and re-run the check. The reason is for a reviewer to agree with.
+It means a package's source changed and none of its tests did. Either the change has untested behaviour (go to step 1), or it genuinely needs none: then add one line to the PR description, `Tests: none needed — <reason>` (e.g. "comment and log wording only", "rename, covered by the existing example tests"), and re-run the failed jobs: `gh run rerun <run id> --failed` (the check reads the description fresh). The reason is for a reviewer to agree with.

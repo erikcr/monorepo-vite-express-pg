@@ -122,7 +122,7 @@ A test that sometimes fails is a bug, in the test or the code. **Never retry it 
 
 | Check | Fails when |
 |---|---|
-| **Tests with code** (PRs) | A package's source changed and none of its tests did, and the PR description has no `Tests: none needed — <reason>` line |
+| **Tests with code** (PRs into `staging`) | A package's source changed and none of its tests did, and the PR description has no `Tests: none needed — <reason>` line (`lib/ci/src/tests-with-code.ts` says what counts as source and where each package's tests live). After editing the description, re-run the failed jobs: `gh run rerun <run id> --failed` |
 | **Test** (`pnpm test:coverage`) | A test fails or coverage drops below a floor |
 | `route-access.test.ts` | A route has no access rule as its first handler, or its rule changed without the table |
 | `contract.test.ts` | The server and `openapi.yaml` disagree about which operations exist |

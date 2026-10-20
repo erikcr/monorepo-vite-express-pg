@@ -475,9 +475,16 @@ hand during 1.1). Both proven red.
 Choose the tests a change needs from the matrix, write them with the template's helpers, prove
 them red, and audit a diff or branch for missing tests.
 
-### T.5 `[ ]` CI: tests come with the code
+### T.5 `[x]` CI: tests come with the code
 A PR job: a package whose source changed without its tests changing fails, unless the PR
 description has `Tests: none needed — <reason>`. Part of **CI passed**.
+**Done:** new `@repo/ci` package (`lib/ci`, no dependencies; CI runs its `src/bin/*.ts` with
+Node 24's type stripping, no install). Rules and tests in `tests-with-code.ts`; a package's tests
+can live elsewhere (`lib/db` → API tests, pages → E2E too). Fetches the description instead of
+reading the event, so editing it and re-running the job works. In `ci.yml`, PRs into `staging`
+only; not exercised on a live PR (the template repo has no `staging`), but its API calls were run
+against the repo's PRs #1 and #2. Proving the tests red found that the HTML-comment case passed
+without the stripping it was meant to test; fixed.
 
 ### T.6 `[ ]` Post-deploy check
 After **Deploy sites**: each live site's JavaScript has the environment's API address (https),
