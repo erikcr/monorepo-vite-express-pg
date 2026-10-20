@@ -457,10 +457,14 @@ with the route-access test); `src/test-helpers/render.tsx` (`renderAt(path)`) in
 which had drifted 10–20 points below actual (API 80→95 statements); Playwright keeps one CI retry
 only to record a trace, with `failOnFlakyTests`.
 
-### T.2 `[ ]` `docs/TESTING.md`
+### T.2 `[x]` `docs/TESTING.md`
 The one standard: layers and what each is for, what is never mocked, the required-tests matrix by
 change type, conventions (helpers, isolation, determinism, naming), proving tests, coverage
 ratchet, flaky-test policy.
+**Done:** plus two structural tests the matrix needed: `tenancy-schema.test.ts` (every table but
+`GLOBAL_TABLES` has `org_id uuid NOT NULL` → `orgs`) and `migrations.test.ts` with
+`createTestDbAt(tag)` (a migration run on old-shape data; covers 0003, which was only checked by
+hand during 1.1). Both proven red.
 
 ### T.3 `[ ]` Tests in every workflow
 `AGENTS.md` testing section; plan template with a **Tests:** line per task; `execute-plan`
