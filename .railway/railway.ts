@@ -18,15 +18,8 @@ export default defineRailway((ctx) => {
     build: {
       builder: "DOCKERFILE",
       dockerfilePath: "Dockerfile",
-      // Frontend-only commits don't redeploy the API.
-      watchPatterns: [
-        "artifacts/api-server/**",
-        "lib/**",
-        "Dockerfile",
-        "package.json",
-        "pnpm-workspace.yaml",
-        "pnpm-lock.yaml",
-      ],
+      // No watchPatterns: every commit deploys the API, even a frontend-only one, because the
+      // sites deploy only after the API serves their commit (.github/workflows/deploy-sites.yml).
     },
     // Migrations run before the new version starts; if they fail, the old one keeps serving.
     preDeploy: "node dist/migrate.js",

@@ -1,0 +1,61 @@
+name: Deploy sites
+
+# The sites deploy last: CI → migrations → API → sites (docs/DEPLOYMENTS.md). Vercel's
+# automatic deploys of main and staging are off (git.deploymentEnabled in each vercel.json);
+# when Railway reports a successful API deploy, this waits until the API serves that commit,
+# then triggers each site's deploy hook.
+#
+# It reacts to Railway's deployment status instead of waiting for the deploy: Railway's
+# "Wait for CI" waits for every workflow on the commit, so a workflow that waited for
+# Railway would deadlock with it.
+
+on:
+  deployment_status:
+  # Manual release, for when Railway deploys but never reports it to GitHub. Still checks
+  # that the API serves the branch's latest commit first.
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment whose sites to deploy
+        type: choice
+        options: [production, staging]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy sites
+    # Railway names its GitHub environments "<name> / <environment>". Vercel's own (preview)
+    # deployments trigger this workflow too, and are skipped here.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+        (endsWith(github.event.deployment.environment, ' / production') ||
+          endsWith(github.event.deployment.environment, ' / staging')))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: target
+        name: Pick the environment
+        env:
+          DEPLOYMENT_ENVIRONMENT: ${{ github.event.deployment.environment }}
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          if [ -n "$INPUT_ENVIRONMENT" ]; then
+            echo "environment=$INPUT_ENVIRONMENT" >> "$GITHUB_OUTPUT"
+          else
+            echo "environment=${DEPLOYMENT_ENVIRONMENT##* / }" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Wait for the API to serve the commit, then deploy the sites
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ENVIRONMENT: ${{ steps.target.outputs.environment }}
+          SHA: ${{ github.event.deployment.sha }}
+          API_URL_PRODUCTION: ${{ vars.API_URL_PRODUCTION }}
+          API_URL_STAGING: ${{ vars.API_URL_STAGING }}
+          HOOK_WEB_PRODUCTION: ${{ secrets.VERCEL_HOOK_WEB_PRODUCTION }}
+          HOOK_ADMIN_PRODUCTION: ${{ secrets.VERCEL_HOOK_ADMIN_PRODUCTION }}
+          HOOK_WEB_STAGING: ${{ secrets.VERCEL_HOOK_WEB_STAGING }}
+          HOOK_ADMIN_STAGING: ${{ secrets.VERCEL_HOOK_ADMIN_STAGING }}
+        run: .github/scripts/deploy-sites.sh

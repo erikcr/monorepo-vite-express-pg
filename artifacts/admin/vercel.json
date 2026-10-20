@@ -3,5 +3,6 @@
   "buildCommand": "cd ../.. && pnpm --filter @repo/admin build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "git": { "deploymentEnabled": { "main": false, "staging": false } },
   "rewrites": [{ "source": "/((?!api/).*)", "destination": "/index.html" }]
 }

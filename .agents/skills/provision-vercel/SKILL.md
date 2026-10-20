@@ -53,6 +53,18 @@ Do steps 5–9 for `web`, then repeat them for `admin`. `<app>` is `web` or `adm
    ```
    vercel deploy --prod
    ```
+   After this one, Vercel never deploys `main` or `staging` by itself (`git.deploymentEnabled` in
+   `vercel.json`): `.github/workflows/deploy-sites.yml` triggers each site through a deploy hook
+   once the API serves the commit (`docs/DEPLOYMENTS.md`). Create the two hooks and store them as
+   GitHub secrets without printing them (`<APP>` is `WEB` or `ADMIN`):
+   ```
+   vercel deploy-hooks create deploy-sites-main --ref main
+   vercel deploy-hooks create deploy-sites-staging --ref staging
+   gh secret set VERCEL_HOOK_<APP>_PRODUCTION   # paste the main hook's URL on stdin
+   gh secret set VERCEL_HOOK_<APP>_STAGING      # and the staging hook's
+   ```
+   Pipe each URL from the create output into `gh secret set` rather than echoing it: anyone with a
+   hook URL can trigger a deploy.
 
 9. Return to the repo root (`cd ../..`).
 
@@ -65,9 +77,9 @@ Do steps 5–9 for `web`, then repeat them for `admin`. `<app>` is `web` or `adm
 
 ## Staging Sites
 
-11. The staging sites deploy from the `staging` branch's next push. Trigger one now: open the most recent deployment of each project in the dashboard and **Redeploy** it on the `staging` branch, or push any change to `staging` through a PR. Then find each project's stable staging URL (`<base-name>-<app>-git-staging-<team>.vercel.app`, shown under the staging deployment's Domains), and record them as `<staging-<app>-url>`.
+11. The staging sites deploy after the staging API, from the `staging` branch's next merged PR. Trigger the first one now with each project's staging hook (`vercel deploy-hooks list`, then `curl -fsS -X POST <hook>` without printing it). Then find each project's stable staging URL (`<base-name>-<app>-git-staging-<team>.vercel.app`, shown under the staging deployment's Domains), and record them as `<staging-<app>-url>`.
 
-## CORS on Railway
+## Connect the API
 
 12. Allow each environment's sites to call its API (from the repo root, which `/provision-railway` linked to the Railway project):
     ```
@@ -75,6 +87,13 @@ Do steps 5–9 for `web`, then repeat them for `admin`. `<app>` is `web` or `adm
     railway variable set --service api --environment staging 'CORS_ORIGIN=<staging-web-url>,<staging-admin-url>'
     ```
     Use full origins (`https://…`, no trailing slash). Setting a variable redeploys that environment's API.
+
+    Then tell the deploy workflow where each API is, so it can check the API serves a commit
+    before releasing the sites:
+    ```
+    gh variable set API_URL_PRODUCTION --body <prod-api-url>
+    gh variable set API_URL_STAGING --body <staging-api-url>
+    ```
 
 ## Summary
 
@@ -87,6 +106,8 @@ Do steps 5–9 for `web`, then repeat them for `admin`. `<app>` is `web` or `adm
     ✓ VITE_API_URL: production → <prod-api-url>, staging branch → <staging-api-url>
     ✓ VITE_CLERK_PUBLISHABLE_KEY: production instance (production), development instance (previews)
     ✓ CORS_ORIGIN set on both Railway environments
+    ✓ Deploy hooks stored (VERCEL_HOOK_*), API_URL_PRODUCTION / API_URL_STAGING set:
+      sites deploy only after the API serves their commit
 
     Next steps:
     - Add custom domains in Vercel (and update CORS_ORIGIN) if needed.

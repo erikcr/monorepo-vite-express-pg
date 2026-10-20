@@ -84,4 +84,5 @@ Tests are vitest in each package's `src/__tests__/`. API tests use supertest aga
 ## Infrastructure and operations
 
 - Railway is defined by `.railway/railway.ts`: never change it in the dashboard. After editing, `railway config plan` then `apply`, staging first, production after promotion (`docs/DEPLOYMENTS.md`). New projects set up GitHub, Railway and Vercel with the `provision-github`, `provision-railway` and `provision-vercel` skills, in that order.
+- Deploys run in order: CI → migrations → API → sites. Vercel never deploys `main` or `staging` by itself; `.github/workflows/deploy-sites.yml` triggers the sites once the API serves their commit. Don't turn Vercel's automatic deploys back on.
 - **Agents don't change deployed infrastructure or data** (Railway/Vercel variables, GitHub settings, databases) without the user's explicit go-ahead. Verify read-only afterwards: deploy status, health endpoints, variable names (never print secret values).

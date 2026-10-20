@@ -63,7 +63,7 @@ are the provider gotchas behind those commands.
 ### Infrastructure as Code
 
 The Railway project is defined in [`.railway/railway.ts`](.railway/railway.ts): the `Postgres`
-database and the `api` service (Dockerfile build, watch patterns, migrations, health check,
+database and the `api` service (Dockerfile build, migrations, health check,
 draining time, restart policy, Wait for CI, variables), with `production` deploying `main` and
 `staging` deploying `staging`. `/provision-railway` creates the project and applies it.
 

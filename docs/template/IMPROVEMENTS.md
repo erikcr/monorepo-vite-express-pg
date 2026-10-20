@@ -167,11 +167,18 @@ command now re-plans until clean). `ON_FAILURE` restart policy reads back as uns
 **Later (optional):** Railway's `railwayapp/config` GitHub Action plans on PRs and applies on
 merge, which would replace the manual apply step.
 
-### P.6 `[ ]` (Decide later) Deploy sequencing
-Vercel Deployment Checks can hold the production deploys until the API reports the new commit
-live. It works around several Railway/Vercel quirks and is
-a lot of machinery for a new project. Revisit once P.1–P.5 have been used for a while; 0.4's
-`sha` is the prerequisite.
+### P.6 `[x]` Deploy sequencing (done 2026-10-19)
+CI → migrations → API → sites, on `staging` and `main` alike. A common alternative holds production with
+Vercel Deployment Checks and triggers staging with deploy hooks; the template uses deploy hooks for
+both, so one mechanism and no Vercel token:
+- `.github/workflows/deploy-sites.yml` + `.github/scripts/deploy-sites.sh`: on Railway's successful
+  `deployment_status`, poll `/health` until it reports the commit, then trigger each site's deploy
+  hook. Skips if the branch has moved on (a hook builds the head). `workflow_dispatch` releases by
+  hand when Railway never reports success.
+- `vercel.json`: `git.deploymentEnabled` off for `main` and `staging`; PR previews unchanged.
+- `.railway/railway.ts`: no `watchPatterns`, so every commit has an API deploy for the sites to follow.
+- `/provision-vercel` creates the hooks and stores them (secrets `VERCEL_HOOK_*`) with the
+  `API_URL_*` repository variables.
 
 ---
 
