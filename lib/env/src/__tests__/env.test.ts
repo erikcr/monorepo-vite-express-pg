@@ -1,5 +1,8 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { env, validateServerEnv } from "../index.js";
+import { env, loadEnvFiles, validateServerEnv } from "../index.js";
 
 const valid = { DATABASE_URL: "postgres://localhost/app" };
 
@@ -122,5 +125,42 @@ describe("validateServerEnv", () => {
     expect(message).toContain("NODE_ENV:");
     expect(message).toContain("RUN_WORKER:");
     expect(message).toContain("cp .env.example .env");
+  });
+});
+
+// Tested against temporary directories rather than the repo, so the result (and coverage) doesn't
+// depend on whether the machine running the tests has a .env.
+describe("loadEnvFiles", () => {
+  const vars = ["ENV_TEST_ROOT", "ENV_TEST_PKG", "ENV_TEST_SHARED", "ENV_TEST_PRESET"];
+  afterEach(() => {
+    for (const v of vars) delete process.env[v];
+  });
+
+  it("loads the repo root's .env, then the package's; the first value set wins", () => {
+    const root = mkdtempSync(join(tmpdir(), "env-"));
+    const pkg = join(root, "lib", "pkg");
+    mkdirSync(pkg, { recursive: true });
+    writeFileSync(
+      join(root, ".env"),
+      "ENV_TEST_ROOT=root\nENV_TEST_SHARED=root\nENV_TEST_PRESET=file\n"
+    );
+    writeFileSync(join(pkg, ".env"), "ENV_TEST_PKG=pkg\nENV_TEST_SHARED=pkg\n");
+    process.env.ENV_TEST_PRESET = "already set";
+    try {
+      loadEnvFiles(pkg);
+    } finally {
+      rmSync(root, { recursive: true });
+    }
+    expect(vars.map((v) => process.env[v])).toEqual(["root", "pkg", "root", "already set"]);
+  });
+
+  it("does nothing when there are no .env files", () => {
+    const empty = mkdtempSync(join(tmpdir(), "env-"));
+    try {
+      expect(() => loadEnvFiles(join(empty, "lib", "pkg"))).not.toThrow();
+    } finally {
+      rmSync(empty, { recursive: true });
+    }
+    expect(process.env.ENV_TEST_ROOT).toBeUndefined();
   });
 });

@@ -2,10 +2,16 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
 
-// Load .env from the repo root, then the package dir. Variables already set win.
-for (const path of [resolve(process.cwd(), "../../.env"), resolve(process.cwd(), ".env")]) {
-  if (existsSync(path)) process.loadEnvFile(path);
+/**
+ * Loads .env from the repo root, then the package dir (`cwd`), into process.env. Variables already
+ * set win, so a deployed environment's own variables are never overridden by a stray file.
+ */
+export function loadEnvFiles(cwd = process.cwd()): void {
+  for (const path of [resolve(cwd, "../../.env"), resolve(cwd, ".env")]) {
+    if (existsSync(path)) process.loadEnvFile(path);
+  }
 }
+loadEnvFiles();
 
 const flag = (fallback: "true" | "false") =>
   z

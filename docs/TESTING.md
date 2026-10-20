@@ -77,7 +77,9 @@ unchanged).
 - **Isolation:** each test makes its own data (`createMember()` gives a fresh person and org), so
   tests never depend on order or on each other's rows. E2E: one org per test.
 - **Determinism:** no `sleep`s, no real clock, no network beyond the test's own servers, no
-  randomness without a seed. Wait for a condition (`findBy…`, `expect.poll`, Playwright's
+  randomness without a seed, and nothing from the machine running them: set variables with
+  `vi.stubEnv`, and give code that reads files (like `.env`) a temporary directory. A test or
+  coverage floor that passes locally but not in CI depends on your machine. Wait for a condition (`findBy…`, `expect.poll`, Playwright's
   auto-waiting assertions), never for time.
 - **Assert exactly:** `toEqual` on response bodies and rows over `toBeDefined`. Check the side
   effect too: the row written, the job enqueued, the other org's record untouched.
