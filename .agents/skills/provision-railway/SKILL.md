@@ -1,6 +1,6 @@
 ---
 name: provision-railway
-description: Create the Railway project and apply .railway/railway.ts (Infrastructure as Code) to production and staging, with Clerk keys, database backups, the Sentry DSN and an uptime monitor. Use once per new project, after provision-github.
+description: Create the Railway project and apply .railway/railway.ts (Infrastructure as Code) to production and staging, with Clerk keys and webhook, database backups, the Sentry DSN, an uptime monitor and email (Resend). Use once per new project, after provision-github.
 ---
 
 Provision a new Railway project for this monorepo's API server from `.railway/railway.ts` (Railway Infrastructure as Code): a `production` environment deploying `main` and a `staging` environment deploying `staging`, each with its own Postgres (see `docs/DEPLOYMENTS.md`). Work through the steps below in order, stopping and reporting clearly if any step fails.
@@ -114,11 +114,30 @@ Provision a new Railway project for this monorepo's API server from `.railway/ra
 
 17. Ask the user to add an **uptime monitor** on `<prod-api-url>/health/ready` (in Sentry: Alerts → Create alert → Uptime monitor; or any uptime service), alerting them by email. It answers 503 when the database is unreachable, so the monitor catches both a down API and a down database. Nothing else tells anyone the API is down.
 
+## Email and the Clerk webhook
+
+18. Ask the user whether to set up email now:
+    > "Emails are only logged until a Resend API key is set. Create one at resend.com (API keys → sending access), verify your sending domain there (Domains), and paste the key and the sender (e.g. `App <hello@yourdomain.com>`), or say 'later'."
+
+    Check the key starts with `re_` and never print it back. One key can serve both environments: every email names the environment that sent it, and each API ignores the other's events. Set both variables in each environment:
+    ```
+    railway variable set --service api --environment staging RESEND_API_KEY=<re_…> 'EMAIL_FROM=<sender>'
+    railway variable set --service api --environment production RESEND_API_KEY=<re_…> 'EMAIL_FROM=<sender>'
+    ```
+    Then, per environment, ask the user to add a webhook in Resend (Webhooks → Add endpoint) at `<api-url>/api/webhooks/resend` for the `email.bounced`, `email.complained`, `email.failed` and `email.delivery_delayed` events, and paste its signing secret (`whsec_…`) into `RESEND_WEBHOOK_SECRET` the same way. Production refuses unsigned webhook events, so without it the API never hears about undelivered emails.
+
+19. Ask the user to add a webhook in each Clerk instance (dashboard.clerk.com → Webhooks → Add endpoint), subscribed to `user.deleted`: the development instance's at `<staging-api-url>/api/webhooks/clerk`, the production instance's at `<prod-api-url>/api/webhooks/clerk`. Each one's signing secret (`whsec_…`) goes into `CLERK_WEBHOOK_SECRET` in its environment:
+    ```
+    railway variable set --service api --environment staging CLERK_WEBHOOK_SECRET=<whsec_…>
+    railway variable set --service api --environment production CLERK_WEBHOOK_SECRET=<whsec_…>
+    ```
+    When someone deletes their Clerk account, the API then deletes their user and org grants, and disables any staff grant. Until it's set, the webhook refuses every event and deleted accounts' rows stay (they grant nothing, since the account can't sign in).
+
 ## Summary
 
-18. Tell the user to commit the `REPO` change in `.railway/railway.ts` on a feature branch and open a PR into `staging`.
+20. Tell the user to commit the `REPO` change in `.railway/railway.ts` on a feature branch and open a PR into `staging`.
 
-19. Print a success summary in this format:
+21. Print a success summary in this format:
     ```
     ✓ Railway project created: <project-name>
     ✓ production: Postgres + api (deploys main)    → <prod-api-url>
@@ -126,6 +145,8 @@ Provision a new Railway project for this monorepo's API server from `.railway/ra
     ✓ Clerk secret keys set (staging: development instance, production: production instance)
     ✓ Backups: production daily + weekly, staging daily (or: follow-up)
     ✓ Sentry DSN set in both environments (or: follow-up); uptime monitor on /health/ready (or: follow-up)
+    ✓ Email: Resend key, sender and webhook secret in both environments (or: follow-up)
+    ✓ Clerk webhook (user.deleted) and CLERK_WEBHOOK_SECRET in both environments (or: follow-up)
     ✓ Settings come from .railway/railway.ts (change the file, then `railway config apply`)
 
     Your local .env keeps pointing at local Postgres (docker compose); the

@@ -56,6 +56,14 @@ const fields = {
     .transform((v) => (v === undefined ? undefined : v === "true")),
   /** Sentry project DSN. Unset: errors are only logged (see src/lib/error-tracker.ts). */
   SENTRY_DSN: z.url().optional(),
+  /** Resend API key (re_…). Unset: emails are logged instead of sent (see src/lib/email.ts). */
+  RESEND_API_KEY: z.string().startsWith("re_").optional(),
+  /** Sender of every email, on a domain verified in Resend: `App <hello@example.com>`. */
+  EMAIL_FROM: z.string().min(1).optional(),
+  /** Signing secret (whsec_…) of the Resend webhook. Required in production for it to accept events. */
+  RESEND_WEBHOOK_SECRET: z.string().startsWith("whsec_").optional(),
+  /** Signing secret (whsec_…) of the Clerk webhook. Unset: the webhook refuses every event. */
+  CLERK_WEBHOOK_SECRET: z.string().startsWith("whsec_").optional(),
   /** Deployed git commit; set by Railway. */
   RAILWAY_GIT_COMMIT_SHA: z.string().optional(),
   /** Railway environment ("production", "staging"); set by Railway. */
@@ -140,6 +148,19 @@ export const env = {
   },
   get SENTRY_DSN() {
     return read("SENTRY_DSN");
+  },
+  get RESEND_API_KEY() {
+    return read("RESEND_API_KEY");
+  },
+  /** Unset: Resend's shared test sender, which only delivers to the Resend account's own address. */
+  get EMAIL_FROM() {
+    return read("EMAIL_FROM") ?? "onboarding@resend.dev";
+  },
+  get RESEND_WEBHOOK_SECRET() {
+    return read("RESEND_WEBHOOK_SECRET");
+  },
+  get CLERK_WEBHOOK_SECRET() {
+    return read("CLERK_WEBHOOK_SECRET");
   },
   /** Where this runs: the Railway environment's name, or NODE_ENV off Railway. */
   get DEPLOY_ENVIRONMENT() {

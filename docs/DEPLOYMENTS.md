@@ -13,8 +13,8 @@ Run these once, in order, after creating the GitHub repo from this template:
 2. `/provision-github` — creates `staging` and the rulesets that protect `staging` and `main`, and
    stores the development instance's keys as the E2E job's secrets.
 3. `/provision-railway` — API + Postgres in `production` (deploys `main`) and `staging` (deploys
-   `staging`), with each environment's Clerk secret key, scheduled backups, the Sentry DSN and an
-   uptime monitor.
+   `staging`), with each environment's Clerk secret key and webhook, scheduled backups, the Sentry
+   DSN, an uptime monitor and email (Resend).
 4. `/provision-vercel` — web + admin, production on `main`, staging on the `staging` branch, with the
    matching Clerk publishable keys and the deploy hooks that release them after the API; sets
    `CORS_ORIGIN` on Railway.

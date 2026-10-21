@@ -553,6 +553,16 @@ protection were already on; Dependabot alerts were turned on (0 alerts).
 **private repos only**: traces record the test users' Clerk session cookies, and a public repo's
 artifacts are public. So this repo (public) never uploads them.
 
+### O.8 `[x]` Email and account webhooks
+**Done:** email through Resend, sent only by the `send-email` job (an idempotency key per job, so
+a retry never sends twice); `html` tag that escapes what it inserts; subjects forced to one line;
+every email tagged with its environment. `POST /api/webhooks/resend` logs undelivered emails and
+ignores other environments' events; `POST /api/webhooks/clerk` deletes a deleted account's user
+and grants and disables its staff grant. Both check Svix signatures on the raw body. Each design
+point answers a failure seen in the reference app: a rejected send counted as sent, a subject
+with a line break refused, links cut at a bare `&`, staging and production recording each
+other's events. Not verified live (no Resend account or webhooks on the template's deployment).
+
 ---
 
 ## Session Log
@@ -571,3 +581,4 @@ artifacts are public. So this repo (public) never uploads them.
 | 2026-10-20 | O.1–O.3, O.5–O.7 | Sentry (API-only, request data off), backups runbook, CSP + headers, axe in E2E (found contrast failures on every page), dependency audit, report upload. Found: Sentry's bundle broke the API build (now caught by `node --check`); Sentry 11 collects request bodies by default |
 | 2026-10-20 | Final QA + alignment | Phase O verified live (deploy checks pass with headers + CSP; live sites load Clerk with no CSP violations). Found: a project made from the template would run the deploy check against the *template's* sites and pass (now fails until `DEPLOY_REPO` names the repo); `/provision-vercel`'s deploy-targets PR and `/new-project`'s brand-color PR would both fail Tests-with-code (deploy-targets excluded as data; new-project's PR carries the opt-out line); `/new-project` never committed its brand-color edits. `ARCHITECTURE.md` rewritten (still described TEXT org ids and `createApp(db)`); README gets a "start a project" path; skill descriptions match what they do |
 | 2026-10-20 | End-to-end run on a scratch project | `erikcr/template-scratch` taken through all three provisioning skills, `/new-project`, a feature PR with a migration, and a promotion; then deleted. Worked as documented: hooks, rulesets, Tests-with-code (failed the feature until its tests were added; accepted the brand-color opt-out and the deploy-targets data file), Promotion source (blocked a feature branch into `main`), backups, deploy order (CI → migration → API → sites → check) on staging and production, staging checks through the bypass secrets, live sites clean. Found, in `/provision-vercel`: the first deploy hung (Root Directory was a dashboard step *after* it; now set by `vercel api` first, and first deploys go through the hooks); `vercel git connect` needs the repo URL from the app folder; `vercel link` leaves an app `.gitignore`; **CLI-created projects don't report deployments to GitHub, so the deploy check never ran** (now enabled in step 5, with a DEPLOYMENTS row); bypass secrets and settings checks now CLI, not dashboard. `/provision-railway` uses `--environment` for staging. Not template issues: a Railway build pause delayed the run; `railway.ts` pins no region (the workspace default applies) |
+| 2026-10-21 | O.8 | Email (Resend) and the Resend and Clerk webhooks, from the reference app's recent email fixes. Every new test shown red against a broken version of its behaviour; one (the signature version check) passed broken at first and was rewritten |

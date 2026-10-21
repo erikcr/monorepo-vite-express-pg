@@ -9,8 +9,14 @@ import { mountedRoutes } from "../test-helpers/mounted-routes.js";
 // without an operation is an endpoint no client is generated for and no response is validated by.
 const SPEC = resolve(import.meta.dirname, "../../../../lib/api-spec/openapi.yaml");
 const METHODS = ["get", "post", "put", "patch", "delete"];
-// Routes that serve the spec itself, so they aren't in it.
-const NOT_IN_SPEC = new Set(["GET /docs", "GET /docs/openapi.yaml"]);
+// Routes that serve the spec itself, and webhooks: their providers define the payloads and no
+// client of ours calls them.
+const NOT_IN_SPEC = new Set([
+  "GET /docs",
+  "GET /docs/openapi.yaml",
+  "POST /api/webhooks/resend",
+  "POST /api/webhooks/clerk",
+]);
 
 function specOperations(): string[] {
   const spec = parse(readFileSync(SPEC, "utf8")) as { paths: Record<string, object> };

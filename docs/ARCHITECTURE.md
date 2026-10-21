@@ -22,6 +22,7 @@ Key technical decisions and their rationale. Add an entry here whenever a non-ob
 | Monorepo | pnpm workspaces |
 | Identity | Clerk | Sign-in, MFA and sessions bought, not built. Clerk only proves who someone is: access comes from our own tables, so changing provider touches one file (`src/lib/identity.ts`) |
 | Hosting | Railway (API + Postgres), Vercel (sites) | Railway runs a long-lived process for the API and its in-process job worker; Vercel serves static builds. Railway is defined in code (`.railway/railway.ts`) |
+| Email | Resend, through a job | Sent only by the `send-email` job, so a request never waits on the provider and a failed send retries; an idempotency key per job keeps a retry from sending twice. Resend's HTTP API is called directly (one request), no SDK. Off until `RESEND_API_KEY` is set |
 | Error tracking | Sentry, API only | One DSN covers the API, jobs and both sites (the browsers report crashes to the API), and no SDK ships to browsers. Off until `SENTRY_DSN` is set |
 
 ---

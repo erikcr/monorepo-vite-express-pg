@@ -104,6 +104,28 @@ describe("env getters", () => {
     expect(() => env.SENTRY_DSN).toThrow("Invalid env var SENTRY_DSN");
   });
 
+  it("the Resend key and webhook secrets are optional but must have their prefix", () => {
+    for (const [key, good, bad] of [
+      ["RESEND_API_KEY", "re_abc", "sk_abc"],
+      ["RESEND_WEBHOOK_SECRET", "whsec_abc", "abc"],
+      ["CLERK_WEBHOOK_SECRET", "whsec_abc", "abc"],
+    ] as const) {
+      vi.stubEnv(key, undefined);
+      expect(env[key]).toBeUndefined();
+      vi.stubEnv(key, good);
+      expect(env[key]).toBe(good);
+      vi.stubEnv(key, bad);
+      expect(() => env[key]).toThrow(`Invalid env var ${key}`);
+    }
+  });
+
+  it("EMAIL_FROM defaults to Resend's test sender", () => {
+    vi.stubEnv("EMAIL_FROM", undefined);
+    expect(env.EMAIL_FROM).toBe("onboarding@resend.dev");
+    vi.stubEnv("EMAIL_FROM", "App <hello@example.com>");
+    expect(env.EMAIL_FROM).toBe("App <hello@example.com>");
+  });
+
   it("DEPLOY_ENVIRONMENT is Railway's environment, or NODE_ENV off Railway", () => {
     vi.stubEnv("RAILWAY_ENVIRONMENT_NAME", undefined);
     vi.stubEnv("NODE_ENV", "development");

@@ -58,6 +58,8 @@ explains why in its **Tests** section (below).
 | **Schema change** | The rows the feature writes, asserted through the API; for a migration that changes or removes existing data (a type change, a backfill, a delete), a test in `migrations.test.ts` that runs it against a database holding the old shape (`createTestDbAt(tag)`) |
 | **New table** | `tenancy-schema.test.ts` checks it automatically: `org_id uuid NOT NULL` referencing `orgs`. A table that isn't org data goes in its `GLOBAL_TABLES` list, a decision the PR explains |
 | **Job** | The handler's effect on the database; that the route enqueues it with the right payload (fake queue); a failure is logged with the job's name and id |
+| **Email** | The route or job enqueues `sendEmailJob` with the right recipient, subject and tags (fake queue); its text and HTML for the inputs that vary, asserted on the built strings. Never stub `sendEmail` itself: `email.test.ts` covers sending |
+| **Webhook** | A correctly signed event's effect; a bad signature is a 401 and changes nothing; events it ignores still get 200. Sign test requests with `signWebhook()` (`src/lib/webhook-signature.ts`); webhooks are listed in `contract.test.ts`'s `NOT_IN_SPEC` |
 | **Scheduled job** | The schedule is registered; the handler with a fixed clock |
 | **Env variable** | `lib/env` test: parsed value, default, and the error for an invalid value |
 | **Page or route** | Through `renderAt(path)`: loading, empty, error and success states; the guard (signed out, wrong role); search params it reads; each interaction's effect (the mutation called, navigation). Where an E2E test reaches the page, `expectAccessible(page)` once its content shows |

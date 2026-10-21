@@ -11,6 +11,7 @@ Production-ready pnpm monorepo: Express 5 API + React 19 web/admin apps + Postgr
 | Database | PostgreSQL + Drizzle ORM |
 | Background jobs | pg-boss |
 | Errors | Sentry (optional: on when `SENTRY_DSN` is set) |
+| Email | Resend (optional: on when `RESEND_API_KEY` is set) |
 | Package manager | pnpm 12 workspace monorepo |
 
 ## Starting a project from this template
@@ -125,6 +126,12 @@ requests from Vercel to Railway with a CORS error even though the API is reachab
 `SENTRY_DSN` turns on error tracking (the API's errors and the sites' crash reports); like
 `CLERK_SECRET_KEY` it's `preserve()`d, set per environment by `/provision-railway`. Unset, errors
 are only logged.
+
+`RESEND_API_KEY` and `EMAIL_FROM` turn on email (sent by the `send-email` job through
+[Resend](https://resend.com)); unset, emails are only logged. `RESEND_WEBHOOK_SECRET` and
+`CLERK_WEBHOOK_SECRET` are the signing secrets of the webhooks at `/api/webhooks/resend`
+(undelivered emails) and `/api/webhooks/clerk` (deleted accounts). All four are `preserve()`d and
+set per environment by `/provision-railway`.
 
 ---
 

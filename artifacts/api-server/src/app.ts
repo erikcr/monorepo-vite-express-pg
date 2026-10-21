@@ -20,6 +20,7 @@ import { createClientErrorsRouter } from "./routes/client-errors.js";
 import { createDocsRouter } from "./routes/docs.js";
 import { createExampleRouter } from "./routes/example.js";
 import { createHealthRouter } from "./routes/health.js";
+import { createWebhooksRouter } from "./routes/webhooks.js";
 
 /**
  * Every router the API mounts, by path. Each route in them declares one access rule
@@ -34,6 +35,7 @@ export function createRouters(db: Db, queue: JobQueue): Record<string, Router> {
     "/api/admin": createAdminRouter(db, access),
     "/api/example": createExampleRouter(db, queue, access),
     "/api/client-errors": createClientErrorsRouter(),
+    "/api/webhooks": createWebhooksRouter(db),
     ...(env.API_DOCS ? { "/docs": createDocsRouter() } : {}),
   };
 }
@@ -65,7 +67,9 @@ export function createApp(db: Db, queue: JobQueue): Express {
       })
     );
   }
-  // Explicit body size cap (Express's default, stated): larger bodies get 413.
+  // Explicit body size cap (Express's default, stated): larger bodies get 413. Webhook bodies stay
+  // bytes, which their signatures are checked against; express.json then leaves them alone.
+  app.use("/api/webhooks", express.raw({ type: () => true, limit: "100kb" }));
   app.use(express.json({ limit: "100kb" }));
 
   for (const [path, router] of Object.entries(createRouters(db, queue))) app.use(path, router);

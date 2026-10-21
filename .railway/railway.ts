@@ -48,6 +48,12 @@ export default defineRailway((ctx) => {
       // Sentry DSN (error tracking), set per environment when a Sentry project exists; unset,
       // errors are only logged. Set by /provision-railway.
       SENTRY_DSN: preserve(),
+      // Email (Resend): the API key and sender, and the two webhooks' signing secrets. Unset, emails
+      // are only logged and the webhooks refuse events. Set by /provision-railway.
+      RESEND_API_KEY: preserve(),
+      EMAIL_FROM: preserve(),
+      RESEND_WEBHOOK_SECRET: preserve(),
+      CLERK_WEBHOOK_SECRET: preserve(),
     },
   });
 

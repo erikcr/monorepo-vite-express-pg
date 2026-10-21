@@ -8,6 +8,8 @@ const EXPECTED: Record<string, string> = {
   "GET /health": "public",
   "GET /health/ready": "public",
   "POST /api/client-errors": "public",
+  "POST /api/webhooks/resend": "public",
+  "POST /api/webhooks/clerk": "public",
   "GET /docs/openapi.yaml": "public",
   "GET /docs": "public",
   "GET /api/me": "signed-in",

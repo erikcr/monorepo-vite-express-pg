@@ -2,6 +2,7 @@ import type { Db } from "@repo/db";
 import { exampleTable } from "@repo/db/schema";
 import { count } from "drizzle-orm";
 import type { QueueOptions } from "pg-boss";
+import { type Email, sendEmail } from "../lib/email.js";
 import { logger } from "../logger.js";
 
 interface JobContext {
@@ -42,6 +43,17 @@ export const exampleDailyCount = defineJob<Record<string, never>>({
   },
 });
 
+// Sends one email (src/lib/email.ts). Routes enqueue this rather than sending, so the request
+// doesn't wait on Resend and a refused or failed send is retried. The key keeps a retry from
+// sending an email twice if the first attempt reached Resend.
+export const sendEmailJob = defineJob<Email>({
+  name: "send-email",
+  options: { retryLimit: 4, retryBackoff: true },
+  handler: async (email, { jobId }) => {
+    await sendEmail(email, { idempotencyKey: `send-email/${jobId}` });
+  },
+});
+
 // Every job the worker runs. A job missing from this list is never processed.
 // biome-ignore lint/suspicious/noExplicitAny: handlers take different payload types
-export const jobs: JobDefinition<any>[] = [exampleCreated, exampleDailyCount];
+export const jobs: JobDefinition<any>[] = [exampleCreated, exampleDailyCount, sendEmailJob];
