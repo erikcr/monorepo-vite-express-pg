@@ -130,17 +130,17 @@ are only logged.
 
 ## Deploying to Vercel (web + admin)
 
-Create two separate Vercel projects — one for `artifacts/web`, one for `artifacts/admin`.
+Create two separate Vercel projects — one for `artifacts/web`, one for `artifacts/admin` (the `provision-vercel` skill does all of this from the CLI).
 
-### Required dashboard setting
+### Required setting
 
-The only setting that needs to be configured in the Vercel dashboard is:
+The only project setting that needs to be configured is:
 
 | Setting | Value |
 |---------|-------|
 | Root Directory | `artifacts/web` or `artifacts/admin` |
 
-Leave Build Command, Output Directory, and Install Command as defaults. All three are defined in `vercel.json` inside each app directory and will be picked up automatically once Root Directory is set.
+Set it before the first deploy: without it, Vercel builds the app folder on its own and the install (`cd ../..`) has no workspace to run in. Leave Build Command, Output Directory, and Install Command as defaults. All three are defined in `vercel.json` inside each app directory and will be picked up automatically once Root Directory is set.
 
 ### How the vercel.json works
 

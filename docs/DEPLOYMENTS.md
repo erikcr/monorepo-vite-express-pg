@@ -128,6 +128,7 @@ with `railway postgres pitr schedule list --service Postgres --environment produ
 | Deploy sites | The new API is live; the sites keep their previous build | Read the run. If `/health` serves the commit now, re-run it. If there's no run (Railway never reported success, below), run **Deploy sites** by hand (Actions → Deploy sites → Run workflow, on the branch) |
 | A site's build | That site keeps its previous build, against an API that still supports it | Fix forward |
 | Deploy check | Everything is live, but a site was built or served wrong | The failed run names the site and problem (never a key's value). Fix the Vercel variable or `vercel.json`, then redeploy that site (run **Deploy sites** by hand). A secret key in a bundle is public: rotate it |
+| Deploy check never runs (only skipped runs) | The sites deployed, unchecked | The Vercel project doesn't report deployments to GitHub: enable `gitProviderOptions.createDeployments` (`provision-vercel` step 5), then run **Deploy sites** by hand |
 
 **Rollback:** Railway's rollback for the API, Vercel's instant rollback for a site. A database can't be rolled back by redeploying, which is why migrations stay additive.
 
