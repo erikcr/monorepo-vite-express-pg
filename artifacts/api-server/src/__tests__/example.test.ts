@@ -152,6 +152,19 @@ describe("/api/example", () => {
       expect(res.status).toBe(400);
       expect(res.body.error.fieldErrors.cursor).toEqual(["Invalid cursor"]);
     });
+
+    // Well-formed cursors whose values Postgres would reject must still be a 400, not a 500.
+    it.each([
+      ["an id that isn't a uuid", ["2026-01-01T00:00:00.000Z", "not-a-uuid"]],
+      ["a date Postgres can't compare", ["+275760-09-13T00:00:00.000Z", missingId]],
+      ["a date that isn't ISO", ["1 January 2026", missingId]],
+    ])("returns 400 for a cursor with %s", async (_case, parts) => {
+      const m = await createMember(db);
+      const cursor = Buffer.from(JSON.stringify(parts)).toString("base64url");
+      const res = await request.get(`/api/example?cursor=${cursor}`).set(m.headers);
+      expect(res.status).toBe(400);
+      expect(res.body.error.fieldErrors.cursor).toEqual(["Invalid cursor"]);
+    });
   });
 
   describe("GET /:id", () => {
