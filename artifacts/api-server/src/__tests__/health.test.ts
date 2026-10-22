@@ -42,6 +42,19 @@ describe("GET /health", () => {
     expect((await request.get("/health")).body.sha).toBe("abc123");
   });
 
+  // Health probes are public and never rate limited, so a flood of them must not become a flood
+  // of database queries.
+  it("queries the db once for concurrent probes, and not again while the answer is fresh", async () => {
+    const db = fakeDb(() => new Promise((resolve) => setTimeout(resolve, 20)));
+    const request = supertest(app(db));
+    const probes = await Promise.all(
+      Array.from({ length: 10 }, (_, i) => request.get(i % 2 ? "/health" : "/health/ready"))
+    );
+    expect(probes.map((res) => res.status)).toEqual(Array(10).fill(200));
+    expect((await request.get("/health")).body.db).toBe("ok");
+    expect(db.execute).toHaveBeenCalledTimes(1);
+  });
+
   it("stays 200 when the db is down (liveness), reporting db: error", async () => {
     const res = await supertest(app(fakeDb(() => Promise.reject(new Error("down"))))).get(
       "/health"
