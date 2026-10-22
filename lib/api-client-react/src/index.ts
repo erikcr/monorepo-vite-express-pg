@@ -110,6 +110,14 @@ export interface CreateOrgInput {
   name: string;
 }
 
+export interface DeleteOrgInput {
+  /**
+     * The org's name, exactly as it is
+     * @maxLength 100
+     */
+  confirmName: string;
+}
+
 export interface AdminOrg {
   id: string;
   name: string;
@@ -229,6 +237,11 @@ export type ForbiddenResponse = ErrorResponse;
  * No such record in this org
  */
 export type NotFoundResponse = ErrorResponse;
+
+/**
+ * Not possible in the current state (the `code` says why)
+ */
+export type ConflictResponse = ErrorResponse;
 
 export type ListAdminOrgsParams = {
 /**
@@ -755,6 +768,171 @@ export const useCreateOrg = <TError = ErrorType<BadRequestResponse | Unauthorize
         TContext
       > => {
       return useMutation(getCreateOrgMutationOptions(options), queryClient);
+    }
+
+export const getDeleteCurrentOrgUrl = () => {
+
+
+
+
+  return `/api/orgs/current`
+}
+
+/**
+ * Only an org_admin may. The body repeats the org's name, so a stale or mistaken request
+ * can't delete the wrong org.
+ * @summary Delete the org (X-Org-Id) and everything in it, for good
+ */
+export const deleteCurrentOrg = async (deleteOrgInput: DeleteOrgInput, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetch<void>(getDeleteCurrentOrgUrl(),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(deleteOrgInput)
+  }
+);}
+
+
+
+
+
+export const getDeleteCurrentOrgMutationKey = () => ['deleteCurrentOrg'] as const;
+
+export const getDeleteCurrentOrgMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCurrentOrg>>, TError,DeleteCurrentOrgMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCurrentOrg>>, TError,DeleteCurrentOrgMutationVariables, TContext> => {
+
+const mutationKey = getDeleteCurrentOrgMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCurrentOrg>>, DeleteCurrentOrgMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  deleteCurrentOrg(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCurrentOrgMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCurrentOrg>>>
+    export type DeleteCurrentOrgMutationBody = DeleteOrgInput
+    export type DeleteCurrentOrgMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+    export type DeleteCurrentOrgMutationVariables = {data: DeleteOrgInput}
+
+    /**
+ * @summary Delete the org (X-Org-Id) and everything in it, for good
+ */
+export const useDeleteCurrentOrg = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCurrentOrg>>, TError,DeleteCurrentOrgMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCurrentOrg>>,
+        TError,
+        DeleteCurrentOrgMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteCurrentOrgMutationOptions(options), queryClient);
+    }
+
+export const getLeaveCurrentOrgUrl = () => {
+
+
+
+
+  return `/api/orgs/current/membership`
+}
+
+/**
+ * Any member may, except its last org_admin (409 `last_org_admin`).
+ * @summary Leave the org (X-Org-Id)
+ */
+export const leaveCurrentOrg = async ( options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+
+  return apiFetch<void>(getLeaveCurrentOrgUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getLeaveCurrentOrgMutationKey = () => ['leaveCurrentOrg'] as const;
+
+export const getLeaveCurrentOrgMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof leaveCurrentOrg>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof leaveCurrentOrg>>, TError,void, TContext> => {
+
+const mutationKey = getLeaveCurrentOrgMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof leaveCurrentOrg>>, void> = () => {
+
+
+          return  leaveCurrentOrg(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LeaveCurrentOrgMutationResult = NonNullable<Awaited<ReturnType<typeof leaveCurrentOrg>>>
+
+    export type LeaveCurrentOrgMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ConflictResponse>
+
+
+    /**
+ * @summary Leave the org (X-Org-Id)
+ */
+export const useLeaveCurrentOrg = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof leaveCurrentOrg>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof leaveCurrentOrg>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLeaveCurrentOrgMutationOptions(options), queryClient);
     }
 
 export const getListAdminOrgsUrl = (params?: ListAdminOrgsParams,) => {

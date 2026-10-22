@@ -114,6 +114,48 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /api/orgs/current:
+    delete:
+      operationId: deleteCurrentOrg
+      summary: Delete the org (X-Org-Id) and everything in it, for good
+      description: |
+        Only an org_admin may. The body repeats the org's name, so a stale or mistaken request
+        can't delete the wrong org.
+      tags: [account]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteOrgInput"
+      responses:
+        "204":
+          description: Deleted, with its memberships and records
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/orgs/current/membership:
+    delete:
+      operationId: leaveCurrentOrg
+      summary: Leave the org (X-Org-Id)
+      description: Any member may, except its last org_admin (409 `last_org_admin`).
+      tags: [account]
+      responses:
+        "204":
+          description: Left
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /api/admin/orgs:
     get:
       operationId: listAdminOrgs
@@ -319,6 +361,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Not possible in the current state (the `code` says why)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
 
   schemas:
     ErrorResponse:
@@ -398,6 +446,15 @@ components:
         name:
           type: string
           minLength: 1
+          maxLength: 100
+
+    DeleteOrgInput:
+      type: object
+      required: [confirmName]
+      properties:
+        confirmName:
+          description: The org's name, exactly as it is
+          type: string
           maxLength: 100
 
     AdminOrg:

@@ -2,12 +2,18 @@
 // (`requireOrg("example.write")`) and never test a role, so changing what a role can do is an
 // edit here. Every role/permission pair is covered by src/__tests__/policy.test.ts.
 
-export const ORG_PERMISSIONS = ["example.read", "example.write", "org.settings.write"] as const;
+export const ORG_PERMISSIONS = [
+  "example.read",
+  "example.write",
+  "org.settings.write",
+  "org.delete",
+  "org.leave",
+] as const;
 export type OrgPermission = (typeof ORG_PERMISSIONS)[number];
 
 const ORG_POLICY = {
   org_admin: ORG_PERMISSIONS,
-  org_member: ["example.read", "example.write"],
+  org_member: ["example.read", "example.write", "org.leave"],
 } as const satisfies Record<string, readonly OrgPermission[]>;
 export type OrgRole = keyof typeof ORG_POLICY;
 
