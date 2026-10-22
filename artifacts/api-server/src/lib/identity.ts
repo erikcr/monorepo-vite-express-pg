@@ -13,7 +13,7 @@ export interface Identity {
   profile(): Promise<Profile | null>;
 }
 
-export interface Profile {
+interface Profile {
   /** The primary email, verified: never another or an unverified address. */
   email: string;
   /** First and last name ("" when the account has none). */
