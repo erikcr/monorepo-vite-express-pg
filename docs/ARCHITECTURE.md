@@ -38,7 +38,10 @@ never from the request; every query filters by it, so another org's record is a 
 ### Access: identity vs. grants
 Clerk verifies the session; `org_users` (a role per org) and `platform_staff` grant access, and
 `src/lib/authz/policy.ts` maps roles to permissions. Every route declares exactly one access rule
-as its first handler (`route-access.test.ts` lists them all).
+as its first handler (`route-access.test.ts` lists them all). People join an org by creating it or
+by accepting an emailed invitation (single use, 7 days, only for the invited verified email;
+`src/routes/members.ts`). Memberships change only through `src/lib/memberships.ts`, which locks the
+org's row and never leaves an org without an org_admin.
 
 ### createApp(db, queue) factory
 The Express app takes its database and job queue as arguments. Production passes postgres-js and

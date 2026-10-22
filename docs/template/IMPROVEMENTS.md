@@ -327,11 +327,23 @@ draining time is 0 (immediate SIGKILL), so `railway.toml` sets `drainingSeconds 
 
 ---
 
-### 1.6 `[ ]` Invitations + email provider (after 1.1)
+### 1.6 `[x]` Invitations + email provider (after 1.1)
 Several users per org needs invitations: single-use, stored hashed, expiring (7 days), accepted
 only by a signed-in user whose **primary verified** email matches; an org users page (list,
 change role, remove; never remove the last `org_admin`). Needs an email provider in the template
 (decide: e.g. Resend) and its provisioning step.
+
+**Done (2026-10-22):** decided with Erik: every member sees the member list and pending
+invitations (`org.members.read`); org admins invite, revoke, change roles and remove
+(`org.members.manage`); a page of its own, `/app/members`; inviting an email again replaces its
+pending invitation (and so resends). Tokens are 32 random bytes, stored as SHA-256, in the link's
+`#` (never sent to a server); accepting is single use (row-locked delete), only for the invited
+email (`users.email`, the primary verified one), 410 when expired; an existing member keeps their
+role. `src/lib/memberships.ts` locks the org's row for every membership change (leave, remove,
+role) and refuses to leave an org without an org_admin. Links need the API's new `WEB_URL`
+(`/provision-vercel` sets it). E2E: an inviter invites, the invitee follows the emailed link (the
+E2E server stands in for Resend) and joins. Not covered by E2E: following a link while signed out
+(Clerk's sign-in redirect back to `/invite#…`).
 
 ## Phase 2 — Tier 2 (strongly recommended defaults)
 
@@ -584,3 +596,4 @@ other's events. Not verified live (no Resend account or webhooks on the template
 | 2026-10-21 | O.8 | Email (Resend) and the Resend and Clerk webhooks, from the reference app's recent email fixes. Every new test shown red against a broken version of its behaviour; one (the signature version check) passed broken at first and was rewritten |
 | 2026-10-22 | Review fixes | A review found, and this fixed (each test shown red first): crafted pagination cursors answered 500 (ids that aren't uuids, dates Postgres rejects); the error handler passed through any error's `status`, so Clerk's 429/401 reached users as our 4xx and never reached Sentry (now only `expose`d errors keep theirs); every non-staff request to `/api/admin` called Clerk's API (now only while a grant awaits linking); `/health` queried the DB on every unthrottled call (now one shared, single-flight check); no statement timeout (now 30s; migrations use their own client without it, verified on Postgres 18 in Docker); the image ran as root (now `node`, verified migrate + serve); `NODE_ENV=test` on Railway now fails at startup; example names capped at 100. Still open from the review: `users.email`/`name` never sync from Clerk (`user.updated`), unverified accounts call Clerk on every request, `Cache-Control: no-store` on API responses, a staff second-factor max age, org deletion/leaving, `security.txt` |
 | 2026-10-22 | Review follow-ups | The rest of the review's open items, decided with Erik: `Cache-Control: no-store` on every API response; staff second factors count for 12 hours (the admin app's sign-in-again screen handles the rest); an account without a verified email is checked with Clerk at most once per 30s; `users.email`/`name` stored at first sign-in and kept current by Clerk's `user.updated` webhook (the webhook must subscribe to it; `/provision-railway` says so); `security.txt` from `VITE_SECURITY_CONTACT` (unset: none, as on the template's own sites); deleting the current org (org_admin, name repeated) and leaving it (never the last org_admin), API + web + E2E. The org row lock on leaving can't be shown by PGlite, which runs one transaction at a time: on Postgres 18, two admins leaving at once stranded 99/100 orgs without it, 0/100 with it. `tenancy-schema` now requires `ON DELETE CASCADE`. Found and fixed: `admin.test.ts` was flaky (two orgs created in the same millisecond tie on `created_at` and order by random id; 1 in 10 coverage runs). Still open: invitations and member management (1.6) |
+| 2026-10-22 | 1.6 | Invitations and member management (see 1.6). Found while proving tests red: the new members and invitations list tests had the same-millisecond tie as `admin.test.ts` (fixed before commit). The template's own production needs `WEB_URL=https://web.template.erikcr.com` on Railway before invitations work there |
