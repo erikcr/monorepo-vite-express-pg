@@ -44,10 +44,11 @@ describe("authentication", () => {
   });
 
   it("creates the users row on the first signed-in request, from the verified email", async () => {
-    const res = await request.get("/me").set(bearer({ sub: "user_new", email: "new@x.test" }));
+    const session = bearer({ sub: "user_new", email: "new@x.test", name: "New Person" });
+    const res = await request.get("/me").set(session);
     expect(res.status).toBe(200);
     const [row] = await db.select().from(usersTable).where(eq(usersTable.clerkUserId, "user_new"));
-    expect(row).toMatchObject({ id: res.body.userId, email: "new@x.test" });
+    expect(row).toMatchObject({ id: res.body.userId, email: "new@x.test", name: "New Person" });
     // Second request: same row.
     const again = await request.get("/me").set(bearer({ sub: "user_new", email: "new@x.test" }));
     expect(again.body.userId).toBe(row?.id);
@@ -155,21 +156,21 @@ describe("requireStaff", () => {
     const identity = (clerkUserId: string, email: string) => ({
       clerkUserId,
       secondFactorAgeMinutes: null,
-      primaryVerifiedEmail: vi.fn(async () => email),
+      profile: vi.fn(async () => ({ email, name: "" })),
     });
 
     const outsider = identity("user_outsider", "outsider@x.test");
     expect(await loadStaff(fresh, outsider)).toBeNull();
-    expect(outsider.primaryVerifiedEmail).not.toHaveBeenCalled();
+    expect(outsider.profile).not.toHaveBeenCalled();
 
     await grantStaff(fresh, "pending@x.test", "staff_support");
     const claimant = identity("user_pending", "pending@x.test");
     expect(await loadStaff(fresh, claimant)).toMatchObject({ role: "staff_support" });
-    expect(claimant.primaryVerifiedEmail).toHaveBeenCalledOnce();
+    expect(claimant.profile).toHaveBeenCalledOnce();
 
     // Linked now, so nothing is waiting: the outsider is refused without a lookup again.
     expect(await loadStaff(fresh, outsider)).toBeNull();
-    expect(outsider.primaryVerifiedEmail).not.toHaveBeenCalled();
+    expect(outsider.profile).not.toHaveBeenCalled();
   });
 
   it("checks the staff permission", async () => {

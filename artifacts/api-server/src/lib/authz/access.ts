@@ -13,7 +13,8 @@ import {
 
 /**
  * The person's `users` row, created on their first signed-in request from the primary verified
- * email. Null when Clerk hasn't verified one yet: such an account gets no access.
+ * email and the name; Clerk's user.updated webhook keeps both current (src/routes/webhooks.ts).
+ * Null when Clerk hasn't verified an email yet: such an account gets no access.
  */
 export async function ensureUser(db: Db, identity: Identity): Promise<User | null> {
   const [existing] = await db
@@ -21,11 +22,11 @@ export async function ensureUser(db: Db, identity: Identity): Promise<User | nul
     .from(usersTable)
     .where(eq(usersTable.clerkUserId, identity.clerkUserId));
   if (existing) return existing;
-  const email = await identity.primaryVerifiedEmail();
-  if (!email) return null;
+  const profile = await identity.profile();
+  if (!profile) return null;
   await db
     .insert(usersTable)
-    .values({ clerkUserId: identity.clerkUserId, email })
+    .values({ clerkUserId: identity.clerkUserId, email: profile.email, name: profile.name })
     .onConflictDoNothing(); // a concurrent first request may have created it
   const [created] = await db
     .select()
@@ -81,7 +82,7 @@ export async function loadStaff(
   // Fetching the email calls Clerk's API, so only do it while some grant is waiting to be linked:
   // otherwise every non-staff request to the admin API would make that call.
   if (!row && (await hasUnlinkedStaffGrant(db))) {
-    const email = await identity.primaryVerifiedEmail();
+    const email = (await identity.profile())?.email;
     if (!email) return null;
     [row] = await db
       .update(platformStaffTable)

@@ -4,6 +4,7 @@ import { env } from "@repo/env";
 import { eq } from "drizzle-orm";
 import { type Request, type Response, Router } from "express";
 import { ENVIRONMENT_TAG, environmentTagValue, tagValue } from "../lib/email.js";
+import { webhookAccount } from "../lib/identity.js";
 import { webhookRefusal } from "../lib/webhook-signature.js";
 import { publicRoute } from "../middleware/access.js";
 
@@ -109,11 +110,26 @@ export function createWebhooksRouter(db: Db): Router {
     if (event.type === "user.deleted" && typeof clerkUserId === "string") {
       await forgetAccount(db, clerkUserId);
       req.log.info({ clerkUserId }, "Clerk account deleted: user and access removed");
+    } else if (event.type === "user.updated" && typeof clerkUserId === "string" && event.data) {
+      await syncAccount(db, clerkUserId, event.data);
     }
     res.json({ received: true });
   });
 
   return router;
+}
+
+/**
+ * A changed Clerk account: its name, and its primary email once that's verified (until then the
+ * row keeps the last verified one). An account that hasn't signed in yet has no row to update;
+ * its first request creates one from Clerk's current details.
+ */
+async function syncAccount(db: Db, clerkUserId: string, data: Record<string, unknown>) {
+  const { email, name } = webhookAccount(data);
+  await db
+    .update(usersTable)
+    .set(email ? { email, name } : { name })
+    .where(eq(usersTable.clerkUserId, clerkUserId));
 }
 
 /**

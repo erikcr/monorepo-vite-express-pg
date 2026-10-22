@@ -4,8 +4,12 @@ import { orgsTable, orgUsersTable, platformStaffTable, usersTable } from "@repo/
 let seq = 0;
 
 /** A test session token (accepted only under NODE_ENV=test; see src/lib/identity.ts). */
-export const testToken = (claims: { sub: string; email?: string; fva?: [number, number] }) =>
-  `test:${JSON.stringify(claims)}`;
+export const testToken = (claims: {
+  sub: string;
+  email?: string;
+  name?: string;
+  fva?: [number, number];
+}) => `test:${JSON.stringify(claims)}`;
 
 /** `Authorization` header for a test session. */
 export const bearer = (claims: Parameters<typeof testToken>[0]) => ({
