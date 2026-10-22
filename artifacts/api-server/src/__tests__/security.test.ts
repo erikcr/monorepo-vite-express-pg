@@ -21,6 +21,20 @@ describe("security headers", () => {
     expect(res.headers["strict-transport-security"]).toBeDefined();
     expect(res.headers["x-powered-by"]).toBeUndefined();
   });
+
+  // Responses can carry an org's data: no browser or proxy may keep a copy, e.g. for the next
+  // person on a shared computer to see through the back button.
+  it("tells browsers and proxies never to store a response", async () => {
+    const { request, headers } = await memberApp();
+    for (const res of [
+      await request.get("/api/example").set(headers),
+      await request.get("/api/example"),
+      await request.get("/health"),
+      await request.get("/nowhere"),
+    ]) {
+      expect(res.headers["cache-control"]).toBe("no-store");
+    }
+  });
 });
 
 describe("rate limiting", () => {
