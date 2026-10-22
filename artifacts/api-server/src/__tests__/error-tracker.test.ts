@@ -76,6 +76,23 @@ describe("with SENTRY_DSN", () => {
     expect(JSON.stringify(event)).not.toContain("token");
   });
 
+  it("treats a dependency's error carrying an HTTP status as a 500, and reports it", async () => {
+    // e.g. Clerk's API errors carry the status Clerk answered with (429 when rate limited).
+    const clerkError = Object.assign(new Error("Too Many Requests"), { status: 429 });
+    const db = {
+      select: () => {
+        throw clerkError;
+      },
+    } as unknown as Db;
+    const res = await supertest(createApp(db, createFakeQueue()))
+      .get("/api/example/123e4567-e89b-42d3-a456-426614174000")
+      .set(bearer({ sub: "user_x", email: "x@x.test" }));
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe("Internal server error");
+    const [event] = await sent();
+    expect(event?.exception?.values?.[0]).toMatchObject({ value: "Too Many Requests" });
+  });
+
   it("doesn't report 4xx answers", async () => {
     const res = await supertest(createApp(await createTestDb(), createFakeQueue()))
       .post("/api/example")
