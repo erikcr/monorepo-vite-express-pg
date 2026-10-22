@@ -65,5 +65,18 @@ test.describe("signed in", () => {
     // The selection survives a reload.
     await page.reload();
     await expect(page.getByText("First record")).toBeVisible();
+
+    // The only admin can't leave; they delete the org instead, and land in the other one. (In
+    // this test rather than its own: tests share the member account, and run in parallel.)
+    await page.getByRole("button", { name: "Leave Alpha Co" }).click();
+    await expect(page.getByText(/Make someone else an org admin/)).toBeVisible();
+    await page.getByLabel("Type Alpha Co to confirm").fill("Alpha Co");
+    await page.getByRole("button", { name: "Delete organization" }).click();
+    await expect(page.getByRole("heading", { name: "Beta Co" })).toBeVisible();
+    await expect(page.getByText("No records yet.")).toBeVisible();
+
+    await page.getByLabel("Type Beta Co to confirm").fill("Beta Co");
+    await page.getByRole("button", { name: "Delete organization" }).click();
+    await expect(page.getByRole("heading", { name: "Create your organization" })).toBeVisible();
   });
 });
