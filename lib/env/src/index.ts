@@ -47,7 +47,8 @@ const fields = {
   /** Clerk secret key (sk_test_… / sk_live_…). Without it no session verifies (every request is 401). */
   CLERK_SECRET_KEY: z.string().startsWith("sk_").optional(),
   /**
-   * Require a completed second factor for staff (admin API). Unset: required, except under
+   * Require staff (admin API) to have completed a second factor in the last 12 hours (see
+   * src/middleware/access.ts in the API). Unset: required, except under
    * NODE_ENV=development/test. Set "false" only where your Clerk plan lacks MFA, and never in production.
    */
   STAFF_MFA_REQUIRED: z

@@ -84,12 +84,13 @@ describe("routes (admin)", () => {
     expect(await screen.findByRole("heading", { name: "Staff access required" })).toBeTruthy();
   });
 
-  it("asks staff without a second factor to set one up", async () => {
+  it("asks staff without a recent second factor to sign in again with one", async () => {
     listOrgs.mockReturnValue(
       page([], { error: { status: 403, code: "second_factor_required", message: "x" } })
     );
     renderAt("/");
     expect(await screen.findByRole("heading", { name: "Second factor required" })).toBeTruthy();
+    expect(screen.getByText(/in the last 12 hours/)).toBeTruthy();
   });
 
   it("renders the settings placeholder, sign-in and the 404 page", async () => {
