@@ -24,6 +24,8 @@ COPY --from=build /app/lib/db/migrations ./migrations
 COPY --from=build /app/lib/api-spec/openapi.yaml ./openapi.yaml
 COPY scripts/migrate-and-start.sh ./scripts/migrate-and-start.sh
 ENV NODE_ENV=production
+# The image's unprivileged user: the API only reads its files, so it never needs root.
+USER node
 EXPOSE 3000
 # Railway overrides CMD with the start command in .railway/railway.ts (migrations run as its pre-deploy command).
 # docker-compose has no pre-deploy concept, so migrate-and-start.sh is used there instead.
