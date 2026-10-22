@@ -48,6 +48,11 @@ export function createApp(db: Db, queue: JobQueue): Express {
 
   app.use(requestLogger);
   app.use(helmet());
+  // Responses can carry an org's data, so no browser or proxy keeps a copy of any of them.
+  app.use((_req, res, next) => {
+    res.set("Cache-Control", "no-store");
+    next();
+  });
   app.use(
     cors({
       origin: env.CORS_ORIGIN,
