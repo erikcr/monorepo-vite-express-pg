@@ -121,4 +121,22 @@ describe("verifySession: Clerk tokens", () => {
     expect(await ask()).toBe("u@x.test");
     expect(getUser).toHaveBeenCalledTimes(2);
   });
+
+  it("remembers at most 10,000 unverified accounts, then starts over", async () => {
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_abc");
+    getUser.mockResolvedValue({ primaryEmailAddressId: "e1", emailAddresses: [] });
+    // A fresh copy of the module: the cache is module state, and earlier tests leave entries.
+    vi.resetModules();
+    const fresh = await import("../lib/identity.js");
+    const ask = async (sub: string) => {
+      verifyToken.mockResolvedValueOnce({ sub });
+      return (await fresh.verifySession("jwt"))?.profile();
+    };
+    for (let i = 0; i < 10_000; i++) await ask(`user_many_${i}`);
+    await ask("user_many_0"); // remembered
+    expect(getUser).toHaveBeenCalledTimes(10_000);
+    await ask("user_many_10000"); // full: forgets everyone, then remembers this one
+    await ask("user_many_0"); // asked again
+    expect(getUser).toHaveBeenCalledTimes(10_002);
+  });
 });
