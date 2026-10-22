@@ -20,6 +20,12 @@ if (env.NODE_ENV === "production" && env.CORS_ORIGIN.length === 0) {
   );
 }
 
+if (env.NODE_ENV === "production" && !env.WEB_URL) {
+  logger.warn(
+    "WEB_URL is not set: invitations can't be sent (their links need the web site's URL)"
+  );
+}
+
 if (env.NODE_ENV === "production" && !env.RESEND_API_KEY) {
   logger.warn("RESEND_API_KEY is not set: emails are logged, not sent");
 }

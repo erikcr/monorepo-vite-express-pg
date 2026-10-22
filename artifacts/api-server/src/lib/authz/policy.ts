@@ -8,14 +8,17 @@ export const ORG_PERMISSIONS = [
   "org.settings.write",
   "org.delete",
   "org.leave",
+  "org.members.read",
+  "org.members.manage",
 ] as const;
 export type OrgPermission = (typeof ORG_PERMISSIONS)[number];
 
 const ORG_POLICY = {
   org_admin: ORG_PERMISSIONS,
-  org_member: ["example.read", "example.write", "org.leave"],
+  org_member: ["example.read", "example.write", "org.leave", "org.members.read"],
 } as const satisfies Record<string, readonly OrgPermission[]>;
 export type OrgRole = keyof typeof ORG_POLICY;
+export const ORG_ROLES = Object.keys(ORG_POLICY) as OrgRole[];
 
 /** Staff permissions on the admin API (/api/admin). */
 export const STAFF_PERMISSIONS = ["platform.orgs.read", "platform.staff.manage"] as const;

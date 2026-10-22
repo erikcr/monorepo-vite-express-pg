@@ -120,6 +120,142 @@ export const LeaveCurrentOrgResponse = zod.void()
 
 
 /**
+ * @summary The org's members (X-Org-Id), newest first, one page at a time
+ */
+export const listOrgMembersQueryLimitDefault = 20;
+export const listOrgMembersQueryLimitMax = 100;
+
+
+
+export const ListOrgMembersQueryParams = zod.object({
+  "limit": zod.coerce.number().int().min(1).max(listOrgMembersQueryLimitMax).default(listOrgMembersQueryLimitDefault),
+  "cursor": zod.string().optional().describe('The nextCursor from the previous page; omit for the first page')
+})
+
+export const ListOrgMembersResponse = zod.object({
+  "items": zod.array(zod.object({
+  "userId": zod.uuid(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "role": zod.enum(['org_admin', 'org_member']),
+  "joinedAt": zod.iso.datetime({"offset":true})
+})),
+  "nextCursor": zod.string().nullable().describe('Pass as cursor to get the next page; null on the last page')
+})
+
+
+/**
+ * Never demotes the org's last org_admin (409 `last_org_admin`).
+ * @summary Change a member's role (org admins)
+ */
+export const UpdateOrgMemberParams = zod.object({
+  "userId": zod.uuid()
+})
+
+export const UpdateOrgMemberBody = zod.object({
+  "role": zod.enum(['org_admin', 'org_member'])
+})
+
+export const UpdateOrgMemberResponse = zod.object({
+  "userId": zod.uuid(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "role": zod.enum(['org_admin', 'org_member']),
+  "joinedAt": zod.iso.datetime({"offset":true})
+})
+
+
+/**
+ * Never removes the org's last org_admin (409 `last_org_admin`).
+ * @summary Remove a member from the org (org admins)
+ */
+export const RemoveOrgMemberParams = zod.object({
+  "userId": zod.uuid()
+})
+
+export const RemoveOrgMemberResponse = zod.void()
+
+
+/**
+ * @summary The org's pending invitations (X-Org-Id), newest first, one page at a time
+ */
+export const listInvitationsQueryLimitDefault = 20;
+export const listInvitationsQueryLimitMax = 100;
+
+
+
+export const ListInvitationsQueryParams = zod.object({
+  "limit": zod.coerce.number().int().min(1).max(listInvitationsQueryLimitMax).default(listInvitationsQueryLimitDefault),
+  "cursor": zod.string().optional().describe('The nextCursor from the previous page; omit for the first page')
+})
+
+export const ListInvitationsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.uuid(),
+  "email": zod.string(),
+  "role": zod.enum(['org_admin', 'org_member']),
+  "expiresAt": zod.iso.datetime({"offset":true}).describe('After this the link no longer works; invite again to send a new one'),
+  "createdAt": zod.iso.datetime({"offset":true})
+})),
+  "nextCursor": zod.string().nullable().describe('Pass as cursor to get the next page; null on the last page')
+})
+
+
+/**
+ * Emails them a link that's valid for 7 days. Replaces a pending invitation for the same
+ * email (its link stops working). 409 `already_member` if they already belong to the org.
+ * @summary Invite someone by email (org admins)
+ */
+export const createInvitationBodyEmailMax = 254;
+
+
+
+export const CreateInvitationBody = zod.object({
+  "email": zod.email().max(createInvitationBodyEmailMax),
+  "role": zod.enum(['org_admin', 'org_member'])
+})
+
+export const CreateInvitationResponse = zod.object({
+  "id": zod.uuid(),
+  "email": zod.string(),
+  "role": zod.enum(['org_admin', 'org_member']),
+  "expiresAt": zod.iso.datetime({"offset":true}).describe('After this the link no longer works; invite again to send a new one'),
+  "createdAt": zod.iso.datetime({"offset":true})
+})
+
+
+/**
+ * @summary Revoke a pending invitation (org admins); its link stops working
+ */
+export const RevokeInvitationParams = zod.object({
+  "id": zod.uuid()
+})
+
+export const RevokeInvitationResponse = zod.void()
+
+
+/**
+ * The signed-in person's verified email must be the one invited (403
+ * `invitation_email_mismatch`). An unknown, used or revoked token is 404
+ * `invitation_not_found`; an expired one 410 `invitation_expired`.
+ * @summary Join an org with an invitation's token
+ */
+export const acceptInvitationBodyTokenMax = 200;
+
+
+
+export const AcceptInvitationBody = zod.object({
+  "token": zod.string().min(1).max(acceptInvitationBodyTokenMax).describe('The token from the invitation link')
+})
+
+export const AcceptInvitationResponse = zod.object({
+  "id": zod.uuid(),
+  "name": zod.string(),
+  "role": zod.enum(['org_admin', 'org_member'])
+})
+
+
+/**
  * @summary Every org, newest first (staff)
  */
 export const listAdminOrgsQueryQMax = 100;

@@ -90,6 +90,60 @@ export interface OrgMembership {
   role: OrgRole;
 }
 
+export interface OrgMember {
+  userId: string;
+  email: string;
+  name: string;
+  role: OrgRole;
+  joinedAt: string;
+}
+
+export interface OrgMemberPage {
+  items: OrgMember[];
+  /**
+     * Pass as cursor to get the next page; null on the last page
+     * @nullable
+     */
+  nextCursor: string | null;
+}
+
+export interface UpdateOrgMemberInput {
+  role: OrgRole;
+}
+
+export interface Invitation {
+  id: string;
+  email: string;
+  role: OrgRole;
+  /** After this the link no longer works; invite again to send a new one */
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface InvitationPage {
+  items: Invitation[];
+  /**
+     * Pass as cursor to get the next page; null on the last page
+     * @nullable
+     */
+  nextCursor: string | null;
+}
+
+export interface CreateInvitationInput {
+  /** @maxLength 254 */
+  email: string;
+  role: OrgRole;
+}
+
+export interface AcceptInvitationInput {
+  /**
+     * The token from the invitation link
+     * @minLength 1
+     * @maxLength 200
+     */
+  token: string;
+}
+
 export type MeUser = {
   id: string;
   email: string;
@@ -242,6 +296,37 @@ export type NotFoundResponse = ErrorResponse;
  * Not possible in the current state (the `code` says why)
  */
 export type ConflictResponse = ErrorResponse;
+
+export type PageLimitParameter = number;
+
+/**
+ * The nextCursor from the previous page; omit for the first page
+ */
+export type PageCursorParameter = string;
+
+export type ListOrgMembersParams = {
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: PageLimitParameter;
+/**
+ * The nextCursor from the previous page; omit for the first page
+ */
+cursor?: PageCursorParameter;
+};
+
+export type ListInvitationsParams = {
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: PageLimitParameter;
+/**
+ * The nextCursor from the previous page; omit for the first page
+ */
+cursor?: PageCursorParameter;
+};
 
 export type ListAdminOrgsParams = {
 /**
@@ -933,6 +1018,788 @@ export const useLeaveCurrentOrg = <TError = ErrorType<BadRequestResponse | Unaut
         TContext
       > => {
       return useMutation(getLeaveCurrentOrgMutationOptions(options), queryClient);
+    }
+
+export const getListOrgMembersUrl = (params?: ListOrgMembersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/orgs/current/members?${stringifiedParams}` : `/api/orgs/current/members`
+}
+
+/**
+ * @summary The org's members (X-Org-Id), newest first, one page at a time
+ */
+export const listOrgMembers = async (params?: ListOrgMembersParams, options?: Parameters<typeof apiFetch>[1]): Promise<OrgMemberPage> => {
+
+  return apiFetch<OrgMemberPage>(getListOrgMembersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOrgMembersInfiniteQueryKey = (params?: ListOrgMembersParams,) => {
+    return [
+    'infinite', `/api/orgs/current/members`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getListOrgMembersQueryKey = (params?: ListOrgMembersParams,) => {
+    return [
+    `/api/orgs/current/members`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListOrgMembersInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listOrgMembers>>, ListOrgMembersParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(params?: ListOrgMembersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData, QueryKey, ListOrgMembersParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgMembersInfiniteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgMembers>>, QueryKey, ListOrgMembersParams['cursor']> = ({ signal, pageParam }) => listOrgMembers({...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData, QueryKey, ListOrgMembersParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListOrgMembersInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgMembers>>>
+export type ListOrgMembersInfiniteQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+
+export function useListOrgMembersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgMembers>>, ListOrgMembersParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params: undefined |  ListOrgMembersParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData, QueryKey, ListOrgMembersParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgMembers>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgMembers>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgMembersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgMembers>>, ListOrgMembersParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListOrgMembersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData, QueryKey, ListOrgMembersParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgMembers>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgMembers>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgMembersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgMembers>>, ListOrgMembersParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListOrgMembersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData, QueryKey, ListOrgMembersParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary The org's members (X-Org-Id), newest first, one page at a time
+ */
+
+export function useListOrgMembersInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listOrgMembers>>, ListOrgMembersParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListOrgMembersParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData, QueryKey, ListOrgMembersParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListOrgMembersInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getListOrgMembersQueryOptions = <TData = Awaited<ReturnType<typeof listOrgMembers>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(params?: ListOrgMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOrgMembersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOrgMembers>>> = ({ signal }) => listOrgMembers(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListOrgMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listOrgMembers>>>
+export type ListOrgMembersQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+
+export function useListOrgMembers<TData = Awaited<ReturnType<typeof listOrgMembers>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params: undefined |  ListOrgMembersParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgMembers>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgMembers>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgMembers<TData = Awaited<ReturnType<typeof listOrgMembers>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListOrgMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOrgMembers>>,
+          TError,
+          Awaited<ReturnType<typeof listOrgMembers>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListOrgMembers<TData = Awaited<ReturnType<typeof listOrgMembers>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListOrgMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary The org's members (X-Org-Id), newest first, one page at a time
+ */
+
+export function useListOrgMembers<TData = Awaited<ReturnType<typeof listOrgMembers>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListOrgMembersParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listOrgMembers>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListOrgMembersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateOrgMemberUrl = (userId: string,) => {
+
+
+
+
+  return `/api/orgs/current/members/${userId}`
+}
+
+/**
+ * Never demotes the org's last org_admin (409 `last_org_admin`).
+ * @summary Change a member's role (org admins)
+ */
+export const updateOrgMember = async (userId: string,
+    updateOrgMemberInput: UpdateOrgMemberInput, options?: Parameters<typeof apiFetch>[1]): Promise<OrgMember> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetch<OrgMember>(getUpdateOrgMemberUrl(userId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateOrgMemberInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateOrgMemberMutationKey = () => ['updateOrgMember'] as const;
+
+export const getUpdateOrgMemberMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrgMember>>, TError,UpdateOrgMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOrgMember>>, TError,UpdateOrgMemberMutationVariables, TContext> => {
+
+const mutationKey = getUpdateOrgMemberMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOrgMember>>, UpdateOrgMemberMutationVariables> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  updateOrgMember(userId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOrgMemberMutationResult = NonNullable<Awaited<ReturnType<typeof updateOrgMember>>>
+    export type UpdateOrgMemberMutationBody = UpdateOrgMemberInput
+    export type UpdateOrgMemberMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>
+    export type UpdateOrgMemberMutationVariables = {userId: string;data: UpdateOrgMemberInput}
+
+    /**
+ * @summary Change a member's role (org admins)
+ */
+export const useUpdateOrgMember = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOrgMember>>, TError,UpdateOrgMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateOrgMember>>,
+        TError,
+        UpdateOrgMemberMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateOrgMemberMutationOptions(options), queryClient);
+    }
+
+export const getRemoveOrgMemberUrl = (userId: string,) => {
+
+
+
+
+  return `/api/orgs/current/members/${userId}`
+}
+
+/**
+ * Never removes the org's last org_admin (409 `last_org_admin`).
+ * @summary Remove a member from the org (org admins)
+ */
+export const removeOrgMember = async (userId: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+
+  return apiFetch<void>(getRemoveOrgMemberUrl(userId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveOrgMemberMutationKey = () => ['removeOrgMember'] as const;
+
+export const getRemoveOrgMemberMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeOrgMember>>, TError,RemoveOrgMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeOrgMember>>, TError,RemoveOrgMemberMutationVariables, TContext> => {
+
+const mutationKey = getRemoveOrgMemberMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeOrgMember>>, RemoveOrgMemberMutationVariables> = (props) => {
+          const {userId} = props ?? {};
+
+          return  removeOrgMember(userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveOrgMemberMutationResult = NonNullable<Awaited<ReturnType<typeof removeOrgMember>>>
+
+    export type RemoveOrgMemberMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>
+    export type RemoveOrgMemberMutationVariables = {userId: string}
+
+    /**
+ * @summary Remove a member from the org (org admins)
+ */
+export const useRemoveOrgMember = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeOrgMember>>, TError,RemoveOrgMemberMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof removeOrgMember>>,
+        TError,
+        RemoveOrgMemberMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRemoveOrgMemberMutationOptions(options), queryClient);
+    }
+
+export const getListInvitationsUrl = (params?: ListInvitationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/orgs/current/invitations?${stringifiedParams}` : `/api/orgs/current/invitations`
+}
+
+/**
+ * @summary The org's pending invitations (X-Org-Id), newest first, one page at a time
+ */
+export const listInvitations = async (params?: ListInvitationsParams, options?: Parameters<typeof apiFetch>[1]): Promise<InvitationPage> => {
+
+  return apiFetch<InvitationPage>(getListInvitationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInvitationsInfiniteQueryKey = (params?: ListInvitationsParams,) => {
+    return [
+    'infinite', `/api/orgs/current/invitations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+export const getListInvitationsQueryKey = (params?: ListInvitationsParams,) => {
+    return [
+    `/api/orgs/current/invitations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInvitationsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listInvitations>>, ListInvitationsParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(params?: ListInvitationsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData, QueryKey, ListInvitationsParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInvitationsInfiniteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInvitations>>, QueryKey, ListInvitationsParams['cursor']> = ({ signal, pageParam }) => listInvitations({...params, 'cursor': pageParam ?? params?.['cursor']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData, QueryKey, ListInvitationsParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListInvitationsInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listInvitations>>>
+export type ListInvitationsInfiniteQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+
+export function useListInvitationsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listInvitations>>, ListInvitationsParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params: undefined |  ListInvitationsParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData, QueryKey, ListInvitationsParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInvitations>>,
+          TError,
+          Awaited<ReturnType<typeof listInvitations>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInvitationsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listInvitations>>, ListInvitationsParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListInvitationsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData, QueryKey, ListInvitationsParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInvitations>>,
+          TError,
+          Awaited<ReturnType<typeof listInvitations>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInvitationsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listInvitations>>, ListInvitationsParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListInvitationsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData, QueryKey, ListInvitationsParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary The org's pending invitations (X-Org-Id), newest first, one page at a time
+ */
+
+export function useListInvitationsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listInvitations>>, ListInvitationsParams['cursor']>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListInvitationsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData, QueryKey, ListInvitationsParams['cursor']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListInvitationsInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getListInvitationsQueryOptions = <TData = Awaited<ReturnType<typeof listInvitations>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(params?: ListInvitationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInvitationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInvitations>>> = ({ signal }) => listInvitations(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListInvitationsQueryResult = NonNullable<Awaited<ReturnType<typeof listInvitations>>>
+export type ListInvitationsQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+
+export function useListInvitations<TData = Awaited<ReturnType<typeof listInvitations>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params: undefined |  ListInvitationsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInvitations>>,
+          TError,
+          Awaited<ReturnType<typeof listInvitations>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInvitations<TData = Awaited<ReturnType<typeof listInvitations>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListInvitationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInvitations>>,
+          TError,
+          Awaited<ReturnType<typeof listInvitations>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInvitations<TData = Awaited<ReturnType<typeof listInvitations>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListInvitationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary The org's pending invitations (X-Org-Id), newest first, one page at a time
+ */
+
+export function useListInvitations<TData = Awaited<ReturnType<typeof listInvitations>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params?: ListInvitationsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvitations>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListInvitationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateInvitationUrl = () => {
+
+
+
+
+  return `/api/orgs/current/invitations`
+}
+
+/**
+ * Emails them a link that's valid for 7 days. Replaces a pending invitation for the same
+ * email (its link stops working). 409 `already_member` if they already belong to the org.
+ * @summary Invite someone by email (org admins)
+ */
+export const createInvitation = async (createInvitationInput: CreateInvitationInput, options?: Parameters<typeof apiFetch>[1]): Promise<Invitation> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetch<Invitation>(getCreateInvitationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createInvitationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateInvitationMutationKey = () => ['createInvitation'] as const;
+
+export const getCreateInvitationMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInvitation>>, TError,CreateInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInvitation>>, TError,CreateInvitationMutationVariables, TContext> => {
+
+const mutationKey = getCreateInvitationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInvitation>>, CreateInvitationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createInvitation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof createInvitation>>>
+    export type CreateInvitationMutationBody = CreateInvitationInput
+    export type CreateInvitationMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ConflictResponse>
+    export type CreateInvitationMutationVariables = {data: CreateInvitationInput}
+
+    /**
+ * @summary Invite someone by email (org admins)
+ */
+export const useCreateInvitation = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInvitation>>, TError,CreateInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createInvitation>>,
+        TError,
+        CreateInvitationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateInvitationMutationOptions(options), queryClient);
+    }
+
+export const getRevokeInvitationUrl = (id: string,) => {
+
+
+
+
+  return `/api/orgs/current/invitations/${id}`
+}
+
+/**
+ * @summary Revoke a pending invitation (org admins); its link stops working
+ */
+export const revokeInvitation = async (id: string, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+
+  return apiFetch<void>(getRevokeInvitationUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeInvitationMutationKey = () => ['revokeInvitation'] as const;
+
+export const getRevokeInvitationMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInvitation>>, TError,RevokeInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeInvitation>>, TError,RevokeInvitationMutationVariables, TContext> => {
+
+const mutationKey = getRevokeInvitationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeInvitation>>, RevokeInvitationMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeInvitation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof revokeInvitation>>>
+
+    export type RevokeInvitationMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>
+    export type RevokeInvitationMutationVariables = {id: string}
+
+    /**
+ * @summary Revoke a pending invitation (org admins); its link stops working
+ */
+export const useRevokeInvitation = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInvitation>>, TError,RevokeInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof revokeInvitation>>,
+        TError,
+        RevokeInvitationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeInvitationMutationOptions(options), queryClient);
+    }
+
+export const getAcceptInvitationUrl = () => {
+
+
+
+
+  return `/api/invitations/accept`
+}
+
+/**
+ * The signed-in person's verified email must be the one invited (403
+ * `invitation_email_mismatch`). An unknown, used or revoked token is 404
+ * `invitation_not_found`; an expired one 410 `invitation_expired`.
+ * @summary Join an org with an invitation's token
+ */
+export const acceptInvitation = async (acceptInvitationInput: AcceptInvitationInput, options?: Parameters<typeof apiFetch>[1]): Promise<OrgMembership> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiFetch<OrgMembership>(getAcceptInvitationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(acceptInvitationInput)
+  }
+);}
+
+
+
+
+
+export const getAcceptInvitationMutationKey = () => ['acceptInvitation'] as const;
+
+export const getAcceptInvitationMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptInvitation>>, TError,AcceptInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof acceptInvitation>>, TError,AcceptInvitationMutationVariables, TContext> => {
+
+const mutationKey = getAcceptInvitationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof acceptInvitation>>, AcceptInvitationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  acceptInvitation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AcceptInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof acceptInvitation>>>
+    export type AcceptInvitationMutationBody = AcceptInvitationInput
+    export type AcceptInvitationMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse | ErrorResponse>
+    export type AcceptInvitationMutationVariables = {data: AcceptInvitationInput}
+
+    /**
+ * @summary Join an org with an invitation's token
+ */
+export const useAcceptInvitation = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | NotFoundResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptInvitation>>, TError,AcceptInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof acceptInvitation>>,
+        TError,
+        AcceptInvitationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAcceptInvitationMutationOptions(options), queryClient);
     }
 
 export const getListAdminOrgsUrl = (params?: ListAdminOrgsParams,) => {
