@@ -316,7 +316,7 @@ export function createInvitationsRouter(db: Db, access: Access): Router {
 const ROLE_NAMES: Record<OrgRole, string> = { org_admin: "an admin", org_member: "a member" };
 
 /** The invitation email: plain text, and HTML with everything inserted escaped. */
-export function invitationEmail(i: {
+function invitationEmail(i: {
   to: string;
   orgName: string;
   inviter: string;
