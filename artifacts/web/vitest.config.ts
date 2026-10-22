@@ -15,10 +15,10 @@ export default defineConfig({
       // Floors just below current coverage: CI fails if it drops. `pnpm coverage:ratchet` raises
       // them to the current (rounded-down) coverage; commit the result with the tests.
       thresholds: {
-        statements: 85,
-        branches: 69,
-        functions: 80,
-        lines: 85,
+        statements: 87,
+        branches: 72,
+        functions: 82,
+        lines: 87,
         autoUpdate: process.env.COVERAGE_RATCHET === "1" ? (n: number) => Math.floor(n) : false,
       },
     },
