@@ -5,7 +5,9 @@ import {
   type OrgMembership,
   useCreateExample,
   useCreateOrg,
+  useDeleteCurrentOrg,
   useGetMe,
+  useLeaveCurrentOrg,
   useListExamplesInfinite,
 } from "@repo/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,6 +42,15 @@ function Workspace() {
     selectOrg(orgId);
     // Drop every cached response except /me, so nothing from the previous org can show.
     const meKey = getGetMeQueryKey()[0];
+    queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== meKey });
+  };
+
+  // After leaving or deleting the org: refetch /me first, so the org that's gone can't be picked
+  // again from the old list, then move to the first org left (or the create form).
+  const leftOrg = async () => {
+    await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+    const meKey = getGetMeQueryKey()[0];
+    selectOrg(null);
     queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== meKey });
   };
 
@@ -101,7 +112,12 @@ function Workspace() {
         </button>
       </div>
       {/* Mounted only once the selection matches, so requests carry the right X-Org-Id. */}
-      {active.id === selectedId && <ExamplesPanel key={active.id} />}
+      {active.id === selectedId && (
+        <>
+          <ExamplesPanel key={active.id} />
+          <OrgPanel key={`org-${active.id}`} org={active} onGone={leftOrg} />
+        </>
+      )}
     </main>
   );
 }
@@ -204,6 +220,62 @@ function ExamplesPanel() {
         >
           {list.isFetchingNextPage ? "Loading…" : "Load more"}
         </button>
+      )}
+    </section>
+  );
+}
+
+/** Leaving the org (any member) and deleting it (org admins, after typing its name). */
+function OrgPanel({ org, onGone }: { org: OrgMembership; onGone: () => Promise<void> }) {
+  const [confirmName, setConfirmName] = useState("");
+  const leave = useLeaveCurrentOrg({ mutation: { onSuccess: onGone } });
+  const remove = useDeleteCurrentOrg({ mutation: { onSuccess: onGone } });
+  const confirmed = confirmName === org.name;
+
+  return (
+    <section className="bg-surface-raised border border-border rounded-card p-5 mt-6">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted mb-4">
+        Organization
+      </h2>
+      <button
+        type="button"
+        className="border border-border rounded-button px-4 py-2 text-sm disabled:opacity-50"
+        onClick={() => leave.mutate()}
+        disabled={leave.isPending}
+      >
+        Leave {org.name}
+      </button>
+      {leave.error && <p className="text-destructive text-sm mt-2">{leave.error.message}</p>}
+      {org.role === "org_admin" && (
+        <form
+          className="mt-5 flex flex-col gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (confirmed) remove.mutate({ data: { confirmName } });
+          }}
+        >
+          <p className="text-sm text-text-muted">
+            Deleting the organization removes its records and memberships for good.
+          </p>
+          <label htmlFor="confirm-org-name" className="text-sm">
+            Type <strong>{org.name}</strong> to confirm
+          </label>
+          <input
+            id="confirm-org-name"
+            className={input}
+            value={confirmName}
+            onChange={(e) => setConfirmName(e.target.value)}
+            autoComplete="off"
+          />
+          <button
+            type="submit"
+            className="bg-destructive text-destructive-fg rounded-button px-4 py-2 text-sm self-start disabled:opacity-50"
+            disabled={!confirmed || remove.isPending}
+          >
+            Delete organization
+          </button>
+          {remove.error && <p className="text-destructive text-sm">{remove.error.message}</p>}
+        </form>
       )}
     </section>
   );
