@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_API_URL?: string;
   /** Clerk publishable key (pk_test_… / pk_live_…). Required: the app can't sign anyone in without it. */
   readonly VITE_CLERK_PUBLISHABLE_KEY?: string;
+  /** Where to report a vulnerability (mailto: or https: URL), served in /.well-known/security.txt. */
+  readonly VITE_SECURITY_CONTACT?: string;
 }
 
 interface ImportMeta {

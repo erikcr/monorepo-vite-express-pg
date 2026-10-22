@@ -153,3 +153,7 @@ with `railway postgres pitr schedule list --service Postgres --environment produ
   it follows the environment by itself. A new script, API, image or frame host goes in
   `lib/csp/src/index.ts`; until then the browser blocks it (and E2E fails). Headers a `<meta>` tag
   can't carry (`frame-ancestors`, HSTS, …) are in each `vercel.json`.
+- **security.txt comes from `VITE_SECURITY_CONTACT`.** Set on a Vercel environment (a `mailto:` or
+  `https:` URL), both sites' builds serve it at `/.well-known/security.txt` with an `Expires` 360
+  days out; every deploy renews it, so a site not deployed for a year serves an expired one.
+  Unset, there is no security.txt.
