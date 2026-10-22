@@ -1,6 +1,6 @@
 import type { Plugin } from "vite";
 
-// The sites' Content-Security-Policy, built from the same variables as the site itself: the API
+// The sites' Content-Security-Policy (and, below, their security.txt), built from the same variables as the site itself: the API
 // it calls (VITE_API_URL) and the Clerk instance it signs in through (VITE_CLERK_PUBLISHABLE_KEY).
 // Clerk's requirements: https://clerk.com/docs/guides/secure/best-practices/csp-headers
 // The policy goes into index.html as a <meta> tag at build time; the headers that a <meta> tag
@@ -78,6 +78,42 @@ export function csp(): Plugin {
           injectTo: "head-prepend",
         },
       ];
+    },
+  };
+}
+
+// security.txt (RFC 9116): where to report a vulnerability. Served at /.well-known/security.txt
+// when the build sets VITE_SECURITY_CONTACT; its Expires is renewed by every deploy.
+const SECURITY_TXT_LIFETIME_DAYS = 360; // the RFC recommends under a year
+const CONTACT = /^(mailto:[^\s@]+@[^\s@]+\.[^\s@]+|https:\/\/\S+)$/;
+
+export function securityTxt(contact: string, now = new Date()): string {
+  if (!CONTACT.test(contact)) {
+    throw new Error(
+      `VITE_SECURITY_CONTACT must be a mailto: or https: URL (e.g. mailto:security@example.com), got "${contact}"`
+    );
+  }
+  const expires = new Date(now.getTime() + SECURITY_TXT_LIFETIME_DAYS * 24 * 60 * 60 * 1000);
+  return `Contact: ${contact}\nExpires: ${expires.toISOString()}\n`;
+}
+
+/** Vite plugin: emits /.well-known/security.txt in production builds when the contact is set. */
+export function securityTxtFile(): Plugin {
+  let contact: string | undefined;
+  return {
+    name: "repo:security-txt",
+    apply: "build",
+    configResolved(config) {
+      contact = config.env.VITE_SECURITY_CONTACT || undefined;
+      if (contact) securityTxt(contact); // a malformed contact fails the build now
+    },
+    generateBundle() {
+      if (!contact) return;
+      this.emitFile({
+        type: "asset",
+        fileName: ".well-known/security.txt",
+        source: securityTxt(contact),
+      });
     },
   };
 }

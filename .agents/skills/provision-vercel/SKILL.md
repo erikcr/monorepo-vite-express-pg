@@ -63,6 +63,13 @@ command from `artifacts/<app>` (where the project is linked) until step 9.
    The empty `""` means "all Preview branches": without it the CLI stops with `git_branch_required`
    when it isn't interactive. PR previews get no API URL; their API calls fail until a project adds a CORS rule for preview origins.
 
+   Ask the user where vulnerability reports should go (an address or page they watch; a `mailto:`
+   or `https:` URL). Set it for production, and both sites serve it at
+   `/.well-known/security.txt`; skip it if they have none yet (no file is served):
+   ```
+   vercel env add VITE_SECURITY_CONTACT production --value mailto:security@<domain> --yes
+   ```
+
 8. Vercel never deploys `main` or `staging` by itself (`git.deploymentEnabled` in `vercel.json`):
    `.github/workflows/deploy-sites.yml` triggers each site through a deploy hook once the API
    serves the commit (`docs/DEPLOYMENTS.md`). Create the two hooks and store them as GitHub secrets
