@@ -80,17 +80,18 @@ export function createApp(db: Db, queue: JobQueue): Express {
   });
 
   // Global error handler — must be last and have 4 params. Express 5 forwards rejected async
-  // handlers here. 4xx errors (e.g. malformed JSON) keep their message; anything else is logged
-  // with the request id (and reported to Sentry, if on) and answered generically, so internals
-  // (SQL, stack details) never leak.
+  // handlers here. Errors meant for the client (`expose`, e.g. body-parser's malformed JSON or
+  // 413) keep their status and message; anything else is logged with the request id (and reported
+  // to Sentry, if on) and answered generically, so internals (SQL, stack details) never leak. A
+  // dependency's error can carry a status of its own (Clerk's 429), which is still our 500.
   app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-    const status = (err as { status?: number }).status ?? 500;
-    if (status >= 500) {
+    const { status, expose } = err as { status?: number; expose?: boolean };
+    if (!expose || !status || status >= 500) {
       req.log.error({ err }, "unhandled error");
       trackError(err, {
         tags: { requestId: String(req.id), method: req.method, path: req.path },
       });
-      res.status(status).json({ error: "Internal server error", requestId: req.id });
+      res.status(500).json({ error: "Internal server error", requestId: req.id });
       return;
     }
     res.status(status).json({ error: err.message });
