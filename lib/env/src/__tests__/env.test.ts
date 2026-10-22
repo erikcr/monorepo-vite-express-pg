@@ -165,6 +165,14 @@ describe("validateServerEnv", () => {
     expect(message).toContain("RUN_WORKER:");
     expect(message).toContain("cp .env.example .env");
   });
+
+  // Under NODE_ENV=test the API accepts made-up test tokens, which sign anyone in as anyone.
+  it("refuses NODE_ENV=test on Railway", () => {
+    expect(() =>
+      validateServerEnv({ ...valid, NODE_ENV: "test", RAILWAY_ENVIRONMENT_NAME: "staging" })
+    ).toThrow("NODE_ENV: must not be test on Railway");
+    expect(validateServerEnv({ ...valid, NODE_ENV: "test" }).NODE_ENV).toBe("test");
+  });
 });
 
 // Tested against temporary directories rather than the repo, so the result (and coverage) doesn't
