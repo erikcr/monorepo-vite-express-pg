@@ -97,6 +97,9 @@ export function validateServerEnv(source: NodeJS.ProcessEnv = process.env): Serv
       const key = String(issue.path[0]);
       problems.push(`${key}: ${source[key] === undefined ? "missing" : issue.message}`);
     }
+  } else if (parsed.data.NODE_ENV === "test" && parsed.data.RAILWAY_ENVIRONMENT_NAME) {
+    // The API accepts made-up test tokens under NODE_ENV=test (src/lib/identity.ts).
+    problems.push("NODE_ENV: must not be test on Railway (it lets anyone sign in as anyone)");
   }
   if (problems.length > 0) {
     throw new Error(
