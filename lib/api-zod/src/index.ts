@@ -97,6 +97,29 @@ export const CreateOrgResponse = zod.object({
 
 
 /**
+ * Only an org_admin may. The body repeats the org's name, so a stale or mistaken request
+ * can't delete the wrong org.
+ * @summary Delete the org (X-Org-Id) and everything in it, for good
+ */
+export const deleteCurrentOrgBodyConfirmNameMax = 100;
+
+
+
+export const DeleteCurrentOrgBody = zod.object({
+  "confirmName": zod.string().max(deleteCurrentOrgBodyConfirmNameMax).describe('The org\'s name, exactly as it is')
+})
+
+export const DeleteCurrentOrgResponse = zod.void()
+
+
+/**
+ * Any member may, except its last org_admin (409 `last_org_admin`).
+ * @summary Leave the org (X-Org-Id)
+ */
+export const LeaveCurrentOrgResponse = zod.void()
+
+
+/**
  * @summary Every org, newest first (staff)
  */
 export const listAdminOrgsQueryQMax = 100;

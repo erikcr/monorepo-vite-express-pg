@@ -44,7 +44,7 @@ docs/                 PROJECT.md, ARCHITECTURE.md, DEPLOYMENTS.md, TESTING.md, b
 - Edit `lib/db/src/schema.ts`, run `pnpm db:generate` (no DB needed), commit schema and migration together; CI fails on drift. Deploys run migrations before the new API starts. **Migrations are additive**: never drop or rename what the running API reads in the same release.
 - Clerk proves who someone is (`src/lib/identity.ts`, the only server file that knows Clerk); **our tables alone grant access**: `org_users` (role per org) and `platform_staff`. Roles map to permissions in `src/lib/authz/policy.ts`; code checks permissions, never role names.
 - **Every route declares one access rule as its first handler**: `access.requireOrg("example.write")`, `access.signedIn`, `access.requireStaff("platform.orgs.read")` or `publicRoute`. `src/__tests__/route-access.test.ts` lists every route's rule and fails for one without.
-- Every org-scoped table has `org_id uuid NOT NULL` referencing `orgs`. Read the org from `req.ctx.org` (set by `requireOrg`), **never from the request**: the client's `X-Org-Id` is only ever checked against the person's grants. Filter every query by it; single-record queries match `id` **and** org, so another org's record is a 404.
+- Every org-scoped table has `org_id uuid NOT NULL` referencing `orgs` `ON DELETE CASCADE` (deleting an org removes its rows; `tenancy-schema.test.ts` checks). Read the org from `req.ctx.org` (set by `requireOrg`), **never from the request**: the client's `X-Org-Id` is only ever checked against the person's grants. Filter every query by it; single-record queries match `id` **and** org, so another org's record is a 404.
 - Timestamps use `precision: 3` so they round-trip through JS Dates (cursors depend on it).
 
 ## Code patterns
