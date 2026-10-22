@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import express from "express";
 import supertest from "supertest";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { loadStaff } from "../lib/authz/access.js";
 import { type Access, createAccess } from "../middleware/access.js";
 import { bearer, createMember, createOrg, grantStaff } from "../test-helpers/auth.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
@@ -145,6 +146,30 @@ describe("requireStaff", () => {
     expect((await request.get("/staff").set(staffSession("user_gone", "gone@x.test"))).status).toBe(
       403
     );
+  });
+
+  it("only asks Clerk for the email while a grant is waiting to be linked", async () => {
+    // Fetching the email is a Clerk API call: without this, every non-staff request to the admin
+    // API would make one, and anyone signed in could spend the Clerk instance's rate limit.
+    const fresh = await createTestDb();
+    const identity = (clerkUserId: string, email: string) => ({
+      clerkUserId,
+      secondFactorAgeMinutes: null,
+      primaryVerifiedEmail: vi.fn(async () => email),
+    });
+
+    const outsider = identity("user_outsider", "outsider@x.test");
+    expect(await loadStaff(fresh, outsider)).toBeNull();
+    expect(outsider.primaryVerifiedEmail).not.toHaveBeenCalled();
+
+    await grantStaff(fresh, "pending@x.test", "staff_support");
+    const claimant = identity("user_pending", "pending@x.test");
+    expect(await loadStaff(fresh, claimant)).toMatchObject({ role: "staff_support" });
+    expect(claimant.primaryVerifiedEmail).toHaveBeenCalledOnce();
+
+    // Linked now, so nothing is waiting: the outsider is refused without a lookup again.
+    expect(await loadStaff(fresh, outsider)).toBeNull();
+    expect(outsider.primaryVerifiedEmail).not.toHaveBeenCalled();
   });
 
   it("checks the staff permission", async () => {
