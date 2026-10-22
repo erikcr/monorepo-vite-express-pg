@@ -17,6 +17,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.useRealTimers();
 });
 
 describe("verifySession: test tokens", () => {
@@ -86,5 +87,32 @@ describe("verifySession: Clerk tokens", () => {
     expect(await identity?.primaryVerifiedEmail()).toBe("primary@x.test");
     getUser.mockResolvedValueOnce(account("unverified"));
     expect(await identity?.primaryVerifiedEmail()).toBeNull();
+  });
+
+  // An account without a verified email is refused on every request, and each refusal would
+  // otherwise be a Clerk API call: one account could spend the instance's rate limit.
+  it("asks Clerk about an unverified account at most once per 30s", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_abc");
+    verifyToken.mockResolvedValue({ sub: "user_unverified" });
+    getUser.mockResolvedValue({
+      primaryEmailAddressId: "e1",
+      emailAddresses: [{ id: "e1", emailAddress: "u@x.test", verification: { status: "x" } }],
+    });
+    const ask = async () => (await verifySession("jwt"))?.primaryVerifiedEmail();
+
+    expect(await ask()).toBeNull();
+    expect(await ask()).toBeNull();
+    expect(getUser).toHaveBeenCalledOnce();
+
+    vi.setSystemTime(Date.now() + 30_001);
+    getUser.mockResolvedValue({
+      primaryEmailAddressId: "e1",
+      emailAddresses: [
+        { id: "e1", emailAddress: "u@x.test", verification: { status: "verified" } },
+      ],
+    });
+    expect(await ask()).toBe("u@x.test");
+    expect(getUser).toHaveBeenCalledTimes(2);
   });
 });
