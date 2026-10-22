@@ -25,4 +25,7 @@ export function clerkKeys(): { secretKey: string; publishableKey: string } | nul
 export const E2E_USERS = {
   member: "e2e-member+clerk_test@example.com",
   staff: "e2e-staff+clerk_test@example.com",
+  // The invitation test's own pair, so it shares no account with tests running alongside it.
+  inviter: "e2e-inviter+clerk_test@example.com",
+  invitee: "e2e-invitee+clerk_test@example.com",
 } as const;
