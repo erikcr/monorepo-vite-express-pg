@@ -1,4 +1,6 @@
 import type { Db } from "@repo/db";
+import { orgsTable } from "@repo/db/schema";
+import { eq } from "drizzle-orm";
 import supertest from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
@@ -28,6 +30,12 @@ describe("GET /api/admin/orgs", () => {
   it("lists every org newest first, with member counts", async () => {
     const empty = await createOrg(db, "Empty Co");
     const busy = await createOrg(db, "Busy Co");
+    // Created in the same millisecond, the two would tie on createdAt and order by their random
+    // ids: make Empty Co clearly older.
+    await db
+      .update(orgsTable)
+      .set({ createdAt: new Date(busy.createdAt.getTime() - 60_000) })
+      .where(eq(orgsTable.id, empty.id));
     await createMember(db, { orgs: [busy] });
     await createMember(db, { orgs: [busy] });
     const res = await request.get("/api/admin/orgs?limit=100").set(staff);
