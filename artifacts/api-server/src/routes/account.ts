@@ -6,9 +6,10 @@ import {
 } from "@repo/api-zod";
 import type { Db } from "@repo/db";
 import { orgsTable, orgUsersTable } from "@repo/db/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { type Request, Router } from "express";
 import { isOrgRole } from "../lib/authz/policy.js";
+import { changeMembership, LAST_ORG_ADMIN } from "../lib/memberships.js";
 import { sendValidated } from "../lib/send-validated.js";
 import type { Access } from "../middleware/access.js";
 import { validate } from "../middleware/validate.js";
@@ -86,37 +87,11 @@ export function createOrgsRouter(db: Db, access: Access): Router {
   );
 
   router.delete("/current/membership", access.requireOrg("org.leave"), async (req, res) => {
-    const org = currentOrg(req);
-    const user = signedInUser(req);
-    const left = await db.transaction(async (tx) => {
-      // Lock the org's row: one membership change per org at a time, so two admins leaving
-      // together can't both see the other still there.
-      await tx
-        .select({ id: orgsTable.id })
-        .from(orgsTable)
-        .where(eq(orgsTable.id, org.id))
-        .for("update");
-      const [own] = await tx
-        .select({ role: orgUsersTable.role })
-        .from(orgUsersTable)
-        .where(and(eq(orgUsersTable.orgId, org.id), eq(orgUsersTable.userId, user.id)));
-      if (own?.role === "org_admin") {
-        const admins = await tx
-          .select({ userId: orgUsersTable.userId })
-          .from(orgUsersTable)
-          .where(and(eq(orgUsersTable.orgId, org.id), eq(orgUsersTable.role, "org_admin")));
-        if (admins.length <= 1) return false;
-      }
-      await tx
-        .delete(orgUsersTable)
-        .where(and(eq(orgUsersTable.orgId, org.id), eq(orgUsersTable.userId, user.id)));
-      return true;
+    const result = await changeMembership(db, currentOrg(req).id, signedInUser(req).id, {
+      remove: true,
     });
-    if (!left) {
-      res.status(409).json({
-        error: "Make someone else an org admin before you leave: an org needs one",
-        code: "last_org_admin",
-      });
+    if (result === "last_org_admin") {
+      res.status(409).json(LAST_ORG_ADMIN);
       return;
     }
     res.status(204).end();

@@ -12,13 +12,20 @@ import {
 describe("permission policy", () => {
   it("org roles", () => {
     expect(orgPermissions("org_admin")).toEqual(ORG_PERMISSIONS);
-    expect(orgPermissions("org_member")).toEqual(["example.read", "example.write", "org.leave"]);
+    expect(orgPermissions("org_member")).toEqual([
+      "example.read",
+      "example.write",
+      "org.leave",
+      "org.members.read",
+    ]);
     expect(ORG_PERMISSIONS).toEqual([
       "example.read",
       "example.write",
       "org.settings.write",
       "org.delete",
       "org.leave",
+      "org.members.read",
+      "org.members.manage",
     ]);
   });
 

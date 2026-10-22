@@ -20,6 +20,7 @@ import { createClientErrorsRouter } from "./routes/client-errors.js";
 import { createDocsRouter } from "./routes/docs.js";
 import { createExampleRouter } from "./routes/example.js";
 import { createHealthRouter } from "./routes/health.js";
+import { createInvitationsRouter, createMembersRouter } from "./routes/members.js";
 import { createWebhooksRouter } from "./routes/webhooks.js";
 
 /**
@@ -32,6 +33,8 @@ export function createRouters(db: Db, queue: JobQueue): Record<string, Router> {
     "/health": createHealthRouter(db),
     "/api/me": createMeRouter(db, access),
     "/api/orgs": createOrgsRouter(db, access),
+    "/api/orgs/current": createMembersRouter(db, queue, access),
+    "/api/invitations": createInvitationsRouter(db, access),
     "/api/admin": createAdminRouter(db, access),
     "/api/example": createExampleRouter(db, queue, access),
     "/api/client-errors": createClientErrorsRouter(),

@@ -156,6 +156,186 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /api/orgs/current/members:
+    get:
+      operationId: listOrgMembers
+      summary: The org's members (X-Org-Id), newest first, one page at a time
+      tags: [members]
+      parameters:
+        - $ref: "#/components/parameters/PageLimit"
+        - $ref: "#/components/parameters/PageCursor"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgMemberPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/orgs/current/members/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/MemberUserId"
+    patch:
+      operationId: updateOrgMember
+      summary: Change a member's role (org admins)
+      description: Never demotes the org's last org_admin (409 `last_org_admin`).
+      tags: [members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrgMemberInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgMember"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+    delete:
+      operationId: removeOrgMember
+      summary: Remove a member from the org (org admins)
+      description: Never removes the org's last org_admin (409 `last_org_admin`).
+      tags: [members]
+      responses:
+        "204":
+          description: Removed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/orgs/current/invitations:
+    get:
+      operationId: listInvitations
+      summary: The org's pending invitations (X-Org-Id), newest first, one page at a time
+      tags: [members]
+      parameters:
+        - $ref: "#/components/parameters/PageLimit"
+        - $ref: "#/components/parameters/PageCursor"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+    post:
+      operationId: createInvitation
+      summary: Invite someone by email (org admins)
+      description: |
+        Emails them a link that's valid for 7 days. Replaces a pending invitation for the same
+        email (its link stops working). 409 `already_member` if they already belong to the org.
+      tags: [members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvitationInput"
+      responses:
+        "201":
+          description: Invited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /api/orgs/current/invitations/{id}:
+    parameters:
+      - $ref: "#/components/parameters/InvitationId"
+    delete:
+      operationId: revokeInvitation
+      summary: Revoke a pending invitation (org admins); its link stops working
+      tags: [members]
+      responses:
+        "204":
+          description: Revoked
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/invitations/accept:
+    post:
+      operationId: acceptInvitation
+      summary: Join an org with an invitation's token
+      description: |
+        The signed-in person's verified email must be the one invited (403
+        `invitation_email_mismatch`). An unknown, used or revoked token is 404
+        `invitation_not_found`; an expired one 410 `invitation_expired`.
+      tags: [members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptInvitationInput"
+      responses:
+        "200":
+          description: Joined (or already a member)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgMembership"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "410":
+          description: The invitation has expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /api/admin/orgs:
     get:
       operationId: listAdminOrgs
@@ -328,6 +508,36 @@ components:
       description: Clerk session token
 
   parameters:
+    PageLimit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    PageCursor:
+      name: cursor
+      in: query
+      required: false
+      description: The nextCursor from the previous page; omit for the first page
+      schema:
+        type: string
+    MemberUserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    InvitationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     ExampleId:
       name: id
       in: path
@@ -417,6 +627,94 @@ components:
           type: string
         role:
           $ref: "#/components/schemas/OrgRole"
+
+    OrgMember:
+      type: object
+      required: [userId, email, name, role, joinedAt]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          $ref: "#/components/schemas/OrgRole"
+        joinedAt:
+          type: string
+          format: date-time
+
+    OrgMemberPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrgMember"
+        nextCursor:
+          description: Pass as cursor to get the next page; null on the last page
+          type: [string, "null"]
+
+    UpdateOrgMemberInput:
+      type: object
+      required: [role]
+      properties:
+        role:
+          $ref: "#/components/schemas/OrgRole"
+
+    Invitation:
+      type: object
+      required: [id, email, role, expiresAt, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        role:
+          $ref: "#/components/schemas/OrgRole"
+        expiresAt:
+          description: After this the link no longer works; invite again to send a new one
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    InvitationPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invitation"
+        nextCursor:
+          description: Pass as cursor to get the next page; null on the last page
+          type: [string, "null"]
+
+    CreateInvitationInput:
+      type: object
+      required: [email, role]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        role:
+          $ref: "#/components/schemas/OrgRole"
+
+    AcceptInvitationInput:
+      type: object
+      required: [token]
+      properties:
+        token:
+          description: The token from the invitation link
+          type: string
+          minLength: 1
+          maxLength: 200
 
     Me:
       type: object

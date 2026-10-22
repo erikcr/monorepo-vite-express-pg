@@ -27,6 +27,12 @@ export default defineConfig({
           listAdminOrgs: {
             query: { useInfinite: true, useInfiniteQueryParam: "cursor" },
           },
+          listOrgMembers: {
+            query: { useInfinite: true, useInfiniteQueryParam: "cursor" },
+          },
+          listInvitations: {
+            query: { useInfinite: true, useInfiniteQueryParam: "cursor" },
+          },
         },
       },
     },

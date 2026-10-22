@@ -1,6 +1,6 @@
 ---
 name: provision-vercel
-description: Create the web and admin Vercel projects with per-environment API URLs and Clerk keys, the deploy hooks that release them after the API, CORS_ORIGIN on Railway, and the deploy check's targets. Use once per new project, after provision-railway.
+description: Create the web and admin Vercel projects with per-environment API URLs and Clerk keys, the deploy hooks that release them after the API, CORS_ORIGIN and WEB_URL on Railway, and the deploy check's targets. Use once per new project, after provision-railway.
 ---
 
 Provision two Vercel projects for this monorepo — one for `artifacts/web` and one for `artifacts/admin` — each with production deploying `main` against the production API and the `staging` branch deploying against the staging API (see `docs/DEPLOYMENTS.md`). Work through the steps below in order, stopping and reporting clearly if any step fails. Run `/provision-railway` first.
@@ -109,10 +109,12 @@ command from `artifacts/<app>` (where the project is linked) until step 9.
 
 ## Connect the API
 
-12. Allow each environment's sites to call its API (from the repo root, which `/provision-railway` linked to the Railway project):
+12. Allow each environment's sites to call its API, and tell the API where the web site is, for
+    links in emails such as invitations (from the repo root, which `/provision-railway` linked to
+    the Railway project):
     ```
-    railway variable set --service api --environment production 'CORS_ORIGIN=<prod-web-url>,<prod-admin-url>'
-    railway variable set --service api --environment staging 'CORS_ORIGIN=<staging-web-url>,<staging-admin-url>'
+    railway variable set --service api --environment production 'CORS_ORIGIN=<prod-web-url>,<prod-admin-url>' 'WEB_URL=<prod-web-url>'
+    railway variable set --service api --environment staging 'CORS_ORIGIN=<staging-web-url>,<staging-admin-url>' 'WEB_URL=<staging-web-url>'
     ```
     Use full origins (`https://…`, no trailing slash). Setting a variable redeploys that environment's API.
 
@@ -141,14 +143,14 @@ command from `artifacts/<app>` (where the project is linked) until step 9.
       production → <prod-admin-url>    staging → <staging-admin-url>
     ✓ VITE_API_URL: production → <prod-api-url>, staging branch → <staging-api-url>
     ✓ VITE_CLERK_PUBLISHABLE_KEY: production instance (production), development instance (previews)
-    ✓ CORS_ORIGIN set on both Railway environments
+    ✓ CORS_ORIGIN and WEB_URL set on both Railway environments
     ✓ Deploy hooks stored (VERCEL_HOOK_*), API_URL_PRODUCTION / API_URL_STAGING set:
       sites deploy only after the API serves their commit
     ✓ Staging bypass secrets stored (VERCEL_BYPASS_*), so the check can read the staging sites
     ✓ lib/ci/src/deploy-targets.ts filled in (PR into staging): every site deploy is checked against it
 
     Next steps:
-    - Add custom domains in Vercel if needed; then update CORS_ORIGIN on Railway,
+    - Add custom domains in Vercel if needed; then update CORS_ORIGIN and WEB_URL on Railway,
       lib/ci/src/deploy-targets.ts, and the Clerk instance's allowed origins.
     - The sites' Content-Security-Policy follows VITE_API_URL and the Clerk key by itself
       (lib/csp); a new third-party script or API host goes in lib/csp/src/index.ts.
