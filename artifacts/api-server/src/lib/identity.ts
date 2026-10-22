@@ -62,11 +62,25 @@ export async function verifySession(token: string): Promise<Identity | null> {
   };
 }
 
+// Accounts Clerk last said have no verified email, until when to believe it. Such an account is
+// refused on every request, and without this each refusal would be a Clerk API call. Someone who
+// has just verified waits at most UNVERIFIED_RECHECK_MS.
+const UNVERIFIED_RECHECK_MS = 30_000;
+const UNVERIFIED_MAX_ENTRIES = 10_000;
+const unverifiedUntil = new Map<string, number>();
+
 async function fetchPrimaryVerifiedEmail(clerkUserId: string): Promise<string | null> {
   const secretKey = env.CLERK_SECRET_KEY;
   if (!secretKey) return null;
+  if ((unverifiedUntil.get(clerkUserId) ?? 0) > Date.now()) return null;
   const user = await createClerkClient({ secretKey }).users.getUser(clerkUserId);
   const primary = user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId);
   // Never fall back to emailAddresses[0]: an unverified or secondary address must grant nothing.
-  return primary?.verification?.status === "verified" ? primary.emailAddress : null;
+  if (primary?.verification?.status === "verified") {
+    unverifiedUntil.delete(clerkUserId);
+    return primary.emailAddress;
+  }
+  if (unverifiedUntil.size >= UNVERIFIED_MAX_ENTRIES) unverifiedUntil.clear();
+  unverifiedUntil.set(clerkUserId, Date.now() + UNVERIFIED_RECHECK_MS);
+  return null;
 }
