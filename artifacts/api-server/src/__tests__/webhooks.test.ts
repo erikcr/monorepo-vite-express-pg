@@ -192,10 +192,60 @@ describe("POST /api/webhooks/clerk", () => {
     expect(staff).toMatchObject({ email: ann.user.email, status: "disabled", clerkUserId: null });
   });
 
+  describe("user.updated", () => {
+    const updated = (id: string, primaryStatus: string) =>
+      JSON.stringify({
+        type: "user.updated",
+        data: {
+          id,
+          first_name: "Ann",
+          last_name: "Lee",
+          primary_email_address_id: "idn_2",
+          email_addresses: [
+            { id: "idn_1", email_address: "old@x.test", verification: { status: "verified" } },
+            { id: "idn_2", email_address: "new@x.test", verification: { status: primaryStatus } },
+          ],
+        },
+      });
+    const userRow = async (clerkUserId: string) =>
+      (await db.select().from(usersTable).where(eq(usersTable.clerkUserId, clerkUserId)))[0];
+
+    it("updates the account's name and its new primary email once it's verified", async () => {
+      vi.stubEnv("CLERK_WEBHOOK_SECRET", SECRET);
+      const ann = await createMember(db);
+      const body = updated(ann.user.clerkUserId, "verified");
+      const res = await request.post("/api/webhooks/clerk").set(signed(body)).send(body);
+      expect(res.status).toBe(200);
+      expect(await userRow(ann.user.clerkUserId)).toMatchObject({
+        email: "new@x.test",
+        name: "Ann Lee",
+      });
+    });
+
+    it("keeps the last verified email while the new primary is unverified", async () => {
+      vi.stubEnv("CLERK_WEBHOOK_SECRET", SECRET);
+      const ann = await createMember(db);
+      const body = updated(ann.user.clerkUserId, "unverified");
+      await request.post("/api/webhooks/clerk").set(signed(body)).send(body);
+      expect(await userRow(ann.user.clerkUserId)).toMatchObject({
+        email: ann.user.email,
+        name: "Ann Lee",
+      });
+    });
+
+    it("ignores an account that hasn't signed in yet: its row is made on first sign-in", async () => {
+      vi.stubEnv("CLERK_WEBHOOK_SECRET", SECRET);
+      const body = updated("user_never_seen", "verified");
+      const res = await request.post("/api/webhooks/clerk").set(signed(body)).send(body);
+      expect(res.status).toBe(200);
+      expect(await db.select().from(usersTable)).toEqual([]);
+    });
+  });
+
   it("acknowledges other events and changes nothing", async () => {
     vi.stubEnv("CLERK_WEBHOOK_SECRET", SECRET);
     const ann = await createMember(db);
-    const body = JSON.stringify({ type: "user.updated", data: { id: ann.user.clerkUserId } });
+    const body = JSON.stringify({ type: "session.created", data: { id: "sess_1" } });
     const res = await request.post("/api/webhooks/clerk").set(signed(body)).send(body);
     expect(res.body).toEqual({ received: true });
     expect(await db.select().from(usersTable)).toEqual([ann.user]);

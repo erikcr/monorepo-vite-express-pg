@@ -22,10 +22,14 @@ afterEach(() => {
 
 describe("verifySession: test tokens", () => {
   it("accepts test tokens under NODE_ENV=test", async () => {
-    const identity = await verifySession(test({ sub: "user_1", fva: [3, 2], email: "a@x.test" }));
+    const identity = await verifySession(
+      test({ sub: "user_1", fva: [3, 2], email: "a@x.test", name: "A" })
+    );
     expect(identity?.clerkUserId).toBe("user_1");
     expect(identity?.secondFactorAgeMinutes).toBe(2);
-    expect(await identity?.primaryVerifiedEmail()).toBe("a@x.test");
+    expect(await identity?.profile()).toEqual({ email: "a@x.test", name: "A" });
+    // Without an email claim the account has no verified email.
+    expect(await (await verifySession(test({ sub: "user_2" })))?.profile()).toBeNull();
   });
 
   it("refuses them in every other environment", async () => {
@@ -76,6 +80,8 @@ describe("verifySession: Clerk tokens", () => {
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_abc");
     verifyToken.mockResolvedValue({ sub: "user_9" });
     const account = (status: string) => ({
+      firstName: "Ann",
+      lastName: null,
       primaryEmailAddressId: "e2",
       emailAddresses: [
         { id: "e1", emailAddress: "other@x.test", verification: { status: "verified" } },
@@ -84,9 +90,9 @@ describe("verifySession: Clerk tokens", () => {
     });
     const identity = await verifySession("jwt");
     getUser.mockResolvedValueOnce(account("verified"));
-    expect(await identity?.primaryVerifiedEmail()).toBe("primary@x.test");
+    expect(await identity?.profile()).toEqual({ email: "primary@x.test", name: "Ann" });
     getUser.mockResolvedValueOnce(account("unverified"));
-    expect(await identity?.primaryVerifiedEmail()).toBeNull();
+    expect(await identity?.profile()).toBeNull();
   });
 
   // An account without a verified email is refused on every request, and each refusal would
@@ -99,7 +105,7 @@ describe("verifySession: Clerk tokens", () => {
       primaryEmailAddressId: "e1",
       emailAddresses: [{ id: "e1", emailAddress: "u@x.test", verification: { status: "x" } }],
     });
-    const ask = async () => (await verifySession("jwt"))?.primaryVerifiedEmail();
+    const ask = async () => (await (await verifySession("jwt"))?.profile())?.email ?? null;
 
     expect(await ask()).toBeNull();
     expect(await ask()).toBeNull();

@@ -126,7 +126,7 @@ Provision a new Railway project for this monorepo's API server from `.railway/ra
     ```
     Then, per environment, ask the user to add a webhook in Resend (Webhooks → Add endpoint) at `<api-url>/api/webhooks/resend` for the `email.bounced`, `email.complained`, `email.failed` and `email.delivery_delayed` events, and paste its signing secret (`whsec_…`) into `RESEND_WEBHOOK_SECRET` the same way. Production refuses unsigned webhook events, so without it the API never hears about undelivered emails.
 
-19. Ask the user to add a webhook in each Clerk instance (dashboard.clerk.com → Webhooks → Add endpoint), subscribed to `user.deleted`: the development instance's at `<staging-api-url>/api/webhooks/clerk`, the production instance's at `<prod-api-url>/api/webhooks/clerk`. Each one's signing secret (`whsec_…`) goes into `CLERK_WEBHOOK_SECRET` in its environment:
+19. Ask the user to add a webhook in each Clerk instance (dashboard.clerk.com → Webhooks → Add endpoint), subscribed to `user.updated` and `user.deleted`: the development instance's at `<staging-api-url>/api/webhooks/clerk`, the production instance's at `<prod-api-url>/api/webhooks/clerk`. Each one's signing secret (`whsec_…`) goes into `CLERK_WEBHOOK_SECRET` in its environment:
     ```
     railway variable set --service api --environment staging CLERK_WEBHOOK_SECRET=<whsec_…>
     railway variable set --service api --environment production CLERK_WEBHOOK_SECRET=<whsec_…>
@@ -146,7 +146,7 @@ Provision a new Railway project for this monorepo's API server from `.railway/ra
     ✓ Backups: production daily + weekly, staging daily (or: follow-up)
     ✓ Sentry DSN set in both environments (or: follow-up); uptime monitor on /health/ready (or: follow-up)
     ✓ Email: Resend key, sender and webhook secret in both environments (or: follow-up)
-    ✓ Clerk webhook (user.deleted) and CLERK_WEBHOOK_SECRET in both environments (or: follow-up)
+    ✓ Clerk webhook (user.updated, user.deleted) and CLERK_WEBHOOK_SECRET in both environments (or: follow-up)
     ✓ Settings come from .railway/railway.ts (change the file, then `railway config apply`)
 
     Your local .env keeps pointing at local Postgres (docker compose); the
