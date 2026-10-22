@@ -233,6 +233,20 @@ describe("POST /api/webhooks/clerk", () => {
       });
     });
 
+    it("keeps the email when the event carries no addresses", async () => {
+      vi.stubEnv("CLERK_WEBHOOK_SECRET", SECRET);
+      const ann = await createMember(db);
+      const body = JSON.stringify({
+        type: "user.updated",
+        data: { id: ann.user.clerkUserId, first_name: "Ann" },
+      });
+      await request.post("/api/webhooks/clerk").set(signed(body)).send(body);
+      expect(await userRow(ann.user.clerkUserId)).toMatchObject({
+        email: ann.user.email,
+        name: "Ann",
+      });
+    });
+
     it("ignores an account that hasn't signed in yet: its row is made on first sign-in", async () => {
       vi.stubEnv("CLERK_WEBHOOK_SECRET", SECRET);
       const body = updated("user_never_seen", "verified");

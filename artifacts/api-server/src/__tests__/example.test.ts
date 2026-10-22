@@ -167,6 +167,7 @@ describe("/api/example", () => {
       ["an id that isn't a uuid", ["2026-01-01T00:00:00.000Z", "not-a-uuid"]],
       ["a date Postgres can't compare", ["+275760-09-13T00:00:00.000Z", missingId]],
       ["a date that isn't ISO", ["1 January 2026", missingId]],
+      ["a date that doesn't exist", ["2026-13-45T00:00:00.000Z", missingId]],
     ])("returns 400 for a cursor with %s", async (_case, parts) => {
       const m = await createMember(db);
       const cursor = Buffer.from(JSON.stringify(parts)).toString("base64url");

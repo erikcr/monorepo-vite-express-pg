@@ -6,7 +6,7 @@ import {
 } from "@repo/api-zod";
 import type { Db } from "@repo/db";
 import { orgsTable, orgUsersTable } from "@repo/db/schema";
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { type Request, Router } from "express";
 import { isOrgRole } from "../lib/authz/policy.js";
 import { sendValidated } from "../lib/send-validated.js";
@@ -101,11 +101,11 @@ export function createOrgsRouter(db: Db, access: Access): Router {
         .from(orgUsersTable)
         .where(and(eq(orgUsersTable.orgId, org.id), eq(orgUsersTable.userId, user.id)));
       if (own?.role === "org_admin") {
-        const [admins] = await tx
-          .select({ n: count() })
+        const admins = await tx
+          .select({ userId: orgUsersTable.userId })
           .from(orgUsersTable)
           .where(and(eq(orgUsersTable.orgId, org.id), eq(orgUsersTable.role, "org_admin")));
-        if ((admins?.n ?? 0) <= 1) return false;
+        if (admins.length <= 1) return false;
       }
       await tx
         .delete(orgUsersTable)
