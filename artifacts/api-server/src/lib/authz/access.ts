@@ -78,7 +78,9 @@ export async function loadStaff(
     .select()
     .from(platformStaffTable)
     .where(eq(platformStaffTable.clerkUserId, identity.clerkUserId));
-  if (!row) {
+  // Fetching the email calls Clerk's API, so only do it while some grant is waiting to be linked:
+  // otherwise every non-staff request to the admin API would make that call.
+  if (!row && (await hasUnlinkedStaffGrant(db))) {
     const email = await identity.primaryVerifiedEmail();
     if (!email) return null;
     [row] = await db
@@ -94,4 +96,13 @@ export async function loadStaff(
   }
   if (row?.status !== "active" || !isStaffRole(row.role)) return null;
   return { id: row.id, role: row.role };
+}
+
+async function hasUnlinkedStaffGrant(db: Db): Promise<boolean> {
+  const [row] = await db
+    .select({ id: platformStaffTable.id })
+    .from(platformStaffTable)
+    .where(and(isNull(platformStaffTable.clerkUserId), eq(platformStaffTable.status, "active")))
+    .limit(1);
+  return row !== undefined;
 }
