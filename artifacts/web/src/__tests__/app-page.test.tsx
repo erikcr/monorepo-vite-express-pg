@@ -105,6 +105,8 @@ describe("/app", () => {
     renderAt("/app");
     expect(await screen.findByText("First record")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
+    // The API's limit, so a long name is stopped in the form rather than refused by the API.
+    expect(screen.getByLabelText("Record name").getAttribute("maxlength")).toBe("100");
     fireEvent.change(screen.getByLabelText("Record name"), { target: { value: "Second" } });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(createExample).toHaveBeenCalledWith({ data: { name: "Second" } });

@@ -70,6 +70,15 @@ describe("/api/example", () => {
       expect(res.status).toBe(400);
       expect(res.body.error.fieldErrors.name).toBeDefined();
     });
+
+    it("returns 400 for a name over 100 characters", async () => {
+      const m = await createMember(db);
+      const send = (name: string) => request.post("/api/example").set(m.headers).send({ name });
+      expect((await send("x".repeat(100))).status).toBe(201);
+      const res = await send("x".repeat(101));
+      expect(res.status).toBe(400);
+      expect(res.body.error.fieldErrors.name).toBeDefined();
+    });
   });
 
   describe("GET / (list)", () => {
@@ -224,6 +233,10 @@ describe("/api/example", () => {
       const row = await create(m.headers, "Valid");
       const res = await request.patch(`/api/example/${row.id}`).set(m.headers).send({ name: "" });
       expect(res.status).toBe(400);
+      const long = { name: "x".repeat(101) };
+      expect((await request.patch(`/api/example/${row.id}`).set(m.headers).send(long)).status).toBe(
+        400
+      );
     });
   });
 
