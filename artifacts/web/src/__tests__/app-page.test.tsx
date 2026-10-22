@@ -76,6 +76,7 @@ describe("/app", () => {
     expect(await screen.findByRole("heading", { name: "Alpha" })).toBeTruthy();
     expect(getSelectedOrgId()).toBe(ORG_A.id);
     expect(await screen.findByText("No records yet.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Members" }).getAttribute("href")).toBe("/app/members");
   });
 
   it("drops a remembered org the person no longer belongs to", async () => {

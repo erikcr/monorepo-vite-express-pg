@@ -6,13 +6,14 @@ import {
   useCreateExample,
   useCreateOrg,
   useDeleteCurrentOrg,
-  useGetMe,
   useLeaveCurrentOrg,
   useListExamplesInfinite,
 } from "@repo/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useEffect, useState } from "react";
-import { selectOrg, useSelectedOrgId } from "../org.ts";
+import { Link } from "@tanstack/react-router";
+import { type FormEvent, useState } from "react";
+import { useActiveOrg } from "../active-org.ts";
+import { selectOrg } from "../org.ts";
 
 export function AppPage() {
   return (
@@ -27,16 +28,13 @@ const button = "bg-brand text-brand-fg rounded-button px-4 py-2 text-sm disabled
 
 function Workspace() {
   const queryClient = useQueryClient();
-  const { data: me, isLoading, error } = useGetMe();
-  const selectedId = useSelectedOrgId();
+  const {
+    me: { isLoading, error },
+    orgs,
+    active,
+    ready,
+  } = useActiveOrg();
   const [creating, setCreating] = useState(false);
-
-  const orgs = me?.orgs ?? [];
-  // The remembered org if the person still belongs to it, else their first.
-  const active = orgs.find((o) => o.id === selectedId) ?? orgs[0];
-  useEffect(() => {
-    if (active && active.id !== selectedId) selectOrg(active.id);
-  }, [active, selectedId]);
 
   const switchTo = (orgId: string) => {
     selectOrg(orgId);
@@ -107,12 +105,17 @@ function Workspace() {
         ) : (
           <h1 className="text-2xl font-bold">{active.name}</h1>
         )}
-        <button type="button" className="text-sm text-text-muted" onClick={() => setCreating(true)}>
-          New organization
-        </button>
+        <span className="flex items-center gap-4 text-sm">
+          <Link to="/app/members" className="text-text-muted hover:text-text">
+            Members
+          </Link>
+          <button type="button" className="text-text-muted" onClick={() => setCreating(true)}>
+            New organization
+          </button>
+        </span>
       </div>
       {/* Mounted only once the selection matches, so requests carry the right X-Org-Id. */}
-      {active.id === selectedId && (
+      {ready && (
         <>
           <ExamplesPanel key={active.id} />
           <OrgPanel key={`org-${active.id}`} org={active} onGone={leftOrg} />
