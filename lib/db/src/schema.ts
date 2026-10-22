@@ -70,6 +70,29 @@ export const platformStaffTable = pgTable(
   (t) => [uniqueIndex("platform_staff_email_idx").on(sql`lower(${t.email})`)]
 );
 
+/**
+ * An invitation to join an org, pending until accepted (it becomes an org_users row) or revoked:
+ * both delete it, so it can be used once. Only a hash of its token is stored; the token itself
+ * is only ever in the email. One pending invitation per email per org: inviting again replaces it.
+ */
+export const orgInvitationsTable = pgTable(
+  "org_invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: uuid("org_id")
+      .notNull()
+      .references(() => orgsTable.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: text("role").notNull(),
+    /** SHA-256 (hex) of the token in the invitation link. */
+    tokenHash: text("token_hash").notNull().unique(),
+    invitedBy: uuid("invited_by").references(() => usersTable.id, { onDelete: "set null" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true, precision: 3 }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("org_invitations_org_email_idx").on(t.orgId, sql`lower(${t.email})`)]
+);
+
 // ── Example domain table ────────────────────────────────────────────────────────────────────
 
 export const exampleTable = pgTable("example", {
@@ -86,5 +109,6 @@ export type User = typeof usersTable.$inferSelect;
 export type Org = typeof orgsTable.$inferSelect;
 export type OrgUser = typeof orgUsersTable.$inferSelect;
 export type PlatformStaff = typeof platformStaffTable.$inferSelect;
+export type OrgInvitation = typeof orgInvitationsTable.$inferSelect;
 export type Example = typeof exampleTable.$inferSelect;
 export type NewExample = typeof exampleTable.$inferInsert;
