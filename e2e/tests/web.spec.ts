@@ -1,4 +1,5 @@
 import { E2E_USERS } from "../clerk-env";
+import { API, WEB } from "../playwright.config";
 import { expect, expectAccessible, test } from "./fixtures";
 import { requireClerk, signIn } from "./signed-in";
 
@@ -78,5 +79,48 @@ test.describe("signed in", () => {
     await page.getByLabel("Type Beta Co to confirm").fill("Beta Co");
     await page.getByRole("button", { name: "Delete organization" }).click();
     await expect(page.getByRole("heading", { name: "Create your organization" })).toBeVisible();
+  });
+
+  test("invites someone by email, who joins through the link", async ({
+    page,
+    browser,
+    request,
+  }) => {
+    await signIn(page, E2E_USERS.inviter);
+    await page.goto("/app");
+    await page.getByLabel("Organization name").fill("Gamma Co");
+    await page.getByRole("button", { name: "Create" }).click();
+    await page.getByRole("link", { name: "Members" }).click();
+    await expect(page.getByRole("heading", { name: "Members of Gamma Co" })).toBeVisible();
+    await expect(page.getByText("No pending invitations.")).toBeVisible();
+    await expectAccessible(page);
+
+    await page.getByLabel("Email address").fill(E2E_USERS.invitee);
+    await page.getByRole("button", { name: "Invite" }).click();
+    await expect(page.getByText(/Member · Expires/)).toBeVisible();
+
+    // The email the API sent (through the E2E server's stand-in for Resend), and its link.
+    const latestEmail = async () =>
+      (await request.get(`${API}/__e2e/emails`, { params: { to: E2E_USERS.invitee } })).json();
+    await expect.poll(latestEmail).not.toBeNull();
+    const email = await latestEmail();
+    expect(email.subject).toBe("Join Gamma Co");
+    const link = /(https?:\/\/\S+\/invite#\S+)/.exec(email.text)?.[1];
+    expect(link?.startsWith(`${WEB}/invite#`)).toBe(true);
+
+    // The invitee, in their own browser session.
+    const inviteeContext = await browser.newContext({ baseURL: WEB });
+    const invitee = await inviteeContext.newPage();
+    await signIn(invitee, E2E_USERS.invitee);
+    await invitee.goto(link as string);
+    await expect(invitee.getByRole("button", { name: "Accept invitation" })).toBeVisible();
+    await expectAccessible(invitee);
+    await invitee.getByRole("button", { name: "Accept invitation" }).click();
+    await expect(invitee.getByRole("heading", { name: "Gamma Co" })).toBeVisible();
+    await inviteeContext.close();
+
+    await page.reload();
+    await expect(page.getByText(E2E_USERS.invitee)).toBeVisible();
+    await expect(page.getByText("No pending invitations.")).toBeVisible();
   });
 });
