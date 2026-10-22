@@ -62,6 +62,10 @@ async function signedInUser(db: Db, req: Request, res: Response): Promise<User |
   return user;
 }
 
+// A staff session's second factor counts for this long; then they sign in again with it. Clerk
+// sessions last days, so a factor from the start of one says little about who holds it now.
+const STAFF_SECOND_FACTOR_MAX_AGE_MINUTES = 12 * 60;
+
 // Access checks never read params, query or body, so they're typed to fit any route: express
 // infers a route's request types from all its handlers, and a default-typed one would clash
 // with what validate() narrows them to.
@@ -119,8 +123,9 @@ export function createAccess(db: Db): Access {
     });
 
   /**
-   * Staff routes (/api/admin): an active staff grant with `permission`, plus a completed second
-   * factor in this session unless STAFF_MFA_REQUIRED is off (development and tests).
+   * Staff routes (/api/admin): an active staff grant with `permission`, plus a second factor
+   * completed in this session within STAFF_SECOND_FACTOR_MAX_AGE_MINUTES, unless
+   * STAFF_MFA_REQUIRED is off (development and tests).
    */
   const requireStaff = (permission: StaffPermission) =>
     declare(`staff:${permission}`, async (req, res, next) => {
@@ -134,8 +139,17 @@ export function createAccess(db: Db): Access {
         refuse(res, 403, "Staff access required", "forbidden");
         return;
       }
-      if (env.STAFF_MFA_REQUIRED && identity.secondFactorAgeMinutes === null) {
-        refuse(res, 403, "Staff must sign in with a second factor", "second_factor_required");
+      const factorAge = identity.secondFactorAgeMinutes;
+      if (
+        env.STAFF_MFA_REQUIRED &&
+        (factorAge === null || factorAge > STAFF_SECOND_FACTOR_MAX_AGE_MINUTES)
+      ) {
+        refuse(
+          res,
+          403,
+          "Staff must have signed in with a second factor in the last 12 hours",
+          "second_factor_required"
+        );
         return;
       }
       req.staff = { id: staff.id, role: staff.role, permissions: staffPermissions(staff.role) };

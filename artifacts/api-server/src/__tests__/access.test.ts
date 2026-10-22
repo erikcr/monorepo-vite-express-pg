@@ -191,5 +191,13 @@ describe("requireStaff", () => {
       .get("/staff")
       .set(staffSession("user_mfa", "mfa@x.test", [1, 0]));
     expect(withFactor.status).toBe(200);
+    // A second factor counts for 12 hours; after that, staff sign in again.
+    const lastMinute = staffSession("user_mfa", "mfa@x.test", [720, 720]);
+    expect((await request.get("/staff").set(lastMinute)).status).toBe(200);
+    const stale = await request
+      .get("/staff")
+      .set(staffSession("user_mfa", "mfa@x.test", [721, 721]));
+    expect(stale.status).toBe(403);
+    expect(stale.body.code).toBe("second_factor_required");
   });
 });
