@@ -29,6 +29,13 @@
       "when": 1792449211486,
       "tag": "0003_far_maddog",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792710436288,
+      "tag": "0004_chief_sabretooth",
+      "breakpoints": true
     }
   ]
 }
