@@ -1,0 +1,55 @@
+import { RedirectToSignIn, Show } from "@clerk/react";
+import { getGetMeQueryKey, useAcceptInvitation, useGetMe } from "@repo/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
+import { selectOrg } from "../org.ts";
+
+// An invitation email links to /invite#<token>. The token is in the fragment, which browsers
+// never send to a server: it stays out of request logs and Referer headers.
+export function InvitePage() {
+  return (
+    <Show when="signed-in" fallback={<RedirectToSignIn />}>
+      <AcceptInvitation />
+    </Show>
+  );
+}
+
+function AcceptInvitation() {
+  const token = useLocation({ select: (l) => l.hash });
+  const { data: me } = useGetMe();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const accept = useAcceptInvitation({
+    mutation: {
+      onSuccess: async (org) => {
+        selectOrg(org.id);
+        await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+        await navigate({ to: "/app" });
+      },
+    },
+  });
+
+  return (
+    <main className="px-page-x py-page-y max-w-xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Join an organization</h1>
+      {token ? (
+        <>
+          <button
+            type="button"
+            className="bg-brand text-brand-fg rounded-button px-4 py-2 text-sm disabled:opacity-50"
+            disabled={accept.isPending}
+            onClick={() => accept.mutate({ data: { token } })}
+          >
+            Accept invitation
+          </button>
+          {accept.error && <p className="text-destructive text-sm mt-3">{accept.error.message}</p>}
+        </>
+      ) : (
+        <p className="text-sm">
+          This invitation link is incomplete. Open it again from the email, all of it.
+        </p>
+      )}
+      {me && <p className="text-text-muted text-sm mt-4">Signed in as {me.user.email}</p>}
+    </main>
+  );
+}

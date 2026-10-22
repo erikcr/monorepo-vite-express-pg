@@ -13,6 +13,8 @@ import { AboutPage } from "./pages/AboutPage.tsx";
 import { AppPage } from "./pages/AppPage.tsx";
 import { CrashScreen } from "./pages/CrashScreen.tsx";
 import { HomePage } from "./pages/HomePage.tsx";
+import { InvitePage } from "./pages/InvitePage.tsx";
+import { MembersPage } from "./pages/MembersPage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
 import { SignInPage } from "./pages/SignInPage.tsx";
 
@@ -67,6 +69,17 @@ const aboutRoute = createRoute({
 });
 
 const appRoute = createRoute({ getParentRoute: () => rootRoute, path: "/app", component: AppPage });
+const membersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/app/members",
+  component: MembersPage,
+});
+// Invitation emails link here, with the token after the #.
+const inviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/invite",
+  component: InvitePage,
+});
 // Clerk's sign-in renders its own steps under /sign-in/… (factor-one, verify, …).
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -74,7 +87,14 @@ const signInRoute = createRoute({
   component: SignInPage,
 });
 
-const routeTree = rootRoute.addChildren([homeRoute, aboutRoute, appRoute, signInRoute]);
+const routeTree = rootRoute.addChildren([
+  homeRoute,
+  aboutRoute,
+  appRoute,
+  membersRoute,
+  inviteRoute,
+  signInRoute,
+]);
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
   return createRouter({
