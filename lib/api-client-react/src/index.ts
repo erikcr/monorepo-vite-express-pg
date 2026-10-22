@@ -195,12 +195,18 @@ export interface ReadyResponse {
 }
 
 export interface CreateExampleInput {
-  /** @minLength 1 */
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
   name: string;
 }
 
 export interface UpdateExampleInput {
-  /** @minLength 1 */
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
   name: string;
 }
 

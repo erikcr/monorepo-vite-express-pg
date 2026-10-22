@@ -151,11 +151,12 @@ export const ListExamplesResponse = zod.object({
 /**
  * @summary Create an example record
  */
+export const createExampleBodyNameMax = 100;
 
 
 
 export const CreateExampleBody = zod.object({
-  "name": zod.string().min(1)
+  "name": zod.string().min(1).max(createExampleBodyNameMax)
 })
 
 export const CreateExampleResponse = zod.object({
@@ -190,11 +191,12 @@ export const UpdateExampleParams = zod.object({
   "id": zod.uuid()
 })
 
+export const updateExampleBodyNameMax = 100;
 
 
 
 export const UpdateExampleBody = zod.object({
-  "name": zod.string().min(1)
+  "name": zod.string().min(1).max(updateExampleBodyNameMax)
 })
 
 export const UpdateExampleResponse = zod.object({

@@ -176,6 +176,7 @@ function ExamplesPanel() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
+          maxLength={100}
         />
         <button type="submit" className={button} disabled={create.isPending}>
           Add
