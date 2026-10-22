@@ -35,6 +35,8 @@ const fields = {
   RUN_WORKER: flag("true"),
   /** Comma-separated browser origins allowed to call the API (see the CORS_ORIGIN getter). */
   CORS_ORIGIN: list.optional(),
+  /** The web site's URL, for links in emails (invitations). See the WEB_URL getter. */
+  WEB_URL: z.url({ protocol: /^https?$/ }).optional(),
   /** Rate limit per client IP: at most RATE_LIMIT_MAX requests per RATE_LIMIT_WINDOW_MS. */
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   /** 0 disables the limiter. Unset: 300, or 0 under tests (see the getter). */
@@ -134,6 +136,16 @@ export const env = {
     return read("NODE_ENV") === "production"
       ? []
       : ["http://localhost:5173", "http://localhost:3001"];
+  },
+  /**
+   * The web site's URL without a trailing slash, for links in emails. Unset: the local Vite dev
+   * server, but null in production (it is set per environment once the site exists, and the API
+   * warns at startup until then).
+   */
+  get WEB_URL() {
+    const url = read("WEB_URL");
+    if (url) return url.replace(/\/+$/, "");
+    return read("NODE_ENV") === "production" ? null : "http://localhost:5173";
   },
   get RATE_LIMIT_WINDOW_MS() {
     return read("RATE_LIMIT_WINDOW_MS");

@@ -51,6 +51,18 @@ describe("env getters", () => {
     expect(env.CORS_ORIGIN).toEqual([]);
   });
 
+  it("WEB_URL is the web site's origin: the local dev server by default, none in production", () => {
+    vi.stubEnv("WEB_URL", undefined);
+    vi.stubEnv("NODE_ENV", "development");
+    expect(env.WEB_URL).toBe("http://localhost:5173");
+    vi.stubEnv("NODE_ENV", "production");
+    expect(env.WEB_URL).toBeNull();
+    vi.stubEnv("WEB_URL", "https://app.example.com/");
+    expect(env.WEB_URL).toBe("https://app.example.com");
+    vi.stubEnv("WEB_URL", "app.example.com");
+    expect(() => env.WEB_URL).toThrow("WEB_URL");
+  });
+
   it("API_DOCS is on by default except in production, and can be set either way", () => {
     vi.stubEnv("API_DOCS", undefined);
     vi.stubEnv("NODE_ENV", "development");
