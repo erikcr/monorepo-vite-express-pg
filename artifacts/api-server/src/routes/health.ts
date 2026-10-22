@@ -27,10 +27,26 @@ async function pingDb(db: Db, timeoutMs: number): Promise<boolean> {
 export function createHealthRouter(db: Db): Router {
   const router = Router();
   let readyUntil = 0;
+  let checking: Promise<boolean> | undefined;
+
+  // Probes are public and never rate limited, so they share one check: concurrent probes wait for
+  // the same query, and a success answers every probe for READY_CACHE_MS.
+  const checkDb = (): Promise<boolean> => {
+    if (Date.now() < readyUntil) return Promise.resolve(true);
+    checking ??= pingDb(db, READY_TIMEOUT_MS)
+      .then((ok) => {
+        if (ok) readyUntil = Date.now() + READY_CACHE_MS;
+        return ok;
+      })
+      .finally(() => {
+        checking = undefined;
+      });
+    return checking;
+  };
 
   // Liveness: 200 while the process is up. Reports DB status for dashboards, and the deployed commit.
   router.get("/", publicRoute, async (_req, res) => {
-    const dbOk = await pingDb(db, READY_TIMEOUT_MS);
+    const dbOk = await checkDb();
     sendValidated(res, GetHealthResponse, {
       status: "ok",
       ts: new Date().toISOString(),
@@ -41,11 +57,7 @@ export function createHealthRouter(db: Db): Router {
 
   // Readiness: 503 when the DB is unreachable, so the platform holds traffic (Railway healthcheckPath).
   router.get("/ready", publicRoute, async (_req, res) => {
-    let dbOk = Date.now() < readyUntil;
-    if (!dbOk) {
-      dbOk = await pingDb(db, READY_TIMEOUT_MS);
-      if (dbOk) readyUntil = Date.now() + READY_CACHE_MS;
-    }
+    const dbOk = await checkDb();
     sendValidated(
       res,
       GetReadyResponse,
