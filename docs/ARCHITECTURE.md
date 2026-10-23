@@ -70,6 +70,20 @@ org's members, leaving or deleting it) is a section of one settings dialog, open
 menu over any page at `?settings=<section>` (`artifacts/web/src/settings/`). Closing it returns
 people to where they were. Which one a feature gets, and the dialog's rules: `UI.md`.
 
+### What the template assumes
+Orgs are private: only their members, and staff, see an org or its data, and people do their work
+inside an org. Most business products fit this. A marketplace, a directory or a community bends
+it in four places, each listed in `CAPABILITIES.md` with when to build it:
+- public org profiles;
+- reading across orgs, which needs a second, public read path;
+- people without an org, and data a person owns, which needs a third kind of table;
+- pages search engines can read, since the app renders in the browser.
+
+Plan for none of them until a product needs them. The decisions that are hard to change later
+are already being made with them in mind: every route declares who may call it, and when the org
+moves into the address (`UI.md`, the scope layer), it gets a fixed, human-readable handle that
+can also be its public address.
+
 ### Browser security
 Each site's Content-Security-Policy is generated at build time from its own API address and Clerk
 key (`lib/csp`), so it follows the environment without configuration; the other security headers

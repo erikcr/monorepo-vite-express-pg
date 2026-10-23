@@ -100,3 +100,44 @@ Add an entry when a review or discussion turns up something worth having later.
   - Each command has a label, keywords, an optional shortcut it shows, and what it runs.
   - Arrow keys and Enter, with recent commands first.
   - ⌘K / Ctrl+K opens it from anywhere. It must not take over shortcuts the app already uses, such as ⌘, for settings.
+
+## Structure
+
+These change the template's assumptions (`ARCHITECTURE.md`, "What the template assumes"). They're bigger than an interface pattern, so each one starts as a plan of its own.
+
+### Public org profiles
+
+- **Build it when:** an org needs a page people outside it can see: a marketplace's sellers, a directory, a portfolio.
+- **Shape:**
+  - The profile is org-owned data, in a table with `org_id` like any other. It's edited in a settings section with an explicit Publish, and it stays private until published.
+  - It's read through `publicRoute` endpoints under `/api/public/…`, keyed by the org's handle (`UI.md`, the scope layer). They return only published profiles, and only the fields the spec's public schemas declare: `sendValidated` strips the rest.
+  - The public address uses the same handle as the app, so handles must stay fixed, or redirect once renaming exists.
+  - It needs pages search engines can read (below).
+
+### Reading across orgs: browse and search
+
+- **Build it when:** people need to find orgs, or their records, beyond the orgs they belong to: a marketplace's catalog, a directory's search.
+- **Shape:**
+  - A second, explicit read path beside `requireOrg`, which keeps its rule (filter by the person's org).
+  - Public endpoints read only published rows and declared public columns. A structural test, like `tenancy-schema.test.ts`, lists what each one may read, so a new column stays private until someone decides otherwise.
+  - Paged like other lists. Postgres full-text search comes first, and a search service only once that's outgrown.
+
+### People without an org, and data a person owns
+
+- **Build it when:** some people use the product without belonging to an org (a marketplace's buyers, a community's members), or records belong to a person, or to a person and an org at once (an order, a conversation).
+- **Shape:**
+  - A third kind of table beside org-owned and global: person-owned, with `user_id` referencing `users` `ON DELETE CASCADE`. It's read only by that person, through `access.signedIn` and `req.user`. `tenancy-schema.test.ts` gains the list of these tables.
+  - A record with two owners carries both ids, and each side reads it under its own rule: the seller through `requireOrg`, the buyer through `signedIn`. Deleting either one's account says what happens to the record.
+  - Someone without an org needs a home other than "create your organization" ("Choosing where someone lands after signing in", above).
+
+### Pages search engines can read
+
+- **Build it when:** pages are meant to be found through search, or shared with link previews: public profiles, listings, and the marketing pages if search matters for them.
+- **Shape:**
+  - The web app renders in the browser, so a crawler or a link preview gets an empty page. The app itself can stay that way, and only public pages change.
+  - The options, smallest first:
+    1. Prerender at build time, for pages that change rarely (marketing).
+    2. Render the public routes on the server or at the edge, from the public API, with each page's title, description and Open Graph tags.
+    3. Run a separate public site beside the app, sharing the API client.
+  - Choose when the first page that must be indexed exists.
+

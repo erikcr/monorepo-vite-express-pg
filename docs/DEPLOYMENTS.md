@@ -94,6 +94,18 @@ The API goes live a minute or two before the sites, and migrations run while the
 - **Dependency advisories:** CI's **Dependency audit** job fails on a high or critical advisory in
   a production dependency; GitHub's Dependabot alerts list every advisory, dev dependencies included.
 
+## Granting access by hand
+
+The first staff member, and any fix-up of someone's access, goes through the API's scripts. The person must have signed in once.
+
+```bash
+pnpm staff:grant <email> <staff_admin|staff_support>
+pnpm staff:revoke <email>
+pnpm org:grant <email> <org id> <org_admin|org_member>
+```
+
+Locally they use your `.env`. On a deployed environment, run them in the API's container: `railway ssh --service api --environment <env> -- node dist/scripts/<name>.js <args>` (`staff-grant`, `staff-revoke`, `org-grant`). This changes production data, so an agent needs the user's go-ahead first.
+
 ## Backups and restoring the database
 
 Railway takes volume backups of each Postgres on a schedule (`/provision-railway` sets production
