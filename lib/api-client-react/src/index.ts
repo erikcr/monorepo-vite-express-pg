@@ -297,6 +297,11 @@ export type NotFoundResponse = ErrorResponse;
  */
 export type ConflictResponse = ErrorResponse;
 
+/**
+ * Over a limit (the `code` says which); try again later
+ */
+export type TooManyRequestsResponse = ErrorResponse;
+
 export type PageLimitParameter = number;
 
 /**
@@ -1558,6 +1563,8 @@ export const getCreateInvitationUrl = () => {
 /**
  * Emails them a link that's valid for 7 days. Replaces a pending invitation for the same
  * email (its link stops working). 409 `already_member` if they already belong to the org.
+ * Each person may send at most 50 invitations a day, across all their orgs: past that, 429
+ * `invitation_limit`.
  * @summary Invite someone by email (org admins)
  */
 export const createInvitation = async (createInvitationInput: CreateInvitationInput, options?: Parameters<typeof apiFetch>[1]): Promise<Invitation> => {
@@ -1591,7 +1598,7 @@ return apiFetch<Invitation>(getCreateInvitationUrl(),
 
 export const getCreateInvitationMutationKey = () => ['createInvitation'] as const;
 
-export const getCreateInvitationMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ConflictResponse>,
+export const getCreateInvitationMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ConflictResponse | TooManyRequestsResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInvitation>>, TError,CreateInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createInvitation>>, TError,CreateInvitationMutationVariables, TContext> => {
 
@@ -1620,13 +1627,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateInvitationMutationResult = NonNullable<Awaited<ReturnType<typeof createInvitation>>>
     export type CreateInvitationMutationBody = CreateInvitationInput
-    export type CreateInvitationMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ConflictResponse>
+    export type CreateInvitationMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ConflictResponse | TooManyRequestsResponse>
     export type CreateInvitationMutationVariables = {data: CreateInvitationInput}
 
     /**
  * @summary Invite someone by email (org admins)
  */
-export const useCreateInvitation = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ConflictResponse>,
+export const useCreateInvitation = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ConflictResponse | TooManyRequestsResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInvitation>>, TError,CreateInvitationMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createInvitation>>,

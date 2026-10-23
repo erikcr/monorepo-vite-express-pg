@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Db, Org } from "@repo/db";
-import { orgInvitationsTable, orgUsersTable } from "@repo/db/schema";
+import { orgInvitationsTable, orgsTable, orgUsersTable, usersTable } from "@repo/db/schema";
 import { eq } from "drizzle-orm";
 import supertest from "supertest";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -237,6 +237,47 @@ describe("POST /api/orgs/current/invitations", () => {
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("already_member");
     expect(sentInvitations()).toEqual([]);
+  });
+
+  it("caps each person at 50 invitations a day, across their orgs, even ones since deleted", async () => {
+    const [first, second] = [await createOrg(db), await createOrg(db)];
+    const admin = await createMember(db, { orgs: [first, second] });
+    const inviter = eq(usersTable.id, admin.user.id);
+    const count = async () => (await db.select().from(usersTable).where(inviter))[0];
+    expect((await invite(admin.as(first), "one@x.test")).status).toBe(201);
+    expect(await count()).toMatchObject({
+      invitationsSent: 1,
+      invitationsWindowStart: expect.any(Date),
+    });
+    await db.update(usersTable).set({ invitationsSent: 49 }).where(inviter);
+    expect((await invite(admin.as(first), "fifty@x.test")).status).toBe(201);
+    // Deleting the org takes its invitations with it, but not the count.
+    await db.delete(orgsTable).where(eq(orgsTable.id, first.id));
+    queue.enqueued.length = 0;
+
+    const refused = await invite(admin.as(second), "fifty-one@x.test");
+    expect(refused.status).toBe(429);
+    expect(refused.body.code).toBe("invitation_limit");
+    expect(sentInvitations()).toEqual([]);
+    expect(
+      await db.select().from(orgInvitationsTable).where(eq(orgInvitationsTable.orgId, second.id))
+    ).toEqual([]);
+  });
+
+  it("starts counting again a day after the day's first invitation", async () => {
+    const admin = await createMember(db);
+    const inviter = eq(usersTable.id, admin.user.id);
+    const dayStarted = (msAgo: number) =>
+      db
+        .update(usersTable)
+        .set({ invitationsSent: 50, invitationsWindowStart: new Date(Date.now() - msAgo) })
+        .where(inviter);
+    await dayStarted(23 * 3600_000);
+    expect((await invite(admin.headers, "early@x.test")).status).toBe(429);
+    await dayStarted(24 * 3600_000 + 60_000);
+    expect((await invite(admin.headers, "next-day@x.test")).status).toBe(201);
+    const [row] = await db.select().from(usersTable).where(inviter);
+    expect(row?.invitationsSent).toBe(1);
   });
 
   it("is for org admins only, and validates the body", async () => {

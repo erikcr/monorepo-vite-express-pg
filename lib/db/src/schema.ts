@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   index,
+  integer,
   pgTable,
   primaryKey,
   text,
@@ -26,6 +27,16 @@ export const usersTable = pgTable("users", {
   /** Primary verified email, from Clerk. */
   email: text("email").notNull(),
   name: text("name").notNull().default(""),
+  /**
+   * Invitations this person has sent since `invitationsWindowStart` (the API caps them per day).
+   * Kept here, not counted from org_invitations, so revoking them or deleting the org doesn't
+   * reset the count.
+   */
+  invitationsSent: integer("invitations_sent").notNull().default(0),
+  invitationsWindowStart: timestamp("invitations_window_start", {
+    withTimezone: true,
+    precision: 3,
+  }),
   createdAt: createdAt(),
 });
 

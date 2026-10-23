@@ -36,6 +36,13 @@
       "when": 1792710436288,
       "tag": "0004_chief_sabretooth",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792714900971,
+      "tag": "0005_outstanding_bulldozer",
+      "breakpoints": true
     }
   ]
 }

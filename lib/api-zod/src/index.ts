@@ -204,6 +204,8 @@ export const ListInvitationsResponse = zod.object({
 /**
  * Emails them a link that's valid for 7 days. Replaces a pending invitation for the same
  * email (its link stops working). 409 `already_member` if they already belong to the org.
+ * Each person may send at most 50 invitations a day, across all their orgs: past that, 429
+ * `invitation_limit`.
  * @summary Invite someone by email (org admins)
  */
 export const createInvitationBodyEmailMax = 254;

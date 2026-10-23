@@ -35,6 +35,9 @@ import { validate } from "../middleware/validate.js";
 // them takes org.members.manage.
 
 const INVITATION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
+// Anyone can create an org and invite from it, and each invitation emails text they wrote (the
+// org's name) from our domain: a cap per person, across orgs, keeps that from becoming a spam run.
+const INVITATIONS_PER_DAY = 50;
 
 const currentOrg = (req: Pick<Request, "ctx">): Org => {
   if (!req.ctx) throw new Error("requireOrg must run before this handler");
@@ -193,7 +196,21 @@ export function createMembersRouter(db: Db, queue: JobQueue, access: Access): Ro
           .from(orgUsersTable)
           .innerJoin(usersTable, eq(usersTable.id, orgUsersTable.userId))
           .where(and(eq(orgUsersTable.orgId, org.id), sameEmail(usersTable.email, email)));
-        if (existing) return null;
+        if (existing) return "already_member" as const;
+        // Counts this invitation against the inviter's day (a new day starts with their first
+        // invitation after the last one ended). The update locks their row, so their invitations
+        // from different orgs are counted one at a time too.
+        const windowOver = sql`${usersTable.invitationsWindowStart} IS NULL
+          OR ${usersTable.invitationsWindowStart} <= now() - interval '1 day'`;
+        const [counted] = await tx
+          .update(usersTable)
+          .set({
+            invitationsWindowStart: sql`CASE WHEN ${windowOver} THEN now() ELSE ${usersTable.invitationsWindowStart} END`,
+            invitationsSent: sql`CASE WHEN ${windowOver} THEN 1 ELSE ${usersTable.invitationsSent} + 1 END`,
+          })
+          .where(eq(usersTable.id, inviter.id))
+          .returning({ sent: usersTable.invitationsSent });
+        if (!counted || counted.sent > INVITATIONS_PER_DAY) return "limit" as const;
         // A pending invitation for the same email is replaced: its link stops working.
         await tx
           .delete(orgInvitationsTable)
@@ -213,10 +230,18 @@ export function createMembersRouter(db: Db, queue: JobQueue, access: Access): Ro
           .returning();
         return created;
       });
-      if (!invitation) {
+      if (invitation === "already_member") {
         res.status(409).json({ error: "They're already a member", code: "already_member" });
         return;
       }
+      if (invitation === "limit") {
+        res.status(429).json({
+          error: `You've sent ${INVITATIONS_PER_DAY} invitations today, the most allowed: try again later`,
+          code: "invitation_limit",
+        });
+        return;
+      }
+      if (!invitation) throw new Error("insert returned no row"); // can't happen; narrows the type
       await queue.enqueue(
         sendEmailJob,
         invitationEmail({

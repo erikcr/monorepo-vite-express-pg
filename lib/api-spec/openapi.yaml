@@ -257,6 +257,8 @@ paths:
       description: |
         Emails them a link that's valid for 7 days. Replaces a pending invitation for the same
         email (its link stops working). 409 `already_member` if they already belong to the org.
+        Each person may send at most 50 invitations a day, across all their orgs: past that, 429
+        `invitation_limit`.
       tags: [members]
       requestBody:
         required: true
@@ -279,6 +281,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "409":
           $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
 
   /api/orgs/current/invitations/{id}:
     parameters:
@@ -573,6 +577,12 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
     Conflict:
       description: Not possible in the current state (the `code` says why)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    TooManyRequests:
+      description: Over a limit (the `code` says which); try again later
       content:
         application/json:
           schema:
