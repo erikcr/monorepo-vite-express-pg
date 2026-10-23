@@ -32,7 +32,7 @@ lib/env               typed, validated server env (@repo/env)
 lib/csp               the sites' Content-Security-Policy, added at build time
 e2e/                  Playwright full-stack tests
 .railway/railway.ts   Railway infrastructure (IaC)
-docs/                 PROJECT.md, ARCHITECTURE.md, UI.md, DEPLOYMENTS.md, TESTING.md, board + plans/
+docs/                 PROJECT.md, ARCHITECTURE.md, UI.md, CAPABILITIES.md, DEPLOYMENTS.md, TESTING.md, board + plans/
 ```
 
 ## API contract
@@ -56,7 +56,7 @@ docs/                 PROJECT.md, ARCHITECTURE.md, UI.md, DEPLOYMENTS.md, TESTIN
 - **Lists:** `limit` (default 20, max 100) + opaque `cursor` → `{ items, nextCursor }`, newest first, via `src/lib/pagination.ts`. React pages with the generated `use…Infinite` hook (enable per operation in `orval.config.ts`).
 - **Jobs:** define each in `src/jobs/registry.ts` (name, handler, optional cron `schedule`, retry options) and add it to `jobs`. Routes enqueue through the injected `JobQueue`, never pg-boss directly. The worker runs in the API process unless `RUN_WORKER=false`.
 - **Email:** enqueue `sendEmailJob` with `{ to, subject, text, html?, tags? }`, never call Resend from a route; build HTML with the `html` tag (`src/lib/email.ts`), which escapes what it inserts. Without `RESEND_API_KEY` emails are only logged.
-- **Pages or settings:** before building UI, ask whether people use it all the time (a page) or set it up and revisit it now and then (a section of the settings dialog in `src/settings/`, never its own page). Say which in the plan (`docs/UI.md`).
+- **Pages or settings:** before building UI, ask: do people use it all the time (a page) or set it up and revisit it now and then (a settings dialog section in `src/settings/`, not its own page)? Say which in plans (`docs/UI.md`).
 - **Routing:** code-based TanStack routes in each app's `src/router.tsx`, pages in `src/pages/`. Declare every route as its own `const` (inline `createRoute()` in `addChildren` silently loses the types). Validate search params with Zod, prefetch in loaders via `context.queryClient`, read route state with `getRouteApi()`, navigate with `<Link>`/`useNavigate`.
 - **Frontend auth:** each app wraps itself in `ClerkProvider` and calls `configureApiClient({ getToken, getOrgId })` (`@repo/api-client-react/client`) once, so every request carries the session token (and, in web, the selected org from `src/org.ts`); shared code never imports Clerk. Gate signed-in UI with `<Show when="signed-in" fallback={<RedirectToSignIn />}>`. Switching org clears every cached query except `/me`. Hooks' errors are `ApiError` (`status`, `code`). Tests mock Clerk with `src/__tests__/clerk-mock.tsx`.
 - **Frontend errors:** `createQueryClient()`; crashes reported via `@repo/api-client-react/errors` to `POST /api/client-errors`; route errors use the router's `defaultOnCatch`/`defaultErrorComponent` (`CrashScreen`).

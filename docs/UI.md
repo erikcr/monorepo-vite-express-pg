@@ -42,7 +42,7 @@ Settings people visit every so often are a detour from their work. A dialog keep
 
 - **The address:**
   - `?settings=<section>` on any route opens the dialog over that page; `?settings=` alone opens it with no section chosen.
-  - The account menu opens it, and a link can open a section: `<Link to="/app" search={{ settings: "members" }}>`. An email can link to one too.
+  - The account menu opens it, and so does ⌘, (Ctrl+, off a Mac), as in most desktop apps (`useOpenSettings()` opens it from code). A link can open a section: `<Link to="/app" search={{ settings: "members" }}>`. An email can link to one too.
   - Switching section replaces the address, so one Back leaves settings. Closing removes the parameter.
   - An unknown section, or one the person can't use, opens their first.
 - **Groups:**
@@ -53,7 +53,8 @@ Settings people visit every so often are a detour from their work. A dialog keep
 - **Applying changes:**
   - A preference that's easily undone applies as soon as it changes, and its row shows that it saved or why it didn't. A role, a select, a toggle, or a text field (once you leave it) all work this way.
   - A change that reaches people outside the app, or can't be undone, takes an explicit button: sending an invitation, a schedule that decides when emails go out, billing, deleting.
-  - A form holding typed input that only its button keeps calls `useUnsavedChanges(dirty)`. Closing the dialog or switching section then asks first.
+  - A form holding typed input that only its button keeps calls `useUnsavedChanges(dirty)`. Closing the dialog, switching section, the browser's Back, or a link elsewhere then asks first in the dialog (a router blocker), and leaving the site gets the browser's own prompt.
+  - An explicit action says what it did next to its control, in a `Confirmation` ("Invitation sent to …"), until the person starts on the next one. Inline rather than a toast: it stays where they're looking, and screen readers announce it. Errors show in the same place.
 - **No overlay on an overlay:**
   - A step inside a section replaces the section's content, with a way back, rather than opening another dialog.
   - Third-party account UI is embedded as a section rather than opened as its own modal. Clerk's `<UserProfile>` is the Profile section, and Clerk's own "Manage account" is hidden from the account menu.
@@ -63,6 +64,8 @@ Settings people visit every so often are a detour from their work. A dialog keep
   - Escape, ×, and the backdrop close it.
   - On a phone it fills the screen: the list first, then a section with a way back to the list.
 - **Moving a page into settings:** redirect its old path to `?settings=<section>` so existing links keep working.
+
+Patterns that fit here only once a project needs them, such as preferences that save as they change, search in settings, a side panel for a record's details, and a command palette, are in [`CAPABILITIES.md`](CAPABILITIES.md).
 
 ### Adding a section
 

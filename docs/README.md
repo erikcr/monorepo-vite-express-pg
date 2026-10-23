@@ -41,5 +41,6 @@ leave them alone.
 - [`PROJECT.md`](PROJECT.md): scope, V1 features, success criteria (from `/new-project`).
 - [`ARCHITECTURE.md`](ARCHITECTURE.md): stack decisions and why.
 - [`UI.md`](UI.md): pages versus the settings dialog, which a feature gets, and the dialog's rules.
+- [`CAPABILITIES.md`](CAPABILITIES.md): patterns we know are useful, each with the point at which it's worth building.
 - [`DEPLOYMENTS.md`](DEPLOYMENTS.md): branches, promotion, deploy gates, migration rules.
 - [`TESTING.md`](TESTING.md): test layers, required tests by change, conventions, what CI enforces.
