@@ -579,9 +579,9 @@ other's events. Not verified live (no Resend account or webhooks on the template
 
 ## Phase A — Addresses (2026-10-23)
 
-### A.1 `[ ]` The org in the address (proposal)
+### A.1 `[ ]` The org in the address
 
-**Status:** proposal: written 2026-10-23 and waiting for Erik's decisions. **Origin:** Trust XP's Plan 51 ("Everything in the address"). This would be the template's version, built here first so Trust XP can port it.
+**Status:** not started. Proposed 2026-10-23; D1 and D2 decided by Erik the same day. **Origin:** Trust XP's Plan 51 ("Everything in the address"). This would be the template's version, built here first so Trust XP can port it.
 
 **Why.** Today the org a person works in lives in browser storage (`selectedOrgId`, `artifacts/web/src/org.ts`) and travels as `X-Org-Id`, which the API checks against their grants. That keeps access safe, but the address doesn't say which org is on screen:
 - a link can't point at an org's data;
@@ -601,7 +601,7 @@ Every project built from the template inherits this. Moving it later is a breaki
 - **Settings over a page with no org** (`/about?settings=`) show only "You". Org settings open from inside the org, so they're always for the org on screen (Trust XP's Plan 48 D4).
 
 **Decisions.**
-- **D1 (open): what a handle looks like.** Leaning B.
+- **D1 (decided 2026-10-23): B, a chosen, human-readable handle.**
 
   | Option | Looks like | For | Against |
   |---|---|---|---|
@@ -610,7 +610,7 @@ Every project built from the template inherits this. Moving it later is a breaki
   | C. The id | `/o/0f8c…` | Nothing to build | Unreadable |
 
   B's rules: 3–40 characters, lowercase letters, digits and single hyphens, no hyphen at either end. Reserved words (`new`, `settings`, `api`, `admin`, `app`, `invite`, `sign-in`, …) aren't allowed.
-- **D2 (open): can a handle change?** Proposed: fixed once chosen for now. Renaming, with the old handles kept as redirects, goes in `docs/CAPABILITIES.md` until a project needs it.
+- **D2 (decided 2026-10-23): fixed once chosen, for now.** Renaming, with the old handles kept as redirects, goes in `docs/CAPABILITIES.md` until a project needs it.
 - **D3 (proposed): the API keeps `X-Org-Id`.** Requests stay keyed by id, and `OrgMembership` gains `handle`, which covers `/me`, `POST /orgs` and accepting an invitation in one place. Added fields only, so the previous frontend keeps working during a deploy.
 - **D4 (proposed): settings in the path or the query?** Trust XP puts them in the path (`/o/<org>/settings/<section>`). The template keeps the query, since it's an overlay that opens over any place. No change.
 
