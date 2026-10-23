@@ -308,8 +308,9 @@ paths:
       operationId: acceptInvitation
       summary: Join an org with an invitation's token
       description: |
-        The signed-in person's verified email must be the one invited (403
-        `invitation_email_mismatch`). An unknown, used or revoked token is 404
+        The signed-in person's primary email, verified and as the identity provider has it now,
+        must be the one invited (403 `invitation_email_mismatch`; 403 `email_unverified` if it no
+        longer is verified). An unknown, used or revoked token is 404
         `invitation_not_found`; an expired one 410 `invitation_expired`.
       tags: [members]
       requestBody:

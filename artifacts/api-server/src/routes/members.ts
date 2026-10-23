@@ -288,6 +288,23 @@ export function createInvitationsRouter(db: Db, access: Access): Router {
     validate({ body: AcceptInvitationBody }),
     async (req, res) => {
       const user = signedInUser(req);
+      // The invitation goes to whoever holds its email now, so check with the identity provider:
+      // users.email is only as current as the last user.updated webhook, and an address someone
+      // gave up can be claimed by someone else. Our copy is brought up to date while we're here.
+      if (!req.identity) throw new Error("signedIn must run before this handler");
+      const profile = await req.identity.profile();
+      if (!profile) {
+        res
+          .status(403)
+          .json({ error: "Verify your email address to continue", code: "email_unverified" });
+        return;
+      }
+      if (profile.email !== user.email || profile.name !== user.name) {
+        await db
+          .update(usersTable)
+          .set({ email: profile.email, name: profile.name })
+          .where(eq(usersTable.id, user.id));
+      }
       const result = await db.transaction(async (tx) => {
         // Locked, so the same token can't be accepted twice at once.
         const [invitation] = await tx
@@ -297,8 +314,9 @@ export function createInvitationsRouter(db: Db, access: Access): Router {
           .for("update");
         if (!invitation) return "not_found" as const;
         if (invitation.expiresAt.getTime() <= Date.now()) return "expired" as const;
-        // users.email is the account's primary verified email (src/lib/authz/access.ts).
-        if (invitation.email.toLowerCase() !== user.email.toLowerCase()) return "mismatch" as const;
+        if (invitation.email.toLowerCase() !== profile.email.toLowerCase()) {
+          return "mismatch" as const;
+        }
         await tx.delete(orgInvitationsTable).where(eq(orgInvitationsTable.id, invitation.id));
         // Someone who already belongs keeps their role.
         await tx

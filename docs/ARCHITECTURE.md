@@ -39,7 +39,7 @@ never from the request; every query filters by it, so another org's record is a 
 Clerk verifies the session; `org_users` (a role per org) and `platform_staff` grant access, and
 `src/lib/authz/policy.ts` maps roles to permissions. Every route declares exactly one access rule
 as its first handler (`route-access.test.ts` lists them all). People join an org by creating it or
-by accepting an emailed invitation (single use, 7 days, only for the invited verified email; at
+by accepting an emailed invitation (single use, 7 days, only for the invited email, verified and checked with Clerk on accepting; at
 most 50 sent per person a day, since anyone can create an org and email from it;
 `src/routes/members.ts`). Memberships change only through `src/lib/memberships.ts`, which locks the
 org's row and never leaves an org without an org_admin.

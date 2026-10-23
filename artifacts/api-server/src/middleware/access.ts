@@ -48,7 +48,11 @@ const refuse = (res: Response, status: 401 | 403 | 404 | 400, error: string, cod
 };
 
 /** The signed-in person (session verified, `users` row ensured), or null after answering. */
-async function signedInUser(db: Db, req: Request, res: Response): Promise<User | null> {
+async function signedInUser(
+  db: Db,
+  req: Request,
+  res: Response
+): Promise<{ user: User; identity: Identity } | null> {
   const identity = await identify(req);
   if (!identity) {
     refuse(res, 401, "Authentication required");
@@ -59,7 +63,7 @@ async function signedInUser(db: Db, req: Request, res: Response): Promise<User |
     refuse(res, 403, "Verify your email address to continue", "email_unverified");
     return null;
   }
-  return user;
+  return { user, identity };
 }
 
 // A staff session's second factor counts for this long; then they sign in again with it. Clerk
@@ -82,9 +86,10 @@ export interface Access {
 export function createAccess(db: Db): Access {
   /** For routes about the person rather than an org: /api/me, creating an org. */
   const signedIn = declare("signed-in", async (req, res, next) => {
-    const user = await signedInUser(db, req, res);
-    if (!user) return;
-    req.user = user;
+    const person = await signedInUser(db, req, res);
+    if (!person) return;
+    req.user = person.user;
+    req.identity = person.identity;
     next();
   });
 
@@ -95,8 +100,9 @@ export function createAccess(db: Db): Access {
    */
   const requireOrg = (permission: OrgPermission) =>
     declare(permission, async (req, res, next) => {
-      const user = await signedInUser(db, req, res);
-      if (!user) return;
+      const person = await signedInUser(db, req, res);
+      if (!person) return;
+      const { user, identity } = person;
       const roles = await loadOrgRoles(db, user.id);
       const tenant = resolveTenant(roles, req.get("x-org-id"));
       if ("refusal" in tenant) {
@@ -118,6 +124,7 @@ export function createAccess(db: Db): Access {
         return;
       }
       req.user = user;
+      req.identity = identity;
       req.ctx = { org, role, permissions: orgPermissions(role) };
       next();
     });
@@ -164,6 +171,11 @@ declare global {
     interface Request {
       /** The signed-in person (signedIn, requireOrg). */
       user?: User;
+      /**
+       * Who the session says they are (signedIn, requireOrg). `user` is our copy of their email
+       * and name; `identity.profile()` asks the provider for the current ones.
+       */
+      identity?: Identity;
       /** The org the request acts in and the person's role there (requireOrg). */
       ctx?: { org: Org; role: OrgRole; permissions: readonly OrgPermission[] };
       /** The staff member's grant (requireStaff). */

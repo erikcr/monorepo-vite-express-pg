@@ -6,7 +6,7 @@ import supertest from "supertest";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import type { Email } from "../lib/email.js";
-import { createMember, createOrg } from "../test-helpers/auth.js";
+import { bearer, createMember, createOrg } from "../test-helpers/auth.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
 import { createFakeQueue } from "../test-helpers/fake-queue.js";
 
@@ -409,6 +409,40 @@ describe("POST /api/invitations/accept", () => {
     expect(res.body.code).toBe("invitation_email_mismatch");
     expect(await roleIn(org.id, stranger.user.id)).toBeUndefined();
     expect((await accept(invitee.headers, token)).status).toBe(200);
+  });
+
+  it("goes by the account's email now, not an out-of-date copy of it", async () => {
+    // The users row still has an address the person has since given up (the webhook that would
+    // have updated it never came), and someone else may now hold it.
+    const former = await createMember(db, { orgs: [] });
+    const row = eq(usersTable.id, former.user.id);
+    await db.update(usersTable).set({ email: "given-up@x.test" }).where(row);
+    const { org, token } = await invited("given-up@x.test");
+    const res = await accept(former.headers, token);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("invitation_email_mismatch");
+    expect(await roleIn(org.id, former.user.id)).toBeUndefined();
+    const [updated] = await db.select().from(usersTable).where(row);
+    expect(updated?.email).toBe(former.user.email);
+  });
+
+  it("lets someone whose email changed accept an invitation to the new one", async () => {
+    const invitee = await createMember(db, { orgs: [] });
+    const headers = bearer({ sub: invitee.user.clerkUserId, email: "changed@x.test", name: "Ann" });
+    const { org, token } = await invited("changed@x.test");
+    expect((await accept(headers, token)).status).toBe(200);
+    expect(await roleIn(org.id, invitee.user.id)).toBe("org_member");
+    const [updated] = await db.select().from(usersTable).where(eq(usersTable.id, invitee.user.id));
+    expect(updated).toMatchObject({ email: "changed@x.test", name: "Ann" });
+  });
+
+  it("refuses an account whose email is no longer verified", async () => {
+    const invitee = await createMember(db, { orgs: [] });
+    const { org, token } = await invited(invitee.user.email);
+    const res = await accept(bearer({ sub: invitee.user.clerkUserId }), token);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("email_unverified");
+    expect(await roleIn(org.id, invitee.user.id)).toBeUndefined();
   });
 
   it("refuses an expired invitation with 410", async () => {
