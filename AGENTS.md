@@ -92,7 +92,7 @@ pnpm build
 
 ## Quality gates
 
-CI must pass: lint, typecheck, migration drift, codegen check, tests with coverage floors, knip, dependency audit, build, E2E, tests-with-code, and the promotion-source rule; `CI passed` is the one required check. Use `biome-ignore` only with a reason.
+CI must pass: lint, typecheck, migration drift, codegen check, tests with coverage floors, knip, dependency audit, build, E2E, tests-with-code, and the promotion-source rule; `CI passed` is the one required check. Use `biome-ignore` only with a reason. Audit for vulnerabilities with the `security-review` skill.
 
 ## Infrastructure and operations
 
