@@ -6,7 +6,7 @@ import { clerk } from "./clerk-mock.tsx";
 
 vi.mock("@clerk/react", () => import("./clerk-mock.tsx"));
 
-type Options = { mutation?: { onSuccess?: () => Promise<unknown> } };
+type Options = { mutation?: { onSuccess?: (data?: object) => Promise<unknown> } };
 const me = vi.fn();
 const members = vi.fn();
 const invitations = vi.fn();
@@ -156,11 +156,15 @@ describe("Settings → Members", () => {
       data: { email: "new@x.test", role: "org_admin" },
     });
     const refresh = vi.spyOn(queryClient, "invalidateQueries");
-    await act(() => options.invite?.mutation?.onSuccess?.());
+    await act(() => options.invite?.mutation?.onSuccess?.({ email: "new@x.test" }));
     expect((email as HTMLInputElement).value).toBe("");
     expect(refresh).toHaveBeenCalledWith({
       queryKey: ["infinite", "/api/orgs/current/invitations"],
     });
+    // Says what it did, until the next address is typed.
+    expect(screen.getByRole("status").textContent).toBe("Invitation sent to new@x.test");
+    fireEvent.change(email, { target: { value: "n" } });
+    expect(screen.getByRole("status").textContent).toBe("");
   });
 
   it("lists pending and expired invitations, and revokes one", async () => {

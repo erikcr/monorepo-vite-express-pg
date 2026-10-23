@@ -27,6 +27,18 @@ export function SettingsSection({
   );
 }
 
+/**
+ * What an explicit action just did ("Invitation sent to …"), next to the control that did it.
+ * Always rendered, so screen readers announce the text when it appears.
+ */
+export function Confirmation({ children }: { children: ReactNode }) {
+  return (
+    <p role="status" className="text-success text-sm mb-2 empty:mb-0">
+      {children}
+    </p>
+  );
+}
+
 /** A titled group of rows inside a section. */
 export function SettingsGroup({ title, children }: { title: string; children: ReactNode }) {
   return (

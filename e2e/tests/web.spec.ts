@@ -107,6 +107,8 @@ test.describe("signed in", () => {
     await page.getByLabel("Email address").fill(E2E_USERS.invitee);
     await page.getByRole("button", { name: "Invite" }).click();
     await expect(page.getByText(/Member · Expires/)).toBeVisible();
+    await expect(page.getByRole("status")).toHaveText(`Invitation sent to ${E2E_USERS.invitee}`);
+    await expectAccessible(page); // the confirmation's contrast, in both modes
 
     // The email the API sent (through the E2E server's stand-in for Resend), and its link.
     const latestEmail = async () =>
@@ -131,6 +133,31 @@ test.describe("signed in", () => {
     await page.reload();
     await expect(page.getByText(E2E_USERS.invitee)).toBeVisible();
     await expect(page.getByText("No pending invitations.")).toBeVisible();
+
+    // Back, or leaving the site, asks before dropping an invitation typed but not sent.
+    await page.getByLabel("Email address").fill("someone@example.com");
+    const discard = page.getByRole("alertdialog", { name: "Discard unsaved changes?" });
+    await page.goBack();
+    await expect(discard).toBeVisible();
+    await page.getByRole("button", { name: "Keep editing" }).click();
+    await expect(discard).toBeHidden();
+    await expect(page).toHaveURL(/\?settings=members$/);
+    await expect(page.getByLabel("Email address")).toHaveValue("someone@example.com");
+
+    const asked = new Promise<string>((resolve) =>
+      page.once("dialog", (d) => {
+        resolve(d.type());
+        void d.dismiss(); // stay
+      })
+    );
+    await page.close({ runBeforeUnload: true });
+    expect(await asked).toBe("beforeunload");
+    expect(page.isClosed()).toBe(false);
+
+    await page.goBack();
+    await page.getByRole("button", { name: "Discard" }).click();
+    await expect(page.getByRole("dialog", { name: "Settings" })).toBeHidden();
+    await expect(page).toHaveURL(/\/app$/);
   });
 
   test("keeps the person's own profile in settings, with Clerk's pages inside", async ({
@@ -142,6 +169,15 @@ test.describe("signed in", () => {
     await expect(settings.getByText("Profile details")).toBeVisible();
     await expect(settings.getByText(E2E_USERS.member)).toBeVisible();
     await expectAccessible(page);
+    // Clerk's own menus open over the dialog and work there; their Escape closes only the menu.
+    await settings.getByRole("button", { name: "Open menu" }).click();
+    const menu = page.getByRole("menu");
+    await expect(menu).toBeVisible();
+    // A trial click checks it could be clicked (nothing covers it, it isn't inert) without removing the email.
+    await menu.getByRole("menuitem", { name: "Remove email" }).click({ trial: true });
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+    await expect(settings).toBeVisible();
     // Clerk moves between its own pages without leaving the section or the page behind.
     await settings.getByRole("button", { name: "Security" }).click();
     await expect(settings.getByText(/Active devices/)).toBeVisible();

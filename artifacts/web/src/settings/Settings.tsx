@@ -2,6 +2,7 @@ import { RedirectToSignIn, Show } from "@clerk/react";
 import { getGetMeQueryKey } from "@repo/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useActiveOrg, useSwitchOrg } from "../active-org.ts";
 import { MembersSection } from "./MembersSection.tsx";
 import { OrganizationSection } from "./OrganizationSection.tsx";
@@ -35,6 +36,31 @@ export function Settings() {
       <SettingsForPerson requested={settings} />
     </Show>
   );
+}
+
+/** Opens settings over the current page, on no section in particular. */
+export function useOpenSettings() {
+  const navigate = useNavigate();
+  return () => navigate({ to: ".", search: (prev) => ({ ...prev, settings: "" }) });
+}
+
+/**
+ * ⌘, (Ctrl+, off a Mac) opens settings from anywhere, as in most desktop apps. Rendered only for
+ * someone signed in; while settings are open it does nothing.
+ */
+export function SettingsShortcut() {
+  const open = useOpenSettings();
+  const isOpen = root.useSearch({ select: (s) => s.settings !== undefined });
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "," || !(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+      e.preventDefault();
+      if (!isOpen) open();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, isOpen]);
+  return null;
 }
 
 function SettingsForPerson({ requested }: { requested: SettingsSectionId | "" }) {

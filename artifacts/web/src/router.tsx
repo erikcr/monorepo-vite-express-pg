@@ -8,7 +8,6 @@ import {
   Link,
   Outlet,
   type RouterHistory,
-  useNavigate,
 } from "@tanstack/react-router";
 import { z } from "zod";
 import { AboutPage } from "./pages/AboutPage.tsx";
@@ -18,7 +17,12 @@ import { HomePage } from "./pages/HomePage.tsx";
 import { InvitePage } from "./pages/InvitePage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
 import { SignInPage } from "./pages/SignInPage.tsx";
-import { SETTINGS_SECTIONS, Settings } from "./settings/Settings.tsx";
+import {
+  SETTINGS_SECTIONS,
+  Settings,
+  SettingsShortcut,
+  useOpenSettings,
+} from "./settings/Settings.tsx";
 
 // Route loaders get the QueryClient, so they can prefetch into the same cache the hooks read.
 export interface RouterContext {
@@ -26,7 +30,7 @@ export interface RouterContext {
 }
 
 function RootLayout() {
-  const navigate = useNavigate();
+  const openSettings = useOpenSettings();
   const link = "text-text-muted hover:text-text";
   const active = { className: "text-text font-medium" };
   return (
@@ -54,12 +58,11 @@ function RootLayout() {
                 <UserButton.Action
                   label="Settings"
                   labelIcon={<GearIcon />}
-                  onClick={() =>
-                    navigate({ to: ".", search: (prev) => ({ ...prev, settings: "" }) })
-                  }
+                  onClick={openSettings}
                 />
               </UserButton.MenuItems>
             </UserButton>
+            <SettingsShortcut />
           </Show>
           <Show when="signed-out">
             <Link to="/sign-in/$" params={{ _splat: "" }} className={link}>

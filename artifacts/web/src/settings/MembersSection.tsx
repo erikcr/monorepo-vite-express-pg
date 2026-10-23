@@ -13,7 +13,7 @@ import {
 } from "@repo/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { SettingsGroup, SettingsSection } from "./SettingsSection.tsx";
+import { Confirmation, SettingsGroup, SettingsSection } from "./SettingsSection.tsx";
 import { useUnsavedChanges } from "./unsaved-changes.ts";
 
 const input = "bg-surface border border-border rounded-input px-3 py-2 text-sm";
@@ -116,13 +116,15 @@ function Invitations({ org }: { org: OrgMembership }) {
   const queryClient = useQueryClient();
   const isAdmin = org.role === "org_admin";
   const [email, setEmail] = useState("");
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const [role, setRole] = useState<OrgRole>("org_member");
   const list = useListInvitationsInfinite({}, { query: paging });
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: getListInvitationsInfiniteQueryKey() });
   const invite = useCreateInvitation({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (invitation) => {
+        setSentTo(invitation.email);
         setEmail("");
         return refresh();
       },
@@ -149,7 +151,10 @@ function Invitations({ org }: { org: OrgMembership }) {
             placeholder="name@example.com"
             className={`${input} flex-1`}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setSentTo(null);
+            }}
             required
             maxLength={254}
           />
@@ -167,6 +172,7 @@ function Invitations({ org }: { org: OrgMembership }) {
           </button>
         </form>
       )}
+      <Confirmation>{sentTo && `Invitation sent to ${sentTo}`}</Confirmation>
       {invite.error && <p className="text-destructive text-sm mb-2">{invite.error.message}</p>}
       {revoke.error && <p className="text-destructive text-sm mb-2">{revoke.error.message}</p>}
       {list.isLoading && <p className="text-text-muted text-sm">Loading…</p>}

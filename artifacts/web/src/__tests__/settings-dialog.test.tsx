@@ -105,23 +105,69 @@ describe("the settings dialog", () => {
     expect(await screen.findByText("clerk user profile")).toBeTruthy();
   });
 
-  it("asks before dropping an invitation typed but not sent", async () => {
+  it("asks before closing over an invitation typed but not sent", async () => {
     const { router } = renderAt("/about?settings=members");
     fireEvent.change(await screen.findByLabelText("Email address"), {
       target: { value: "new@x.test" },
     });
 
     fireEvent.keyDown(dialog(), { key: "Escape" });
-    expect(screen.getByRole("alertdialog", { name: "Discard unsaved changes?" })).toBeTruthy();
+    expect(
+      await screen.findByRole("alertdialog", { name: "Discard unsaved changes?" })
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
-    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(router.state.location.search).toEqual({ settings: "members" });
     expect((screen.getByLabelText("Email address") as HTMLInputElement).value).toBe("new@x.test");
 
+    fireEvent.click(screen.getByRole("button", { name: "Close settings" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Discard" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(router.state.location.search).toEqual({});
+  });
+
+  it("asks before switching section, then switches", async () => {
+    const { router } = renderAt("/about?settings=members");
+    fireEvent.change(await screen.findByLabelText("Email address"), {
+      target: { value: "new@x.test" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Organization" }));
-    expect(router.state.location.search).toEqual({ settings: "members" });
-    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
-    expect(router.state.location.search).toEqual({ settings: "organization" });
+    fireEvent.click(await screen.findByRole("button", { name: "Discard" }));
     expect(await screen.findByRole("region", { name: "Organization" })).toBeTruthy();
+    expect(router.state.location.search).toEqual({ settings: "organization" });
+  });
+
+  // Back and leaving the site go through the browser's history, which tests' memory history
+  // doesn't have: E2E covers them ("asks before Back or leaving drops an unsent invitation").
+
+  it.each([
+    ["⌘,", { metaKey: true }],
+    ["Ctrl+,", { ctrlKey: true }],
+  ])("opens with %s from anywhere, and leaves an open one alone", async (_, modifier) => {
+    const { router } = renderAt("/about");
+    await screen.findByRole("heading", { name: "About" });
+    fireEvent.keyDown(window, { key: ",", ...modifier });
+    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeTruthy();
+    expect(router.state.location.pathname).toBe("/about");
+
+    fireEvent.click(screen.getByRole("button", { name: "Members" }));
+    await screen.findByRole("region", { name: "Members" });
+    fireEvent.keyDown(window, { key: ",", ...modifier });
+    expect(router.state.location.search).toEqual({ settings: "members" });
+  });
+
+  it.each([
+    ["with other keys held", true, { key: ",", metaKey: true, shiftKey: true }],
+    ["without ⌘ or Ctrl", true, { key: "," }],
+    ["for someone signed out", false, { key: ",", metaKey: true }],
+  ])("ignores the shortcut %s", async (_, signedIn, keys) => {
+    clerk.signedIn = signedIn;
+    renderAt("/about");
+    await screen.findByRole("heading", { name: "About" });
+    fireEvent.keyDown(window, keys);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByText("redirecting to sign-in")).toBeNull();
   });
 
   it("sends signed-out visitors to sign-in", async () => {

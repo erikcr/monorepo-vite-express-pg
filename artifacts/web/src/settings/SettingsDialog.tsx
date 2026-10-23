@@ -1,3 +1,4 @@
+import { useBlocker } from "@tanstack/react-router";
 import {
   type KeyboardEvent,
   type ReactNode,
@@ -23,8 +24,9 @@ export interface SettingsNavItem<Id extends string> {
  * screen and shows the list first, then a section with a way back to it.
  *
  * The app behind it is inert while it's open; focus moves in, and back to whatever opened it on
- * close. Escape, × and the backdrop close it, but a section holding unsaved changes asks first
- * (useUnsavedChanges).
+ * close. Escape, × and the backdrop close it. Closing and switching section change the address,
+ * so while a section holds unsaved changes (useUnsavedChanges) one router blocker asks before any
+ * of them, and before Back or a link elsewhere; leaving the site gets the browser's own prompt.
  */
 export function SettingsDialog<Id extends string>({
   sections,
@@ -44,7 +46,6 @@ export function SettingsDialog<Id extends string>({
   const titleId = useId();
   const dialog = useRef<HTMLDivElement>(null);
   const [dirtyKeys, setDirtyKeys] = useState<ReadonlySet<string>>(new Set());
-  const [pending, setPending] = useState<(() => void) | null>(null);
 
   const report = useCallback((key: string, dirty: boolean) => {
     setDirtyKeys((prev) => {
@@ -56,11 +57,13 @@ export function SettingsDialog<Id extends string>({
     });
   }, []);
 
-  /** Runs `action` now, or once the person agrees to drop their unsaved changes. */
-  const guard = (action: () => void) => {
-    if (dirtyKeys.size > 0) setPending(() => action);
-    else action();
-  };
+  const dirty = dirtyKeys.size > 0;
+  const blocker = useBlocker({
+    shouldBlockFn: () => true,
+    disabled: !dirty,
+    enableBeforeUnload: dirty,
+    withResolver: true,
+  });
 
   useEffect(() => {
     const app = document.getElementById("root");
@@ -80,7 +83,7 @@ export function SettingsDialog<Id extends string>({
     // A menu inside the dialog handles its own Escape and marks it handled.
     if (e.key === "Escape" && !e.defaultPrevented) {
       e.preventDefault();
-      guard(onClose);
+      onClose();
     }
   };
 
@@ -92,11 +95,7 @@ export function SettingsDialog<Id extends string>({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-backdrop"
-        onMouseDown={() => guard(onClose)}
-      />
+      <div aria-hidden className="absolute inset-0 bg-backdrop" onMouseDown={() => onClose()} />
       <div
         ref={dialog}
         role="dialog"
@@ -113,14 +112,14 @@ export function SettingsDialog<Id extends string>({
           <button
             type="button"
             aria-label="Close settings"
-            onClick={() => guard(onClose)}
+            onClick={() => onClose()}
             className="px-2 py-1 rounded-button text-text-muted hover:text-text text-xl leading-none"
           >
             ×
           </button>
         </div>
 
-        {pending && (
+        {blocker.status === "blocked" && (
           <div
             role="alertdialog"
             aria-label="Discard unsaved changes?"
@@ -130,19 +129,14 @@ export function SettingsDialog<Id extends string>({
             <button
               type="button"
               className="border border-border rounded-button px-3 py-1.5"
-              onClick={() => setPending(null)}
+              onClick={blocker.reset}
             >
               Keep editing
             </button>
             <button
               type="button"
               className="bg-destructive text-destructive-fg rounded-button px-3 py-1.5"
-              onClick={() => {
-                const action = pending;
-                setPending(null);
-                setDirtyKeys(new Set());
-                action();
-              }}
+              onClick={blocker.proceed}
             >
               Discard
             </button>
@@ -165,7 +159,8 @@ export function SettingsDialog<Id extends string>({
                         <button
                           type="button"
                           aria-current={s.id === shownId ? "page" : undefined}
-                          onClick={() => guard(() => onSelect(s.id))}
+                          // The section already shown stays put (on a phone's list, none is shown).
+                          onClick={() => s.id !== activeId && onSelect(s.id)}
                           // On a phone the list stands alone, so no section is marked current.
                           className={`${item} hover:bg-surface-raised ${s.id === shownId ? "md:bg-surface-raised md:font-semibold md:text-text" : ""}`}
                         >
@@ -183,7 +178,7 @@ export function SettingsDialog<Id extends string>({
             {!showList && (
               <button
                 type="button"
-                onClick={() => guard(() => onSelect(null))}
+                onClick={() => onSelect(null)}
                 className="md:hidden px-6 pt-4 text-sm text-text-muted"
               >
                 ← All settings
