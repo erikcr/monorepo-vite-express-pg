@@ -17,7 +17,7 @@ export default defineConfig({
       thresholds: {
         statements: 93,
         branches: 84,
-        functions: 88,
+        functions: 89,
         lines: 93,
         autoUpdate: process.env.COVERAGE_RATCHET === "1" ? (n: number) => Math.floor(n) : false,
       },

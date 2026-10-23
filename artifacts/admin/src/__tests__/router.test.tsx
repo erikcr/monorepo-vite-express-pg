@@ -10,6 +10,10 @@ vi.mock("@repo/api-client-react", () => ({
   useGetHealth: () => ({ data: undefined, isLoading: true, isError: false }),
   useListAdminOrgsInfinite: (params: unknown) => listOrgs(params),
 }));
+const reportError = vi.fn();
+vi.mock("@repo/api-client-react/errors", () => ({
+  reportError: (...a: unknown[]) => reportError(...a),
+}));
 
 const org = (id: string, name: string, memberCount = 1) => ({
   id,
@@ -93,9 +97,23 @@ describe("routes (admin)", () => {
     expect(screen.getByText(/in the last 12 hours/)).toBeTruthy();
   });
 
-  it("renders the settings placeholder, sign-in and the 404 page", async () => {
-    renderAt("/settings");
-    expect(await screen.findByRole("heading", { name: "Settings" })).toBeTruthy();
+  it("shows the crash screen when a page throws, reports it, and retries", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let broken = true;
+    listOrgs.mockImplementation(() => {
+      if (broken) throw new Error("page exploded");
+      return page([]);
+    });
+    renderAt("/");
+    const retry = await screen.findByRole("button", { name: "Try again" });
+    expect(screen.getByRole("heading", { name: "Something went wrong" })).toBeTruthy();
+    broken = false;
+    fireEvent.click(retry);
+    expect(reportError).toHaveBeenCalledWith("admin", expect.any(Error), expect.any(String));
+    expect(await screen.findByText("No organizations yet.")).toBeTruthy();
+  });
+
+  it("renders sign-in and the 404 page", async () => {
     renderAt("/sign-in/");
     expect(await screen.findByText("clerk sign-in form")).toBeTruthy();
     renderAt("/no-such-page");

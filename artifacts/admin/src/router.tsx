@@ -14,7 +14,6 @@ import { z } from "zod";
 import { CrashScreen } from "./pages/CrashScreen.tsx";
 import { DashboardPage } from "./pages/DashboardPage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
-import { SettingsPage } from "./pages/SettingsPage.tsx";
 import { SignInPage } from "./pages/SignInPage.tsx";
 
 // Route loaders get the QueryClient, so they can prefetch into the same cache the hooks read.
@@ -29,9 +28,6 @@ function RootLayout() {
       <nav className="px-page-x pt-3 flex items-center gap-4 text-xs border-b border-border bg-surface-raised pb-3">
         <Link to="/" className={link} activeProps={{ className: "text-text font-medium" }}>
           Dashboard
-        </Link>
-        <Link to="/settings" className={link} activeProps={{ className: "text-text font-medium" }}>
-          Settings
         </Link>
         <span className="ml-auto">
           <Show when="signed-in">
@@ -67,12 +63,6 @@ const dashboardRoute = createRoute({
   component: signedIn(DashboardPage),
 });
 
-const settingsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/settings",
-  component: signedIn(SettingsPage),
-});
-
 // Clerk's sign-in renders its own steps under /sign-in/… (factor-one, verify, …).
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -80,7 +70,7 @@ const signInRoute = createRoute({
   component: SignInPage,
 });
 
-const routeTree = rootRoute.addChildren([dashboardRoute, settingsRoute, signInRoute]);
+const routeTree = rootRoute.addChildren([dashboardRoute, signInRoute]);
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
   return createRouter({

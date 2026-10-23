@@ -33,10 +33,6 @@ test.describe("signed in", () => {
     await page.getByLabel("Search organizations").fill(`Haystack ${run}`);
     await expect(page).toHaveURL(/q=Haystack/);
     await expect(page.getByRole("cell", { name: `Haystack ${run}` })).toBeVisible();
-
-    await page.goto("/settings");
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
-    await expectAccessible(page);
   });
 
   test("refuses a signed-in account without staff access", async ({ page }) => {
