@@ -22,6 +22,7 @@
   --color-border-subtle: oklch(95% 0 0);
   --color-text: oklch(14% 0 0);
   --color-text-muted: oklch(52% 0 0);
+  --color-backdrop: oklch(0% 0 0 / 0.4); /* behind a dialog */
 }
 
 /* ─── Status ─────────────────────────────────────────────────────────────── */
@@ -58,6 +59,7 @@
     --color-border-subtle: oklch(22% 0 0);
     --color-text: oklch(95% 0 0);
     --color-text-muted: oklch(60% 0 0);
+    --color-backdrop: oklch(0% 0 0 / 0.6);
     --color-destructive: oklch(70% 0.17 25);
     --color-destructive-fg: oklch(18% 0.03 25);
     --color-success: oklch(72% 0.17 145);

@@ -46,6 +46,8 @@ const page = <T,>(items: T[], more: object = {}) => ({
   error: null,
   ...more,
 });
+// Settings open over any page; About needs no data of its own.
+const PATH = "/about?settings=members";
 const inDays = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString();
 
 beforeEach(() => {
@@ -62,26 +64,27 @@ beforeEach(() => {
   invitations.mockReturnValue(page([]));
 });
 
-describe("/app/members", () => {
+describe("Settings → Members", () => {
   it("sends signed-out visitors to sign-in", async () => {
     clerk.signedIn = false;
-    renderAt("/app/members");
+    renderAt(PATH);
     expect(await screen.findByText("redirecting to sign-in")).toBeTruthy();
   });
 
   it("shows loading, then an error loading the account", async () => {
     me.mockReturnValue({ data: undefined, isLoading: true, error: null });
-    renderAt("/app/members");
+    renderAt(PATH);
     expect(await screen.findByText("Loading…")).toBeTruthy();
     me.mockReturnValue({ data: undefined, isLoading: false, error: new Error("boom") });
-    renderAt("/app/members");
+    renderAt(PATH);
     expect(await screen.findByText(/Couldn't load your account: boom/)).toBeTruthy();
   });
 
-  it("points someone without an org to creating one", async () => {
+  it("isn't offered to someone without an org, who gets their profile", async () => {
     signedInAs([]);
-    renderAt("/app/members");
-    expect(await screen.findByRole("link", { name: "Create one" })).toBeTruthy();
+    renderAt(PATH);
+    expect(await screen.findByText("clerk user profile")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Members" })).toBeNull();
     expect(members).not.toHaveBeenCalled();
   });
 
@@ -94,8 +97,9 @@ describe("/app/members", () => {
       selectedWhenListed.push(getSelectedOrgId());
       return listed?.();
     });
-    renderAt("/app/members");
-    expect(await screen.findByRole("heading", { name: "Members of Alpha" })).toBeTruthy();
+    renderAt(PATH);
+    expect(await screen.findByRole("region", { name: "Members" })).toBeTruthy();
+    expect(screen.getByText("Who belongs to Alpha, and who's invited")).toBeTruthy();
     expect(getSelectedOrgId()).toBe(ORG.id);
     expect(screen.getByText("bob@x.test")).toBeTruthy();
     expect(screen.getByText("(you)")).toBeTruthy();
@@ -107,7 +111,7 @@ describe("/app/members", () => {
     signedInAs([ORG]);
     members.mockReturnValue({ ...page([]), error: new Error("members failed") });
     invitations.mockReturnValue({ ...page([]), data: undefined, isLoading: true });
-    renderAt("/app/members");
+    renderAt(PATH);
     expect(await screen.findByText("members failed")).toBeTruthy();
     expect(screen.getByText("Loading…")).toBeTruthy();
     expect(screen.queryByText("No pending invitations.")).toBeNull();
@@ -115,7 +119,7 @@ describe("/app/members", () => {
 
   it("lets an admin change roles and remove others, but not themselves", async () => {
     signedInAs([ORG]);
-    renderAt("/app/members");
+    renderAt(PATH);
     fireEvent.change(await screen.findByLabelText("Role of bob@x.test"), {
       target: { value: "org_admin" },
     });
@@ -133,7 +137,7 @@ describe("/app/members", () => {
     invitations.mockReturnValue(
       page([{ id: "i1", email: "new@x.test", role: "org_member", expiresAt: inDays(7) }])
     );
-    renderAt("/app/members");
+    renderAt(PATH);
     expect(await screen.findByText("new@x.test")).toBeTruthy();
     expect(screen.queryByLabelText("Role of bob@x.test")).toBeNull();
     expect(screen.queryByRole("button", { name: /^Remove/ })).toBeNull();
@@ -143,7 +147,7 @@ describe("/app/members", () => {
 
   it("invites by email and role, then clears the form and refreshes the list", async () => {
     signedInAs([ORG]);
-    const { queryClient } = renderAt("/app/members");
+    const { queryClient } = renderAt(PATH);
     const email = await screen.findByLabelText("Email address");
     fireEvent.change(email, { target: { value: "new@x.test" } });
     fireEvent.change(screen.getByLabelText("Role"), { target: { value: "org_admin" } });
@@ -167,7 +171,7 @@ describe("/app/members", () => {
         { id: "i2", email: "late@x.test", role: "org_admin", expiresAt: inDays(-1) },
       ])
     );
-    renderAt("/app/members");
+    renderAt(PATH);
     expect(await screen.findByText(/Member · Expires/)).toBeTruthy();
     expect(screen.getByText(/Admin · Expired: invite again/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Revoke invitation for late@x.test" }));
@@ -176,7 +180,7 @@ describe("/app/members", () => {
 
   it("refreshes the members and /me after a role change", async () => {
     signedInAs([ORG]);
-    const { queryClient } = renderAt("/app/members");
+    const { queryClient } = renderAt(PATH);
     await screen.findByLabelText("Role of bob@x.test");
     const refresh = vi.spyOn(queryClient, "invalidateQueries");
     await act(() => options.update?.mutation?.onSuccess?.());
@@ -188,7 +192,7 @@ describe("/app/members", () => {
     errors.remove = new Error("Make someone else an org admin first: an org needs one");
     errors.invite = new Error("They're already a member");
     signedInAs([ORG]);
-    renderAt("/app/members");
+    renderAt(PATH);
     expect(await screen.findByText(/Make someone else an org admin/)).toBeTruthy();
     expect(screen.getByText("They're already a member")).toBeTruthy();
   });
@@ -197,7 +201,7 @@ describe("/app/members", () => {
     signedInAs([ORG]);
     const fetchNextPage = vi.fn();
     members.mockReturnValue({ ...page([]), hasNextPage: true, fetchNextPage });
-    renderAt("/app/members");
+    renderAt(PATH);
     fireEvent.click(await screen.findByRole("button", { name: "Load more" }));
     expect(fetchNextPage).toHaveBeenCalled();
   });

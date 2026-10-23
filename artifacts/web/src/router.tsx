@@ -8,15 +8,17 @@ import {
   Link,
   Outlet,
   type RouterHistory,
+  useNavigate,
 } from "@tanstack/react-router";
+import { z } from "zod";
 import { AboutPage } from "./pages/AboutPage.tsx";
 import { AppPage } from "./pages/AppPage.tsx";
 import { CrashScreen } from "./pages/CrashScreen.tsx";
 import { HomePage } from "./pages/HomePage.tsx";
 import { InvitePage } from "./pages/InvitePage.tsx";
-import { MembersPage } from "./pages/MembersPage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
 import { SignInPage } from "./pages/SignInPage.tsx";
+import { SETTINGS_SECTIONS, Settings } from "./settings/Settings.tsx";
 
 // Route loaders get the QueryClient, so they can prefetch into the same cache the hooks read.
 export interface RouterContext {
@@ -24,6 +26,7 @@ export interface RouterContext {
 }
 
 function RootLayout() {
+  const navigate = useNavigate();
   const link = "text-text-muted hover:text-text";
   const active = { className: "text-text font-medium" };
   return (
@@ -40,7 +43,23 @@ function RootLayout() {
         </Link>
         <span className="ml-auto">
           <Show when="signed-in">
-            <UserButton />
+            {/* Settings open from the account menu, over the page (docs/UI.md). Clerk's own
+                "Manage account" is hidden: its profile is the Profile section. */}
+            <UserButton
+              appearance={{
+                elements: { userButtonPopoverActionButton__manageAccount: { display: "none" } },
+              }}
+            >
+              <UserButton.MenuItems>
+                <UserButton.Action
+                  label="Settings"
+                  labelIcon={<GearIcon />}
+                  onClick={() =>
+                    navigate({ to: ".", search: (prev) => ({ ...prev, settings: "" }) })
+                  }
+                />
+              </UserButton.MenuItems>
+            </UserButton>
           </Show>
           <Show when="signed-out">
             <Link to="/sign-in/$" params={{ _splat: "" }} className={link}>
@@ -50,12 +69,32 @@ function RootLayout() {
         </span>
       </nav>
       <Outlet />
+      <Settings />
     </>
   );
 }
 
+const GearIcon = () => (
+  <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" aria-hidden>
+    <circle cx="8" cy="8" r="2.5" strokeWidth="1.5" />
+    <path
+      d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
+  // ?settings=<section> opens the settings dialog over any page; an unknown section opens it
+  // with none chosen.
+  validateSearch: z.object({
+    settings: z
+      .enum([...SETTINGS_SECTIONS, ""])
+      .optional()
+      .catch(""),
+  }),
   notFoundComponent: NotFoundPage,
 });
 
@@ -69,11 +108,6 @@ const aboutRoute = createRoute({
 });
 
 const appRoute = createRoute({ getParentRoute: () => rootRoute, path: "/app", component: AppPage });
-const membersRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/app/members",
-  component: MembersPage,
-});
 // Invitation emails link here, with the token after the #.
 const inviteRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -91,7 +125,6 @@ const routeTree = rootRoute.addChildren([
   homeRoute,
   aboutRoute,
   appRoute,
-  membersRoute,
   inviteRoute,
   signInRoute,
 ]);

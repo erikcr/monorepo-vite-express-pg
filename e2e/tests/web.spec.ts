@@ -67,17 +67,26 @@ test.describe("signed in", () => {
     await page.reload();
     await expect(page.getByText("First record")).toBeVisible();
 
-    // The only admin can't leave; they delete the org instead, and land in the other one. (In
-    // this test rather than its own: tests share the member account, and run in parallel.)
-    await page.getByRole("button", { name: "Leave Alpha Co" }).click();
-    await expect(page.getByText(/Make someone else an org admin/)).toBeVisible();
-    await page.getByLabel("Type Alpha Co to confirm").fill("Alpha Co");
-    await page.getByRole("button", { name: "Delete organization" }).click();
+    // Settings open from the account menu, over the page. The only admin can't leave; they
+    // delete the org instead, and land in the other one. (In this test rather than its own:
+    // tests share the member account, and run in parallel.)
+    await page.locator(".cl-userButtonTrigger").click();
+    await page.getByRole("group", { name: "Account actions" }).getByText("Settings").click();
+    const settings = page.getByRole("dialog", { name: "Settings" });
+    await expect(settings.getByRole("region", { name: "Organization" })).toBeVisible();
+    await expectAccessible(page);
+    await settings.getByRole("button", { name: "Leave Alpha Co" }).click();
+    await expect(settings.getByText(/Make someone else an org admin/)).toBeVisible();
+    await settings.getByLabel("Type Alpha Co to confirm").fill("Alpha Co");
+    await settings.getByRole("button", { name: "Delete organization" }).click();
+    await expect(settings).toBeHidden();
     await expect(page.getByRole("heading", { name: "Beta Co" })).toBeVisible();
     await expect(page.getByText("No records yet.")).toBeVisible();
 
-    await page.getByLabel("Type Beta Co to confirm").fill("Beta Co");
-    await page.getByRole("button", { name: "Delete organization" }).click();
+    // A section's address opens it directly.
+    await page.goto("/app?settings=organization");
+    await settings.getByLabel("Type Beta Co to confirm").fill("Beta Co");
+    await settings.getByRole("button", { name: "Delete organization" }).click();
     await expect(page.getByRole("heading", { name: "Create your organization" })).toBeVisible();
   });
 
@@ -91,7 +100,7 @@ test.describe("signed in", () => {
     await page.getByLabel("Organization name").fill("Gamma Co");
     await page.getByRole("button", { name: "Create" }).click();
     await page.getByRole("link", { name: "Members" }).click();
-    await expect(page.getByRole("heading", { name: "Members of Gamma Co" })).toBeVisible();
+    await expect(page.getByText("Who belongs to Gamma Co, and who's invited")).toBeVisible();
     await expect(page.getByText("No pending invitations.")).toBeVisible();
     await expectAccessible(page);
 
@@ -122,5 +131,23 @@ test.describe("signed in", () => {
     await page.reload();
     await expect(page.getByText(E2E_USERS.invitee)).toBeVisible();
     await expect(page.getByText("No pending invitations.")).toBeVisible();
+  });
+
+  test("keeps the person's own profile in settings, with Clerk's pages inside", async ({
+    page,
+  }) => {
+    await signIn(page, E2E_USERS.member);
+    await page.goto("/about?settings=profile");
+    const settings = page.getByRole("dialog", { name: "Settings" });
+    await expect(settings.getByText("Profile details")).toBeVisible();
+    await expect(settings.getByText(E2E_USERS.member)).toBeVisible();
+    await expectAccessible(page);
+    // Clerk moves between its own pages without leaving the section or the page behind.
+    await settings.getByRole("button", { name: "Security" }).click();
+    await expect(settings.getByText(/Active devices/)).toBeVisible();
+    await expect(page).toHaveURL(/\/about\?settings=profile/);
+    await page.keyboard.press("Escape");
+    await expect(settings).toBeHidden();
+    await expect(page.getByRole("heading", { name: "About" })).toBeVisible();
   });
 });

@@ -1,4 +1,3 @@
-import { RedirectToSignIn, Show } from "@clerk/react";
 import {
   getGetMeQueryKey,
   getListInvitationsInfiniteQueryKey,
@@ -13,65 +12,24 @@ import {
   useUpdateOrgMember,
 } from "@repo/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useActiveOrg } from "../active-org.ts";
-
-export function MembersPage() {
-  return (
-    <Show when="signed-in" fallback={<RedirectToSignIn />}>
-      <Members />
-    </Show>
-  );
-}
+import { SettingsGroup, SettingsSection } from "./SettingsSection.tsx";
+import { useUnsavedChanges } from "./unsaved-changes.ts";
 
 const input = "bg-surface border border-border rounded-input px-3 py-2 text-sm";
 const button = "bg-brand text-brand-fg rounded-button px-4 py-2 text-sm disabled:opacity-50";
-const section = "bg-surface-raised border border-border rounded-card p-5 mt-6";
-const heading = "text-sm font-semibold uppercase tracking-wide text-text-muted mb-4";
 const ROLE_LABELS: Record<OrgRole, string> = { org_admin: "Admin", org_member: "Member" };
 const paging = {
   getNextPageParam: (page: { nextCursor: string | null }) => page.nextCursor ?? undefined,
 };
 
-function Members() {
-  const { me, active, ready } = useActiveOrg();
-
-  if (me.isLoading) return <p className="px-page-x py-page-y text-text-muted text-sm">Loading…</p>;
-  if (me.error) {
-    return (
-      <p className="px-page-x py-page-y text-destructive text-sm">
-        Couldn't load your account: {me.error.message}
-      </p>
-    );
-  }
-  if (!active) {
-    return (
-      <main className="px-page-x py-page-y max-w-xl mx-auto text-sm">
-        <p className="mb-2">You don't belong to an organization yet.</p>
-        <Link to="/app" className="underline">
-          Create one
-        </Link>
-      </main>
-    );
-  }
-
+/** Settings → Members: who belongs to the org, their roles, and invitations. */
+export function MembersSection({ org, myId }: { org: OrgMembership; myId: string | undefined }) {
   return (
-    <main className="px-page-x py-page-y max-w-xl mx-auto">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Members of {active.name}</h1>
-        <Link to="/app" className="text-sm text-text-muted hover:text-text">
-          Back to {active.name}
-        </Link>
-      </div>
-      {/* Mounted only once the selection matches, so requests carry the right X-Org-Id. */}
-      {ready && (
-        <>
-          <MemberList key={active.id} org={active} myId={me.data?.user.id} />
-          <Invitations key={`invitations-${active.id}`} org={active} />
-        </>
-      )}
-    </main>
+    <SettingsSection title="Members" description={`Who belongs to ${org.name}, and who's invited`}>
+      <MemberList org={org} myId={myId} />
+      <Invitations org={org} />
+    </SettingsSection>
   );
 }
 
@@ -91,8 +49,7 @@ function MemberList({ org, myId }: { org: OrgMembership; myId: string | undefine
   const error = update.error ?? remove.error;
 
   return (
-    <section className={section}>
-      <h2 className={heading}>Members</h2>
+    <SettingsGroup title="Members">
       {list.isLoading && <p className="text-text-muted text-sm">Loading…</p>}
       {list.error && <p className="text-destructive text-sm">{list.error.message}</p>}
       {error && <p className="text-destructive text-sm mb-2">{error.message}</p>}
@@ -124,7 +81,7 @@ function MemberList({ org, myId }: { org: OrgMembership; myId: string | undefine
                 ) : (
                   <span className="text-text-muted">{ROLE_LABELS[m.role]}</span>
                 )}
-                {/* You leave an org from its page, rather than removing yourself here. */}
+                {/* You leave an org from Settings → Organization, rather than removing yourself here. */}
                 {isAdmin && !you && (
                   <button
                     type="button"
@@ -151,7 +108,7 @@ function MemberList({ org, myId }: { org: OrgMembership; myId: string | undefine
           {list.isFetchingNextPage ? "Loading…" : "Load more"}
         </button>
       )}
-    </section>
+    </SettingsGroup>
   );
 }
 
@@ -173,10 +130,11 @@ function Invitations({ org }: { org: OrgMembership }) {
   });
   const revoke = useRevokeInvitation({ mutation: { onSuccess: refresh } });
   const invitations = list.data?.pages.flatMap((page) => page.items) ?? [];
+  // An address typed but not sent is lost on closing, so the dialog asks first.
+  useUnsavedChanges(email !== "");
 
   return (
-    <section className={section}>
-      <h2 className={heading}>Invitations</h2>
+    <SettingsGroup title="Invitations">
       {isAdmin && (
         <form
           className="flex flex-wrap gap-2 mb-4"
@@ -255,6 +213,6 @@ function Invitations({ org }: { org: OrgMembership }) {
           {list.isFetchingNextPage ? "Loading…" : "Load more"}
         </button>
       )}
-    </section>
+    </SettingsGroup>
   );
 }

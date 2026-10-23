@@ -1,4 +1,5 @@
-import { useGetMe } from "@repo/api-client-react";
+import { getGetMeQueryKey, useGetMe } from "@repo/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { selectOrg, useSelectedOrgId } from "./org.ts";
 
@@ -17,4 +18,17 @@ export function useActiveOrg() {
     if (active && active.id !== selectedId) selectOrg(active.id);
   }, [active, selectedId]);
   return { me, orgs, active, ready: active !== undefined && active.id === selectedId };
+}
+
+/**
+ * Moves to another org (or to none): drops every cached response except /me, so nothing from
+ * the previous org can show.
+ */
+export function useSwitchOrg() {
+  const queryClient = useQueryClient();
+  return (orgId: string | null) => {
+    selectOrg(orgId);
+    const meKey = getGetMeQueryKey()[0];
+    queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== meKey });
+  };
 }
