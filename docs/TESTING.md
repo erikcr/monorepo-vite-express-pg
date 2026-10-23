@@ -63,6 +63,7 @@ explains why in its **Tests** section (below).
 | **Scheduled job** | The schedule is registered; the handler with a fixed clock |
 | **Env variable** | `lib/env` test: parsed value, default, and the error for an invalid value |
 | **Page or route** | Through `renderAt(path)`: loading, empty, error and success states; the guard (signed out, wrong role); search params it reads; each interaction's effect (the mutation called, navigation). Where an E2E test reaches the page, `expectAccessible(page)` once its content shows |
+| **Settings section** (`docs/UI.md`) | Through `renderAt("/about?settings=<id>")`: the section's loading, empty, error and success states and each interaction's effect, as for a page; that it isn't offered to people who can't use it (the dialog opens their first section instead); an explicit form's unsaved input asks before the dialog closes. The dialog itself is covered by `settings-dialog.test.tsx` |
 | **User-facing flow** (a person can now do something new) | An E2E test in `e2e/tests/`, one org per test, data set up through the API, with `expectAccessible(page)` on each new page it reaches |
 | **New external origin** (a script, API, image or frame host the sites load) | Its directive in `lib/csp/src/index.ts`, with a case in its test; the E2E suite fails on any request the policy blocks |
 | **Error handling** (an error caught and handled rather than thrown) | If it's unexpected, it's still reported: `trackError(err, { tags })` (`src/lib/error-tracker.ts`), asserted the way `error-tracker.test.ts` does |

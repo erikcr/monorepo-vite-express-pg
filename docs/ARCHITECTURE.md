@@ -64,6 +64,12 @@ hooks, once the API serves the commit) → deploy check (reads each live site's 
 are additive so the previous API and frontend keep working during the switch. Details in
 `DEPLOYMENTS.md`.
 
+### Pages and the settings dialog
+The work people come for is a page; what they set up and revisit now and then (their profile, the
+org's members, leaving or deleting it) is a section of one settings dialog, opened from the account
+menu over any page at `?settings=<section>` (`artifacts/web/src/settings/`). Closing it returns
+people to where they were. Which one a feature gets, and the dialog's rules: `UI.md`.
+
 ### Browser security
 Each site's Content-Security-Policy is generated at build time from its own API address and Clerk
 key (`lib/csp`), so it follows the environment without configuration; the other security headers

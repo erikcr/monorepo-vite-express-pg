@@ -39,6 +39,11 @@ Ask:
 If the user lists vague items (e.g. "user management", "dashboard"), prompt once:
 > "Can you be more specific about that one? What exactly can the user do?"
 
+Then sort each feature into a page or settings (`docs/UI.md`), proposing an answer for each and confirming with the user:
+> "Which of these will people use all the time, and which do they set up and come back to now and then? I'd make <the daily ones> pages, and put <the rest> in the settings dialog."
+
+Mark each feature in the list with **(page)** or **(settings)**.
+
 ---
 
 ### Section 4 — Data Model
@@ -100,7 +105,7 @@ After collecting all seven sections, create `docs/PROJECT.md` with this exact st
 <Section 2 answer>
 
 ## V1 Features
-<Section 3 answer as a bulleted list>
+<Section 3 answer as a bulleted list, each marked (page) or (settings)>
 
 ## Data Model
 <Section 4 answer — one entity per line>
