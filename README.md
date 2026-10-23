@@ -23,6 +23,30 @@ Each is a skill a coding agent runs with you (Claude Code: type the command; oth
 the skill by name, from `.agents/skills/`). `/new-project` writes `docs/PROJECT.md` and replaces
 this README's heading with your product's.
 
+## Running costs
+
+Estimated monthly cost for one developer on each service's entry paid plan (October 2026; prices
+change, so check each pricing page before budgeting):
+
+| Service | Used for | Plan | Est. / month |
+|---------|----------|------|--------------|
+| Railway | API + worker and Postgres, production and staging; database backups | Pro: $20/seat, includes $20 of usage | $20–40 |
+| Vercel | web and admin sites | Pro: $20/user, includes usage credit | $20 |
+| Clerk | sign-in (orgs and roles live in our tables, so no Organizations add-on) | Pro: $25 monthly, $20 billed yearly | $20–25 |
+| Sentry | error tracking and the `/health/ready` uptime monitor | Team: $26 billed yearly, $29 monthly | $26–29 |
+| Resend | email (invitations, notices, job results) | Pro: $20 for 50,000 emails | $20 |
+| GitHub | repo, Actions CI, rulesets | Pro/Team: $4/user (Actions free on public repos) | $4 |
+| Renovate | weekly dependency PRs | Mend's hosted app | $0 |
+| **Total** | | | **~$115–145** |
+
+- **Railway is the variable:** four always-on pieces (API and Postgres in each environment) mostly
+  fit inside the $20 credit at low traffic; bigger instances or databases push it past $40.
+  Backups need Pro.
+- **Each extra developer** adds about $20 (Railway) + $20 (Vercel) + $4 (GitHub); Clerk, Sentry and
+  Resend aren't per seat.
+- **Before launch**, the free tiers of Clerk, Sentry and Resend (3,000 emails/month, 100/day) are
+  usually enough, leaving about $40/month for Railway and Vercel.
+
 ## Local development
 
 Requires Node 24 (`nvm use` reads `.nvmrc`), pnpm 12 (`npm install -g pnpm@12`), and Docker (for local Postgres).
