@@ -13,9 +13,10 @@ import { SettingsDialog, type SettingsNavItem } from "./SettingsDialog.tsx";
 export const SETTINGS_SECTIONS = ["organization", "members", "profile"] as const;
 type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number];
 
-const WORKSPACE: SettingsNavItem<SettingsSectionId>[] = [
-  { id: "organization", label: "Organization", group: "Workspace" },
-  { id: "members", label: "Members", group: "Workspace" },
+// The org's sections are listed under its name, so nobody changes settings for the wrong org.
+const orgSections = (orgName: string): SettingsNavItem<SettingsSectionId>[] => [
+  { id: "organization", label: "Organization", group: orgName },
+  { id: "members", label: "Members", group: orgName },
 ];
 const YOU: SettingsNavItem<SettingsSectionId>[] = [
   { id: "profile", label: "Profile", group: "You" },
@@ -75,7 +76,7 @@ function SettingsForPerson({ requested }: { requested: SettingsSectionId | "" })
     navigate({ to: ".", search: ({ settings: _, ...rest }) => rest, replace: true });
 
   // The org's sections only for someone in one; a section they can't use opens none.
-  const sections = me.data ? [...(active ? WORKSPACE : []), ...YOU] : [];
+  const sections = me.data ? [...(active ? orgSections(active.name) : []), ...YOU] : [];
   const activeId = sections.find((s) => s.id === requested)?.id ?? null;
   const shownId = activeId ?? sections[0]?.id;
 

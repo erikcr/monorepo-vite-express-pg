@@ -49,10 +49,10 @@ describe("the settings dialog", () => {
     expect(screen.queryByRole("button", { name: "← All settings" })).toBeNull();
   });
 
-  it("lists the org's sections under Workspace and the person's under You", async () => {
+  it("lists the org's sections under its name, and the person's under You", async () => {
     renderAt("/about?settings=profile");
     const nav = await screen.findByRole("navigation", { name: "Settings sections" });
-    expect(nav.textContent).toBe("WorkspaceOrganizationMembersYouProfile");
+    expect(nav.textContent).toBe("AlphaOrganizationMembersYouProfile");
     expect(screen.getByRole("button", { name: "Profile" }).getAttribute("aria-current")).toBe(
       "page"
     );

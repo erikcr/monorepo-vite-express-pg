@@ -14,7 +14,7 @@ import { UnsavedChangesContext } from "./unsaved-changes.ts";
 export interface SettingsNavItem<Id extends string> {
   id: Id;
   label: string;
-  /** The heading it's listed under: "Workspace" for the org's settings, "You" for the person's. */
+  /** The heading it's listed under: the org's name for its settings, "You" for the person's. */
   group: string;
 }
 

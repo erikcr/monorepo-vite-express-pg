@@ -22,7 +22,9 @@ export function SettingsSection({
         </h3>
         <p className="text-sm text-text-muted mt-0.5">{description}</p>
       </header>
-      <div className="px-6 py-5 flex flex-col gap-6">{children}</div>
+      {/* A container, so content sizes to the section (@md:, @lg:), not the window behind the
+          dialog: md: and lg: still mean the window's width. */}
+      <div className="@container px-6 py-5 flex flex-col gap-6">{children}</div>
     </section>
   );
 }
