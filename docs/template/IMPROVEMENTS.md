@@ -577,6 +577,91 @@ other's events. Not verified live (no Resend account or webhooks on the template
 
 ---
 
+## Phase A — Addresses (2026-10-23)
+
+### A.1 `[ ]` The org in the address (proposal)
+
+**Status:** proposal: written 2026-10-23 and waiting for Erik's decisions. **Origin:** Trust XP's Plan 51 ("Everything in the address"). This would be the template's version, built here first so Trust XP can port it.
+
+**Why.** Today the org a person works in lives in browser storage (`selectedOrgId`, `artifacts/web/src/org.ts`) and travels as `X-Org-Id`, which the API checks against their grants. That keeps access safe, but the address doesn't say which org is on screen:
+- a link can't point at an org's data;
+- a refresh relies on storage;
+- someone in two orgs can't keep one in each tab after a refresh, since the last tab to switch wins.
+
+Every project built from the template inherits this. Moving it later is a breaking change for its users, which is what Trust XP is paying for now, so the template is the cheapest place to decide it. (Unlike Trust XP, the template doesn't mix orgs across open tabs: each tab keeps the org it loaded in memory.)
+
+**The shape.**
+- **Addresses:**
+  - `/o/<handle>` is the org scope; its places sit under it. Today's `/app` becomes `/o/<handle>`, and later places become `/o/<handle>/<place>`.
+  - Overlays stay query parameters (`docs/UI.md`, "Layers"): `/o/acme?settings=members`.
+  - `/app` becomes home: the last org used, if the person still reaches it, else their first, else the create form.
+- **The scope layout** resolves the handle through `/me`, and the API client takes `X-Org-Id` from it instead of from storage. The API's access checks don't change.
+  - A handle the person can't reach, or that doesn't exist, shows one "Not found, or you don't have access" screen that doesn't say which. It never silently switches org.
+- **Switching org** is a link to `/o/<other>`. Every cached response except `/me` is dropped, as today.
+- **Settings over a page with no org** (`/about?settings=`) show only "You". Org settings open from inside the org, so they're always for the org on screen (Trust XP's Plan 48 D4).
+
+**Decisions.**
+- **D1 (open): what a handle looks like.** Leaning B.
+
+  | Option | Looks like | For | Against |
+  |---|---|---|---|
+  | A. Generated from the name plus a suffix | `/o/acme-k3f9a2` | Nothing to choose; never collides | Reads as machine-made |
+  | **B. Chosen, like GitHub, Slack or Linear** | `/o/acme` | Reads like the org's name; prefilled from the name, so most people just accept it | A field in the create form, checked as typed; rules; a "taken" answer shows that a handle exists, as GitHub's does |
+  | C. The id | `/o/0f8c…` | Nothing to build | Unreadable |
+
+  B's rules: 3–40 characters, lowercase letters, digits and single hyphens, no hyphen at either end. Reserved words (`new`, `settings`, `api`, `admin`, `app`, `invite`, `sign-in`, …) aren't allowed.
+- **D2 (open): can a handle change?** Proposed: fixed once chosen for now. Renaming, with the old handles kept as redirects, goes in `docs/CAPABILITIES.md` until a project needs it.
+- **D3 (proposed): the API keeps `X-Org-Id`.** Requests stay keyed by id, and `OrgMembership` gains `handle`, which covers `/me`, `POST /orgs` and accepting an invitation in one place. Added fields only, so the previous frontend keeps working during a deploy.
+- **D4 (proposed): settings in the path or the query?** Trust XP puts them in the path (`/o/<org>/settings/<section>`). The template keeps the query, since it's an overlay that opens over any place. No change.
+
+**Tasks** (one commit each, every test shown red):
+1. **Schema:** `orgs.handle text`, unique, added as nullable. The migration backfills existing orgs from their names: lowercased, hyphenated, deduplicated with a counter, reserved words suffixed. New orgs always get one. A later release makes it `NOT NULL`, since the running API inserts orgs without it during the deploy.
+   **Tests:** `migrations.test.ts` with `createTestDbAt(tag)`: orgs named alike, a reserved name, a name with no letters. The rows the API writes, through the API.
+2. **API:**
+   - `OrgMembership.handle`.
+   - `POST /orgs` takes `handle` and answers 409 `handle_taken` or 400 for one breaking the rules.
+   - `GET /orgs/handle-available?handle=` for checking as the person types; signed in and rate-limited.
+   - Spec, then codegen.
+
+   **Tests:** API: happy paths with exact bodies, 401, each 400 class, 409 taken (including a different case), a reserved word, and `/me` and accepting an invitation returning the handle. `route-access.test.ts` row.
+3. **Web, the scope:**
+   - The `/o/$org` layout route resolves the handle, then provides the org to requests and to `useActiveOrg`.
+   - The not-found-or-no-access screen.
+   - `/app` redirects home.
+   - The org switcher, the create form (handle field, prefilled, checked as typed) and the invite page navigate to `/o/<handle>`.
+   - `org.ts` only remembers the last org, for home.
+
+   **Tests:** component tests through `renderAt`:
+   - each address resolves;
+   - an unknown handle and an unreachable one show the same screen;
+   - switching drops the cache;
+   - home's three cases;
+   - settings over `/about` show only "You";
+   - the create form's handle field and its four states.
+4. **E2E:**
+   - the existing flows through addresses;
+   - a deep link to `/o/<handle>?settings=members` after a refresh;
+   - two tabs on two orgs, each saving to its own after a refresh;
+   - an invitee lands on `/o/<handle>`.
+
+   **Tests:** these, with `expectAccessible` on the not-found screen.
+5. **Docs:**
+   - `docs/UI.md`'s layers table: Scope moves into the path.
+   - AGENTS.md's tenancy line: the client's `X-Org-Id` comes from the address.
+   - `ARCHITECTURE.md`.
+   - Renaming handles added to `CAPABILITIES.md`.
+
+   **Tests:** none, as these are docs.
+
+**Exit criteria.**
+- Every org screen worth sharing is an address, and a refresh or a link restores it exactly (E2E).
+- No request's org comes from browser storage (a component test with storage holding another org).
+- Two tabs on two orgs each read and write their own (E2E).
+- An unknown handle and one without access look identical (component test).
+- `/me`, creating an org and accepting an invitation return the handle (API tests).
+
+---
+
 ## Session Log
 
 | Date | Items completed | Notes |
@@ -601,3 +686,4 @@ other's events. Not verified live (no Resend account or webhooks on the template
 | 2026-10-22 | `security-review` skill | Sentry's `security-review` skill (`getsentry/skills`, CC BY-SA; `skills-lock.json` records the source) is now one of the template's skills, trimmed to this stack: the Python guide dropped, and SKILL.md no longer points to the Go, Rust, Java, Kubernetes, Terraform, CI/CD and cloud guides, which never came with it. Updating it through the skills tool brings the original back |
 | 2026-10-23 | Settings dialog | Settings now open as a dialog over whatever page is open, as in Claude and Slack, rather than as pages (`docs/UI.md`, after Trust XP's Plan 48). `?settings=<section>` on any route opens it; the account menu has Settings, and Clerk's own "Manage account" is hidden because Clerk's `<UserProfile>` is the Profile section. Sections are Workspace (Organization: leave or delete; Members: roles and invitations, formerly the `/app/members` page) and You (Profile). An invitation typed but not sent asks before the dialog closes. The rule for which features get a page and which go in settings is in AGENTS.md, `new-feature`, `new-project` and TESTING.md's required-tests table. Every new test was shown red by breaking its behaviour; E2E covers the account menu, a section's own address, and Clerk's pages inside the dialog. Not changed: the admin app's placeholder `/settings` page |
 | 2026-10-23 | Settings dialog follow-ups | A review of the settings dialog against current practice. Built: (1) unsaved changes are now held by a router blocker, so Back and links elsewhere ask too, and leaving the site gets the browser's prompt (E2E, since tests' memory history has neither); (2) `Confirmation`, an inline status for what an explicit action did ("Invitation sent to …"); (3) an E2E check that Clerk's own menus work inside the dialog, shown red by stacking the dialog over them; (5) ⌘, / Ctrl+, opens settings. Each new test shown red. Escape inside Clerk's menu never reaches the dialog, so that check passes with or without its guard. Listed for when they're needed, not built: preferences that save as they change, search in settings, a side panel for a record's details, a command palette (`docs/CAPABILITIES.md`) |
+| 2026-10-23 | Trust XP review | From Trust XP's new docs (Plan 48 Phase 4, Plans 49–52, `platform-ui.md`). Built: the settings group is named after the org, so nobody changes the wrong org's settings (shown red); a settings section is a container (`@md:`), since the dialog is narrower than the window. `docs/UI.md` gains a second test ("what is it about?") and the layers model, "the address is the state", with its history rule. Six entries added to `CAPABILITIES.md`: a row's "…" menu, one explicit save for a group of fields, a small dialog for short creation forms (the template's "New organization" already fits), an attention queue, a hosted demo, and choosing where someone lands after sign-in. The org in the address is proposed as A.1. Checked and not needed: one org per tab (the template keeps the org in page memory, so tabs don't mix) and naming the avatar button (Clerk's is "Open user menu"). Two notes for Trust XP: the template's router blocker fixes Plan 48's Back limit, and Plan 51's "switching section adds history" contradicts Plan 48's replace |
