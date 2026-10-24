@@ -2,7 +2,6 @@ import { RedirectToSignIn, Show } from "@clerk/react";
 import { getGetMeQueryKey, useAcceptInvitation, useGetMe } from "@repo/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { selectOrg } from "../org.ts";
 
 // An invitation email links to /invite#<token>. The token is in the fragment, which browsers
 // never send to a server: it stays out of request logs and Referer headers.
@@ -22,9 +21,8 @@ function AcceptInvitation() {
   const accept = useAcceptInvitation({
     mutation: {
       onSuccess: async (org) => {
-        selectOrg(org.id);
         await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-        await navigate({ to: "/app" });
+        await navigate({ to: "/o/$org", params: { org: org.handle } });
       },
     },
   });

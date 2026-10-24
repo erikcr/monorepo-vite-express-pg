@@ -1,34 +1,40 @@
-import { getGetMeQueryKey, useGetMe } from "@repo/api-client-react";
+import { getGetMeQueryKey, type OrgMembership, useGetMe } from "@repo/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useParams } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { selectOrg, useSelectedOrgId } from "./org.ts";
+import { getCurrentOrgId, rememberLastOrg, setCurrentOrgId, useCurrentOrgId } from "./org.ts";
 
 /**
- * The signed-in person (/me) and the org they're working in: the remembered one if they still
- * belong to it, else their first (which becomes the remembered one). `ready` is true once the
- * selection matches `active`, so requests made from then on carry its X-Org-Id: mount org data
- * only when it's true.
+ * The signed-in person (/me) and the org the address names (/o/<handle>), if they belong to it:
+ * `org` is undefined off the org scope, and for a handle that doesn't exist or isn't theirs
+ * (which look the same). `ready` is true once requests carry its X-Org-Id: mount org data only
+ * when it's true.
  */
-export function useActiveOrg() {
+export function useOrgOnScreen() {
   const me = useGetMe();
-  const selectedId = useSelectedOrgId();
+  const handle = useParams({ strict: false, select: (p) => p.org });
+  const currentId = useCurrentOrgId();
   const orgs = me.data?.orgs ?? [];
-  const active = orgs.find((o) => o.id === selectedId) ?? orgs[0];
-  useEffect(() => {
-    if (active && active.id !== selectedId) selectOrg(active.id);
-  }, [active, selectedId]);
-  return { me, orgs, active, ready: active !== undefined && active.id === selectedId };
+  const org =
+    handle === undefined ? undefined : orgs.find((o) => o.handle === handle.toLowerCase());
+  return { me, orgs, handle, org, ready: org !== undefined && org.id === currentId };
 }
 
 /**
- * Moves to another org (or to none): drops every cached response except /me, so nothing from
- * the previous org can show.
+ * Makes `org` the one requests are for, and the one /app returns to. Coming from another org, it
+ * drops every cached response except /me, so nothing from the previous org can show.
  */
-export function useSwitchOrg() {
+export function useEnterOrg(org: OrgMembership | undefined) {
   const queryClient = useQueryClient();
-  return (orgId: string | null) => {
-    selectOrg(orgId);
-    const meKey = getGetMeQueryKey()[0];
-    queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== meKey });
-  };
+  const orgId = org?.id;
+  useEffect(() => {
+    if (!orgId || orgId === getCurrentOrgId()) return;
+    const previous = getCurrentOrgId();
+    setCurrentOrgId(orgId);
+    rememberLastOrg(orgId);
+    if (previous) {
+      const meKey = getGetMeQueryKey()[0];
+      queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== meKey });
+    }
+  }, [orgId, queryClient]);
 }

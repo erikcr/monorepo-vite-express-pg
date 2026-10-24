@@ -1,6 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { selectOrg } from "../org.ts";
 import { renderAt } from "../test-helpers/render.tsx";
 import { clerk } from "./clerk-mock.tsx";
 
@@ -19,38 +18,52 @@ vi.mock("@repo/api-client-react", () => ({
   useRemoveOrgMember: () => idle(),
   useCreateInvitation: () => idle(),
   useRevokeInvitation: () => idle(),
+  useCreateExample: () => idle(),
+  useListExamplesInfinite: () => empty(),
   getGetMeQueryKey: () => ["/api/me"],
   getListOrgMembersInfiniteQueryKey: () => ["infinite", "/api/orgs/current/members"],
   getListInvitationsInfiniteQueryKey: () => ["infinite", "/api/orgs/current/invitations"],
+  getListExamplesInfiniteQueryKey: () => ["infinite", "/api/example"],
 }));
 
-const ORG = { id: "aaaaaaaa-0000-4000-8000-000000000001", name: "Alpha", role: "org_admin" };
+const ORG = {
+  id: "aaaaaaaa-0000-4000-8000-000000000001",
+  name: "Alpha",
+  handle: "alpha",
+  role: "org_admin",
+};
 const signedInAs = (orgs: object[]) =>
   me.mockReturnValue({ data: { user: { id: "u", email: "e", name: "" }, orgs }, isLoading: false });
 const dialog = () => screen.getByRole("dialog", { name: "Settings" });
 
 beforeEach(() => {
   clerk.signedIn = true;
-  selectOrg(null);
   me.mockReset();
   signedInAs([ORG]);
 });
 
 describe("the settings dialog", () => {
   it("opens from the account menu over the page, which stays where it was", async () => {
-    const { router } = renderAt("/about");
+    const { router } = renderAt("/o/alpha");
     fireEvent.click(await screen.findByRole("button", { name: "Settings" }));
     expect(await screen.findByRole("dialog", { name: "Settings" })).toBeTruthy();
     expect(dialog().getAttribute("aria-modal")).toBe("true");
-    expect(router.state.location.pathname).toBe("/about");
-    expect(screen.getByRole("heading", { name: "About" })).toBeTruthy();
+    expect(router.state.location.pathname).toBe("/o/alpha");
+    expect(screen.getByRole("heading", { name: "Alpha" })).toBeTruthy();
     // No section asked for: the first one shows (on a phone, the list alone).
     expect(screen.getByRole("region", { name: "Organization" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "← All settings" })).toBeNull();
   });
 
+  it("shows only the person's own settings over a page outside an org", async () => {
+    renderAt("/about?settings=members");
+    const nav = await screen.findByRole("navigation", { name: "Settings sections" });
+    expect(nav.textContent).toBe("YouProfile");
+    expect(screen.getByRole("region", { name: "Profile" })).toBeTruthy();
+  });
+
   it("lists the org's sections under its name, and the person's under You", async () => {
-    renderAt("/about?settings=profile");
+    renderAt("/o/alpha?settings=profile");
     const nav = await screen.findByRole("navigation", { name: "Settings sections" });
     expect(nav.textContent).toBe("AlphaOrganizationMembersYouProfile");
     expect(screen.getByRole("button", { name: "Profile" }).getAttribute("aria-current")).toBe(
@@ -60,7 +73,7 @@ describe("the settings dialog", () => {
   });
 
   it("takes focus, and gives it back to what opened it", async () => {
-    renderAt("/about");
+    renderAt("/o/alpha");
     const opener = await screen.findByRole("button", { name: "Settings" });
     opener.focus();
     fireEvent.click(opener);
@@ -76,16 +89,16 @@ describe("the settings dialog", () => {
     ["×", () => fireEvent.click(screen.getByRole("button", { name: "Close settings" }))],
     ["the backdrop", () => fireEvent.mouseDown(dialog().previousElementSibling as Element)],
   ])("closes with %s, back to the page", async (_, close) => {
-    const { router } = renderAt("/about?settings=members");
+    const { router } = renderAt("/o/alpha?settings=members");
     await screen.findByRole("dialog", { name: "Settings" });
     close();
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(router.state.location.search).toEqual({});
-    expect(router.state.location.pathname).toBe("/about");
+    expect(router.state.location.pathname).toBe("/o/alpha");
   });
 
   it("switches section in place, so one Back leaves settings", async () => {
-    const { router } = renderAt("/about?settings=organization");
+    const { router } = renderAt("/o/alpha?settings=organization");
     await screen.findByRole("region", { name: "Organization" });
     const entries = router.history.length;
     fireEvent.click(screen.getByRole("button", { name: "Members" }));
@@ -98,15 +111,15 @@ describe("the settings dialog", () => {
   });
 
   it("opens an unknown section, or one the person can't use, on their first", async () => {
-    renderAt("/about?settings=nope");
+    renderAt("/o/alpha?settings=nope");
     expect(await screen.findByRole("region", { name: "Organization" })).toBeTruthy();
     signedInAs([]);
-    renderAt("/about?settings=members");
+    renderAt("/o/alpha?settings=members");
     expect(await screen.findByText("clerk user profile")).toBeTruthy();
   });
 
   it("asks before closing over an invitation typed but not sent", async () => {
-    const { router } = renderAt("/about?settings=members");
+    const { router } = renderAt("/o/alpha?settings=members");
     fireEvent.change(await screen.findByLabelText("Email address"), {
       target: { value: "new@x.test" },
     });
@@ -127,7 +140,7 @@ describe("the settings dialog", () => {
   });
 
   it("asks before switching section, then switches", async () => {
-    const { router } = renderAt("/about?settings=members");
+    const { router } = renderAt("/o/alpha?settings=members");
     fireEvent.change(await screen.findByLabelText("Email address"), {
       target: { value: "new@x.test" },
     });
@@ -144,11 +157,11 @@ describe("the settings dialog", () => {
     ["⌘,", { metaKey: true }],
     ["Ctrl+,", { ctrlKey: true }],
   ])("opens with %s from anywhere, and leaves an open one alone", async (_, modifier) => {
-    const { router } = renderAt("/about");
-    await screen.findByRole("heading", { name: "About" });
+    const { router } = renderAt("/o/alpha");
+    await screen.findByRole("heading", { name: "Alpha" });
     fireEvent.keyDown(window, { key: ",", ...modifier });
     expect(await screen.findByRole("dialog", { name: "Settings" })).toBeTruthy();
-    expect(router.state.location.pathname).toBe("/about");
+    expect(router.state.location.pathname).toBe("/o/alpha");
 
     fireEvent.click(screen.getByRole("button", { name: "Members" }));
     await screen.findByRole("region", { name: "Members" });

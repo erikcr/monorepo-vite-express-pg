@@ -16,6 +16,8 @@ import { CrashScreen } from "./pages/CrashScreen.tsx";
 import { HomePage } from "./pages/HomePage.tsx";
 import { InvitePage } from "./pages/InvitePage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
+import { OrgHomePage } from "./pages/OrgHomePage.tsx";
+import { OrgLayout } from "./pages/OrgLayout.tsx";
 import { SignInPage } from "./pages/SignInPage.tsx";
 import {
   SETTINGS_SECTIONS,
@@ -110,7 +112,20 @@ const aboutRoute = createRoute({
   component: AboutPage,
 });
 
+// Home for someone signed in: it opens one of their orgs.
 const appRoute = createRoute({ getParentRoute: () => rootRoute, path: "/app", component: AppPage });
+// The org scope: the org's places sit under /o/<handle>, and its layout makes it the org that
+// requests are for.
+const orgRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/o/$org",
+  component: OrgLayout,
+});
+const orgHomeRoute = createRoute({
+  getParentRoute: () => orgRoute,
+  path: "/",
+  component: OrgHomePage,
+});
 // Invitation emails link here, with the token after the #.
 const inviteRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -128,6 +143,7 @@ const routeTree = rootRoute.addChildren([
   homeRoute,
   aboutRoute,
   appRoute,
+  orgRoute.addChildren([orgHomeRoute]),
   inviteRoute,
   signInRoute,
 ]);

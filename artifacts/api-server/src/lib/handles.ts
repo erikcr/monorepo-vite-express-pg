@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
  * handle can become a public address without clashing (docs/ARCHITECTURE.md, "What the template
  * assumes"). Migration 0006 holds a copy for the backfill; add here, not there.
  */
-export const RESERVED_HANDLES: ReadonlySet<string> = new Set([
+const RESERVED_HANDLES: ReadonlySet<string> = new Set([
   "about",
   "account",
   "admin",

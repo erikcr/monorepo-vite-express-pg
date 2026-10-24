@@ -7,15 +7,15 @@ import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import { getSelectedOrgId } from "./org.ts";
+import { getCurrentOrgId } from "./org.ts";
 import { CrashScreen } from "./pages/CrashScreen.tsx";
 import { MissingClerkKey } from "./pages/MissingClerkKey.tsx";
 import { createAppRouter } from "./router.tsx";
 
 installGlobalErrorReporting("web");
 
-// Every API request carries the Clerk session token and the selected org.
-configureApiClient({ getToken: () => getToken(), getOrgId: getSelectedOrgId });
+// Every API request carries the Clerk session token and the org on screen.
+configureApiClient({ getToken: () => getToken(), getOrgId: getCurrentOrgId });
 
 const queryClient = createQueryClient();
 const router = createAppRouter(queryClient);

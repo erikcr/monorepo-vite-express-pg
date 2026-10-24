@@ -1,6 +1,6 @@
 import { act, fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getSelectedOrgId, selectOrg } from "../org.ts";
+import { getCurrentOrgId, rememberLastOrg, setCurrentOrgId } from "../org.ts";
 import { renderAt } from "../test-helpers/render.tsx";
 import { clerk } from "./clerk-mock.tsx";
 
@@ -30,12 +30,23 @@ vi.mock("@repo/api-client-react", () => ({
   useRemoveOrgMember: (o: Options) => mutation("remove")(o),
   useCreateInvitation: (o: Options) => mutation("invite")(o),
   useRevokeInvitation: (o: Options) => mutation("revoke")(o),
+  useCreateExample: () => ({ mutate: vi.fn(), isPending: false, error: null }),
+  useListExamplesInfinite: () => ({
+    data: { pages: [{ items: [], nextCursor: null }] },
+    isLoading: false,
+  }),
   getGetMeQueryKey: () => ["/api/me"],
+  getListExamplesInfiniteQueryKey: () => ["infinite", "/api/example"],
   getListOrgMembersInfiniteQueryKey: () => ["infinite", "/api/orgs/current/members"],
   getListInvitationsInfiniteQueryKey: () => ["infinite", "/api/orgs/current/invitations"],
 }));
 
-const ORG = { id: "aaaaaaaa-0000-4000-8000-000000000001", name: "Alpha", role: "org_admin" };
+const ORG = {
+  id: "aaaaaaaa-0000-4000-8000-000000000001",
+  name: "Alpha",
+  handle: "alpha",
+  role: "org_admin",
+};
 const ME = { id: "11111111-0000-4000-8000-000000000001", email: "ann@x.test", name: "Ann" };
 const BOB = { userId: "22222222-0000-4000-8000-000000000002", email: "bob@x.test", name: "" };
 const signedInAs = (orgs: object[]) =>
@@ -46,13 +57,15 @@ const page = <T,>(items: T[], more: object = {}) => ({
   error: null,
   ...more,
 });
-// Settings open over any page; About needs no data of its own.
-const PATH = "/about?settings=members";
+// An org's settings open over its pages. About needs no data of its own, for what isn't the org's.
+const PATH = "/o/alpha?settings=members";
+const OUTSIDE = "/about?settings=members";
 const inDays = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString();
 
 beforeEach(() => {
   clerk.signedIn = true;
-  selectOrg(null);
+  setCurrentOrgId(null);
+  rememberLastOrg(null);
   for (const fn of [me, members, invitations, ...Object.values(mutations)]) fn.mockReset();
   for (const key of Object.keys(errors)) delete errors[key as keyof typeof errors];
   members.mockReturnValue(
@@ -67,16 +80,16 @@ beforeEach(() => {
 describe("Settings → Members", () => {
   it("sends signed-out visitors to sign-in", async () => {
     clerk.signedIn = false;
-    renderAt(PATH);
+    renderAt(OUTSIDE);
     expect(await screen.findByText("redirecting to sign-in")).toBeTruthy();
   });
 
   it("shows loading, then an error loading the account", async () => {
     me.mockReturnValue({ data: undefined, isLoading: true, error: null });
-    renderAt(PATH);
+    renderAt(OUTSIDE);
     expect(await screen.findByText("Loading…")).toBeTruthy();
     me.mockReturnValue({ data: undefined, isLoading: false, error: new Error("boom") });
-    renderAt(PATH);
+    renderAt(OUTSIDE);
     expect(await screen.findByText(/Couldn't load your account: boom/)).toBeTruthy();
   });
 
@@ -90,17 +103,17 @@ describe("Settings → Members", () => {
 
   it("lists the org's members, marking you, and its empty invitations", async () => {
     signedInAs([ORG]);
-    // The lists ask the API only once the org is selected, so their requests carry its X-Org-Id.
+    // The lists ask the API only once the org on screen is set, so requests carry its X-Org-Id.
     const selectedWhenListed: (string | null)[] = [];
     const listed = members.getMockImplementation();
     members.mockImplementation(() => {
-      selectedWhenListed.push(getSelectedOrgId());
+      selectedWhenListed.push(getCurrentOrgId());
       return listed?.();
     });
     renderAt(PATH);
     expect(await screen.findByRole("region", { name: "Members" })).toBeTruthy();
     expect(screen.getByText("Who belongs to Alpha, and who's invited")).toBeTruthy();
-    expect(getSelectedOrgId()).toBe(ORG.id);
+    expect(getCurrentOrgId()).toBe(ORG.id);
     expect(screen.getByText("bob@x.test")).toBeTruthy();
     expect(screen.getByText("(you)")).toBeTruthy();
     expect(screen.getByText("No pending invitations.")).toBeTruthy();

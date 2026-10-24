@@ -3,7 +3,7 @@ import { getGetMeQueryKey } from "@repo/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { useActiveOrg, useSwitchOrg } from "../active-org.ts";
+import { useOrgOnScreen } from "../active-org.ts";
 import { MembersSection } from "./MembersSection.tsx";
 import { OrganizationSection } from "./OrganizationSection.tsx";
 import { ProfileSection } from "./ProfileSection.tsx";
@@ -67,8 +67,9 @@ export function SettingsShortcut() {
 function SettingsForPerson({ requested }: { requested: SettingsSectionId | "" }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const switchOrg = useSwitchOrg();
-  const { me, active, ready } = useActiveOrg();
+  // Org settings are for the org on screen, so they're never for the wrong one; over a page
+  // outside an org there's only "You".
+  const { me, org: active, ready } = useOrgOnScreen();
 
   const show = (settings: SettingsSectionId | "") =>
     navigate({ to: ".", search: (prev) => ({ ...prev, settings }), replace: true });
@@ -80,12 +81,11 @@ function SettingsForPerson({ requested }: { requested: SettingsSectionId | "" })
   const activeId = sections.find((s) => s.id === requested)?.id ?? null;
   const shownId = activeId ?? sections[0]?.id;
 
-  // After leaving or deleting the org: refetch /me first, so the org that's gone can't be picked
-  // again from the old list, then close settings on the first org left (or the create form).
+  // After leaving or deleting the org: refetch /me first, so the org that's gone can't be opened
+  // again from the old list, then go home, which opens the first org left (or the create form).
   const leftOrg = async () => {
     await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-    switchOrg(null);
-    await close();
+    await navigate({ to: "/app" });
   };
 
   return (
@@ -101,7 +101,7 @@ function SettingsForPerson({ requested }: { requested: SettingsSectionId | "" })
           Couldn't load your account: {me.error.message}
         </p>
       )}
-      {/* Org sections mount only once the selection matches, so requests carry its X-Org-Id. */}
+      {/* Org sections mount only once requests carry the org's X-Org-Id. */}
       {shownId === "organization" && active && ready && (
         <OrganizationSection key={active.id} org={active} onGone={leftOrg} />
       )}

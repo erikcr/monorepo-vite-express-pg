@@ -1,6 +1,6 @@
 import { act, fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getSelectedOrgId, selectOrg } from "../org.ts";
+import { getCurrentOrgId, rememberLastOrg, setCurrentOrgId } from "../org.ts";
 import { renderAt } from "../test-helpers/render.tsx";
 import { clerk } from "./clerk-mock.tsx";
 
@@ -22,19 +22,31 @@ vi.mock("@repo/api-client-react", () => ({
     mutations.delete = options;
     return { mutate: deleteOrg, isPending: false, error: mutationState.deleteError ?? null };
   },
+  useCreateExample: () => ({ mutate: vi.fn(), isPending: false, error: null }),
+  useListExamplesInfinite: () => ({
+    data: { pages: [{ items: [], nextCursor: null }] },
+    isLoading: false,
+  }),
   getGetMeQueryKey: () => ["/api/me"],
+  getListExamplesInfiniteQueryKey: () => ["infinite", "/api/example"],
 }));
 
-const org = (id: string, name: string) => ({ id, name, role: "org_admin" });
+const org = (id: string, name: string) => ({
+  id,
+  name,
+  handle: name.toLowerCase(),
+  role: "org_admin",
+});
 const ORG_A = org("aaaaaaaa-0000-4000-8000-000000000001", "Alpha");
 const ORG_B = org("bbbbbbbb-0000-4000-8000-000000000002", "Beta");
 const signedInAs = (orgs: object[]) =>
   me.mockReturnValue({ data: { user: { id: "u", email: "e", name: "" }, orgs }, isLoading: false });
-const PATH = "/about?settings=organization";
+const PATH = "/o/alpha?settings=organization";
 
 beforeEach(() => {
   clerk.signedIn = true;
-  selectOrg(null);
+  setCurrentOrgId(null);
+  rememberLastOrg(null);
   for (const fn of [me, leaveOrg, deleteOrg]) fn.mockReset();
   mutationState.leaveError = undefined;
   mutationState.deleteError = undefined;
@@ -77,10 +89,9 @@ describe("Settings → Organization", () => {
   });
 
   it.each(["leave", "delete"] as const)(
-    "after a %s, closes settings on another org with nothing cached from the old one",
+    "after a %s, goes home to another org with nothing cached from the old one",
     async (action) => {
       signedInAs([ORG_A, ORG_B]);
-      selectOrg(ORG_A.id);
       const { router, queryClient } = renderAt(PATH);
       await screen.findByRole("button", { name: "Leave Alpha" });
       queryClient.setQueryData(["infinite", "/api/example"], { stale: "from Alpha" });
@@ -90,7 +101,9 @@ describe("Settings → Organization", () => {
       await act(() => mutations[action]?.mutation?.onSuccess?.());
 
       expect(refetchMe).toHaveBeenCalledWith({ queryKey: ["/api/me"] });
-      expect(getSelectedOrgId()).toBe(ORG_B.id);
+      await screen.findByRole("heading", { name: "Beta" });
+      expect(router.state.location.pathname).toBe("/o/beta");
+      expect(getCurrentOrgId()).toBe(ORG_B.id);
       expect(queryClient.getQueryData(["infinite", "/api/example"])).toBeUndefined();
       expect(router.state.location.search).toEqual({});
       expect(screen.queryByRole("dialog")).toBeNull();
