@@ -92,6 +92,16 @@ Add an entry when a review or discussion turns up something worth having later.
 - **Shape:** one `homePath(me)` decides from what `/me` says they can reach. It's used by `/`, by sign-in's redirect, and wherever "no org" would otherwise send someone to onboarding. The last place used comes first, if they can still reach it.
 - **Start from:** Trust XP's Plan 50 D1.
 
+### Renaming an org's handle
+
+- **Build it when:** orgs ask to change their address, usually after a rename or a typo at creation. Handles are fixed until then.
+- **Shape:**
+  - A field in Settings → Organization, checked as typed like the create form's (`GET /api/orgs/handle-available`), for org admins.
+  - The old handle is kept as a redirect, in an `org_handle_redirects` table (`org_id` with cascade, the old handle unique), so links and bookmarks still work. Old handles count as taken.
+  - `OrgLayout` follows a redirect with a `replace`, so Back doesn't return to the old address.
+  - A public profile (below) redirects the same way.
+- **Start from:** GitHub's rename, which redirects from the old name.
+
 ### A command palette (⌘K)
 
 - **Build it when:** the app has enough pages, sections and actions that people hunt for them, usually ten or more destinations. Or when its users live in it all day and expect to drive it from the keyboard.

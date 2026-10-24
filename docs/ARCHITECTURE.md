@@ -35,6 +35,12 @@ enforces it; `orgs`, `users` and `platform_staff` are the only global tables). R
 from `req.ctx.org`, set by `access.requireOrg(permission)` after checking the person's grant,
 never from the request; every query filters by it, so another org's record is a 404.
 
+In the web app the org is in the address: `/o/<handle>`, where the handle is chosen when the org
+is created and fixed after (rules and reserved words in the API's `src/lib/handles.ts`). The org's
+layout resolves the handle through `/me` and sends that org's id as `X-Org-Id`, so a link or a
+refresh restores it and each tab keeps its own. The API still keys requests by id, and checks it
+against the person's grants as before.
+
 ### Access: identity vs. grants
 Clerk verifies the session; `org_users` (a role per org) and `platform_staff` grant access, and
 `src/lib/authz/policy.ts` maps roles to permissions. Every route declares exactly one access rule
@@ -80,9 +86,9 @@ it in four places, each listed in `CAPABILITIES.md` with when to build it:
 - pages search engines can read, since the app renders in the browser.
 
 Plan for none of them until a product needs them. The decisions that are hard to change later
-are already being made with them in mind: every route declares who may call it, and when the org
-moves into the address (`UI.md`, the scope layer), it gets a fixed, human-readable handle that
-can also be its public address.
+are already being made with them in mind: every route declares who may call it, and the org's
+address (`/o/<handle>`, `UI.md`'s scope layer) is a fixed, human-readable handle that can also be
+its public address.
 
 ### Browser security
 Each site's Content-Security-Policy is generated at build time from its own API address and Clerk

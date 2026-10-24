@@ -28,7 +28,7 @@ Every screen is a stack of layers, and the address says what each one shows. A r
 | Layer | What it is | In the address | Here |
 |---|---|---|---|
 | **Shell** | The top bar, the account menu | Never | `RootLayout` in `router.tsx` |
-| **Scope** | Which org the screen is about | Browser storage today; it belongs in the path (`/o/<handle>`), and moving it there is the next step to take | `active-org.ts` |
+| **Scope** | Which org the screen is about | The path: `/o/<handle>`, with the org's places under it | `OrgLayout`, `active-org.ts` |
 | **Place** | A page: where people work | The path | `src/pages/` |
 | **Panel** | Content beside the place, which stays usable | The query, e.g. `?record=<id>` | None yet (`CAPABILITIES.md`) |
 | **Dialog** | A detour over the place, which is blocked behind it | The query, e.g. `?settings=<section>` | The settings dialog |
@@ -62,11 +62,11 @@ Settings people visit every so often are a detour from their work. A dialog keep
 
 - **The address:**
   - `?settings=<section>` on any route opens the dialog over that page; `?settings=` alone opens it with no section chosen.
-  - The account menu opens it, and so does ⌘, (Ctrl+, off a Mac), as in most desktop apps (`useOpenSettings()` opens it from code). A link can open a section: `<Link to="/app" search={{ settings: "members" }}>`. An email can link to one too.
+  - The account menu opens it, and so does ⌘, (Ctrl+, off a Mac), as in most desktop apps (`useOpenSettings()` opens it from code). A link can open a section: `<Link to="/o/$org" params={{ org: org.handle }} search={{ settings: "members" }}>`. An email can link to one too.
   - Switching section replaces the address, so one Back leaves settings. Closing removes the parameter.
   - An unknown section, or one the person can't use, opens their first.
 - **Groups:**
-  - **The org's settings**, which change things for everyone in it, are listed under the org's name, so nobody changes settings for the wrong org. It's shown only to someone in an org.
+  - **The org's settings**, which change things for everyone in it, are listed under the org's name, so nobody changes settings for the wrong org. They're for the org on screen, so they open only over its pages (`/o/<handle>/…`); over a page outside an org, the dialog has only **You**.
   - **You** holds the person's own settings.
   - Show only the sections the person may use. Inside a section, hide what their role can't do, as Members hides the role controls from members.
 - **Every section** starts with `SettingsSection`: a title and one line of description, so content always starts in the same place. Inside it, `SettingsGroup`s.

@@ -579,9 +579,9 @@ other's events. Not verified live (no Resend account or webhooks on the template
 
 ## Phase A — Addresses (2026-10-23)
 
-### A.1 `[ ]` The org in the address
+### A.1 `[x]` The org in the address
 
-**Status:** not started. Proposed 2026-10-23; D1 and D2 decided by Erik the same day. **Origin:** Trust XP's Plan 51 ("Everything in the address"). This would be the template's version, built here first so Trust XP can port it.
+**Status:** done 2026-10-24. Proposed 2026-10-23; D1 and D2 decided by Erik the same day, D3 and D4 on 2026-10-24. **Origin:** Trust XP's Plan 51 ("Everything in the address"). This would be the template's version, built here first so Trust XP can port it.
 
 **Why.** Today the org a person works in lives in browser storage (`selectedOrgId`, `artifacts/web/src/org.ts`) and travels as `X-Org-Id`, which the API checks against their grants. That keeps access safe, but the address doesn't say which org is on screen:
 - a link can't point at an org's data;
@@ -611,8 +611,8 @@ Every project built from the template inherits this. Moving it later is a breaki
 
   B's rules: 3–40 characters, lowercase letters, digits and single hyphens, no hyphen at either end. Reserved words (`new`, `settings`, `api`, `admin`, `app`, `invite`, `sign-in`, …) aren't allowed. The list also holds words a public area might want later (`public`, `explore`, `search`, `about`), so a handle can become a public address without clashing (`ARCHITECTURE.md`, "What the template assumes").
 - **D2 (decided 2026-10-23): fixed once chosen, for now.** Renaming, with the old handles kept as redirects, goes in `docs/CAPABILITIES.md` until a project needs it.
-- **D3 (proposed): the API keeps `X-Org-Id`.** Requests stay keyed by id, and `OrgMembership` gains `handle`, which covers `/me`, `POST /orgs` and accepting an invitation in one place. Added fields only, so the previous frontend keeps working during a deploy.
-- **D4 (proposed): settings in the path or the query?** Trust XP puts them in the path (`/o/<org>/settings/<section>`). The template keeps the query, since it's an overlay that opens over any place. No change.
+- **D3 (decided 2026-10-24): the API keeps `X-Org-Id`.** Requests stay keyed by id, and `OrgMembership` gains `handle`, which covers `/me`, `POST /orgs` and accepting an invitation in one place. Added fields only, so the previous frontend keeps working during a deploy.
+- **D4 (decided 2026-10-24): settings stay in the query.** Trust XP puts them in the path (`/o/<org>/settings/<section>`). The template keeps the query, since it's an overlay that opens over any place. No change.
 
 **Tasks** (one commit each, every test shown red):
 1. **Schema:** `orgs.handle text`, unique, added as nullable. The migration backfills existing orgs from their names: lowercased, hyphenated, deduplicated with a counter, reserved words suffixed. New orgs always get one. A later release makes it `NOT NULL`, since the running API inserts orgs without it during the deploy.
@@ -660,6 +660,11 @@ Every project built from the template inherits this. Moving it later is a breaki
 - An unknown handle and one without access look identical (component test).
 - `/me`, creating an org and accepting an invitation return the handle (API tests).
 
+### A.2 `[ ]` Handles become `NOT NULL`
+
+**Status:** not started; due in the release after A.1's. **Why:** `orgs.handle` was added nullable, since the API running during A.1's deploy inserted orgs without one. Once every running API sets it, a migration first gives any org still without one a handle (the same backfill as 0006, for orgs created during that deploy), then makes the column `NOT NULL`. `OrgMembership.handle` already promises one.
+**Tests:** `migrations.test.ts`: an org without a handle at 0006 gets one, and an insert without a handle is refused.
+
 ---
 
 ## Session Log
@@ -688,3 +693,4 @@ Every project built from the template inherits this. Moving it later is a breaki
 | 2026-10-23 | Settings dialog follow-ups | A review of the settings dialog against current practice. Built: (1) unsaved changes are now held by a router blocker, so Back and links elsewhere ask too, and leaving the site gets the browser's prompt (E2E, since tests' memory history has neither); (2) `Confirmation`, an inline status for what an explicit action did ("Invitation sent to …"); (3) an E2E check that Clerk's own menus work inside the dialog, shown red by stacking the dialog over them; (5) ⌘, / Ctrl+, opens settings. Each new test shown red. Escape inside Clerk's menu never reaches the dialog, so that check passes with or without its guard. Listed for when they're needed, not built: preferences that save as they change, search in settings, a side panel for a record's details, a command palette (`docs/CAPABILITIES.md`) |
 | 2026-10-23 | Trust XP review | From Trust XP's new docs (Plan 48 Phase 4, Plans 49–52, `platform-ui.md`). Built: the settings group is named after the org, so nobody changes the wrong org's settings (shown red); a settings section is a container (`@md:`), since the dialog is narrower than the window. `docs/UI.md` gains a second test ("what is it about?") and the layers model, "the address is the state", with its history rule. Six entries added to `CAPABILITIES.md`: a row's "…" menu, one explicit save for a group of fields, a small dialog for short creation forms (the template's "New organization" already fits), an attention queue, a hosted demo, and choosing where someone lands after sign-in. The org in the address is proposed as A.1. Checked and not needed: one org per tab (the template keeps the org in page memory, so tabs don't mix) and naming the avatar button (Clerk's is "Open user menu"). Two notes for Trust XP: the template's router blocker fixes Plan 48's Back limit, and Plan 51's "switching section adds history" contradicts Plan 48's replace |
 | 2026-10-23 | AGENTS.md trim; marketplace notes | AGENTS.md from 12,287 to 11,459 bytes, keeping every rule nothing else would catch. The test-helper details (already in `docs/TESTING.md` and the `testing` skill), the database, codegen and grant commands (named in their sections, or now in DEPLOYMENTS.md's new "Granting access by hand"), and the order of the setup skills (in DEPLOYMENTS.md's setup) now live in those places. Its intro now says what belongs in it. Admin's placeholder `/settings` page removed, and its crash screen tested. A.1's handle decisions recorded (chosen, readable, fixed for now), with reserved words kept free for a future public area. ARCHITECTURE.md gains "What the template assumes" (orgs are private), and CAPABILITIES.md a Structure part: public org profiles, reading across orgs, people without an org and data a person owns, and pages search engines can read |
+| 2026-10-24 | A.1 | The org is in the address, `/o/<handle>`, in five commits on `feat/org-in-address`. Schema: `orgs.handle`, unique and nullable, with migration 0006 backfilling existing orgs from their names, in SQL that matches the API's `handleFromName()` (a test checks the two agree). API: `OrgMembership.handle`; `POST /orgs` takes an optional handle (400 for the rules or a reserved word, 409 `handle_taken`), making one from the name when a client from before handles sends none; `GET /orgs/handle-available` checks it as typed, covered by the global rate limiter rather than one of its own. Web: the `/o/$org` layout makes the org on screen the one requests are for, in memory per tab; `/app` is home (last org, else first, else the create form); settings over a page outside an org show only "You"; the create form has a handle field, prefilled and checked as typed. URLs match handles whatever their case. E2E shown red by taking the request's org from storage again: a second tab then lists the other org's record. Follow-up A.2 makes handles `NOT NULL`. Commits went on a branch: auto mode wouldn't allow `--no-verify` past the hook guarding `main` |
