@@ -56,4 +56,20 @@ describe("migrations on existing data", () => {
     for (const r of [rows[0], rows[3], rows[4], rows[5], rows[7]])
       expect(r?.handle).toBe(handleFromName(r?.name ?? ""));
   });
+
+  it("0007 gives an org still without a handle one, then requires it", async () => {
+    const { client, migrateRest } = await createTestDbAt("0006_remarkable_leo");
+    await client.query("INSERT INTO orgs (name, handle) VALUES ('Acme', 'acme')");
+    await client.query("INSERT INTO orgs (name) VALUES ('Acme')");
+
+    await migrateRest();
+
+    const { rows } = await client.query<{ handle: string }>(
+      "SELECT handle FROM orgs ORDER BY handle"
+    );
+    expect(rows.map((r) => r.handle)).toEqual(["acme", "acme-2"]);
+    await expect(client.query("INSERT INTO orgs (name) VALUES ('No handle')")).rejects.toThrow(
+      /null value/
+    );
+  });
 });

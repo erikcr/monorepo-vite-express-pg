@@ -86,7 +86,7 @@ export function createOrgsRouter(db: Db, access: Access): Router {
       await tx
         .insert(orgUsersTable)
         .values({ orgId: created.id, userId: user.id, role: "org_admin" });
-      return { ...created, handle };
+      return created;
     });
     if (!org) {
       res.status(409).json(HANDLE_TAKEN);

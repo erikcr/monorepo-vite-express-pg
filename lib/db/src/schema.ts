@@ -46,10 +46,9 @@ export const orgsTable = pgTable("orgs", {
   name: text("name").notNull(),
   /**
    * The org's address, `/o/<handle>`: chosen at creation, then fixed. Lowercase letters, digits
-   * and single hyphens (rules in the API's src/lib/handles.ts). Nullable only until every running
-   * API sets it; a later migration makes it NOT NULL.
+   * and single hyphens (rules in the API's src/lib/handles.ts).
    */
-  handle: text("handle").unique(),
+  handle: text("handle").notNull().unique(),
   createdAt: createdAt(),
 });
 

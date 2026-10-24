@@ -24,7 +24,12 @@ describe("access tables", () => {
         .returning()
     );
   const org = async (name: string) =>
-    first(await db.insert(orgsTable).values({ name }).returning());
+    first(
+      await db
+        .insert(orgsTable)
+        .values({ name, handle: name.toLowerCase().replace(" ", "-") })
+        .returning()
+    );
 
   it("allows one role per person per org", async () => {
     const [u, o] = [await user("user_a"), await org("Org A")];
