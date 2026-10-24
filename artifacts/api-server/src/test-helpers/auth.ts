@@ -1,5 +1,6 @@
 import type { Db, Org, User } from "@repo/db";
 import { orgsTable, orgUsersTable, platformStaffTable, usersTable } from "@repo/db/schema";
+import { freeHandle } from "../lib/handles.js";
 
 let seq = 0;
 
@@ -22,8 +23,13 @@ async function insertOne<T>(rows: Promise<T[]>): Promise<T> {
   return row;
 }
 
-export const createOrg = (db: Db, name = `Org ${++seq}`): Promise<Org> =>
-  insertOne(db.insert(orgsTable).values({ name }).returning());
+export const createOrg = async (db: Db, name = `Org ${++seq}`): Promise<Org> =>
+  insertOne(
+    db
+      .insert(orgsTable)
+      .values({ name, handle: await freeHandle(db, name) })
+      .returning()
+  );
 
 /**
  * A signed-in person with `role` in each of `orgs` (a new org when none given), and the headers

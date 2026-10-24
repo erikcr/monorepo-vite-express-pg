@@ -44,6 +44,12 @@ export const usersTable = pgTable("users", {
 export const orgsTable = pgTable("orgs", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  /**
+   * The org's address, `/o/<handle>`: chosen at creation, then fixed. Lowercase letters, digits
+   * and single hyphens (rules in the API's src/lib/handles.ts). Nullable only until every running
+   * API sets it; a later migration makes it NOT NULL.
+   */
+  handle: text("handle").unique(),
   createdAt: createdAt(),
 });
 

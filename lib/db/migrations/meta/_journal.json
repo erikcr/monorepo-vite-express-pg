@@ -43,6 +43,13 @@
       "when": 1792714900971,
       "tag": "0005_outstanding_bulldozer",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792851326161,
+      "tag": "0006_remarkable_leo",
+      "breakpoints": true
     }
   ]
 }

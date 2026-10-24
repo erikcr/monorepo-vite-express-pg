@@ -4,8 +4,8 @@ import { inArray } from "drizzle-orm";
 
 // Fixed ids, so re-running the seed updates the same two orgs instead of adding more.
 const SEED_ORGS = [
-  { id: "00000000-0000-4000-8000-000000000001", name: "Seed Org One" },
-  { id: "00000000-0000-4000-8000-000000000002", name: "Seed Org Two" },
+  { id: "00000000-0000-4000-8000-000000000001", name: "Seed Org One", handle: "seed-org-one" },
+  { id: "00000000-0000-4000-8000-000000000002", name: "Seed Org Two", handle: "seed-org-two" },
 ] as const;
 
 // No top-level await: the root package is CJS, so tsx transforms this file as CJS.

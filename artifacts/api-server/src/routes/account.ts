@@ -9,6 +9,7 @@ import { orgsTable, orgUsersTable } from "@repo/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { type Request, Router } from "express";
 import { isOrgRole } from "../lib/authz/policy.js";
+import { freeHandle } from "../lib/handles.js";
 import { changeMembership, LAST_ORG_ADMIN } from "../lib/memberships.js";
 import { sendValidated } from "../lib/send-validated.js";
 import type { Access } from "../middleware/access.js";
@@ -53,7 +54,11 @@ export function createOrgsRouter(db: Db, access: Access): Router {
   router.post("/", access.signedIn, validate({ body: CreateOrgBody }), async (req, res) => {
     const user = signedInUser(req);
     const org = await db.transaction(async (tx) => {
-      const [created] = await tx.insert(orgsTable).values({ name: req.body.name }).returning();
+      const handle = await freeHandle(tx, req.body.name);
+      const [created] = await tx
+        .insert(orgsTable)
+        .values({ name: req.body.name, handle })
+        .returning();
       if (!created) throw new Error("insert returned no row");
       await tx
         .insert(orgUsersTable)

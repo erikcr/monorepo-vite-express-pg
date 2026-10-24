@@ -54,6 +54,17 @@ describe("POST /api/orgs", () => {
     expect(created.body.orgId).toBe(res.body.id);
   });
 
+  it("gives the new org a handle from its name, numbered when taken", async () => {
+    const session = bearer({ sub: "user_handles", email: "handles@x.test" });
+    const handleOf = async (name: string) => {
+      const res = await request.post("/api/orgs").set(session).send({ name });
+      const [org] = await db.select().from(orgsTable).where(eq(orgsTable.id, res.body.id));
+      return org?.handle;
+    };
+    expect(await handleOf("Handle Test, Inc.")).toBe("handle-test-inc");
+    expect(await handleOf("Handle test inc")).toBe("handle-test-inc-2");
+  });
+
   it("gives nobody else access to the new org", async () => {
     const founder = bearer({ sub: "user_founder2", email: "founder2@x.test" });
     const org = (await request.post("/api/orgs").set(founder).send({ name: "Private" })).body;
