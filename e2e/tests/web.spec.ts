@@ -38,14 +38,20 @@ test("navigates client-side, deep-links, and shows a 404 page", async ({ page })
 test.describe("signed in", () => {
   test.beforeEach(() => requireClerk());
 
-  test("creates an org, adds records, and switches between orgs", async ({ page }) => {
+  test("creates an org, adds records, and switches between orgs, each at its address", async ({
+    page,
+  }) => {
     await signIn(page, E2E_USERS.member);
     // The E2E database is fresh on every run, so the member starts with no org.
     await page.goto("/app");
-    await expect(page.getByLabel("Organization name")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Create your organization" })).toBeVisible();
+    await page.getByLabel("Name").fill("Alpha Co");
+    // The handle follows the name, and is checked as it's typed.
+    await expect(page.getByLabel("Handle")).toHaveValue("alpha-co");
+    await expect(page.getByText("Available", { exact: true })).toBeVisible();
     await expectAccessible(page);
-    await page.getByLabel("Organization name").fill("Alpha Co");
     await page.getByRole("button", { name: "Create" }).click();
+    await expect(page).toHaveURL(/\/o\/alpha-co$/);
     await expect(page.getByRole("heading", { name: "Alpha Co" })).toBeVisible();
 
     await page.getByLabel("Record name").fill("First record");
@@ -55,17 +61,47 @@ test.describe("signed in", () => {
 
     // A second org: its records are separate, and the picker switches between them.
     await page.getByRole("button", { name: "New organization" }).click();
-    await page.getByLabel("Organization name").fill("Beta Co");
+    await page.getByLabel("Name").fill("Beta Co");
+    await expect(page.getByText("Available", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Create" }).click();
-    await expect(page.getByLabel("Organization")).toHaveValue(/.+/);
+    await expect(page).toHaveURL(/\/o\/beta-co$/);
     await expect(page.getByText("No records yet.")).toBeVisible();
 
     await page.getByLabel("Organization").selectOption({ label: "Alpha Co" });
+    await expect(page).toHaveURL(/\/o\/alpha-co$/);
     await expect(page.getByText("First record")).toBeVisible();
 
-    // The selection survives a reload.
+    // The address restores the org on a reload.
     await page.reload();
     await expect(page.getByText("First record")).toBeVisible();
+
+    // Two tabs, one on each org: after a refresh, each still reads and writes its own.
+    const beta = await page.context().newPage();
+    await beta.goto("/o/beta-co");
+    await page.reload();
+    await beta.reload();
+    await beta.getByLabel("Record name").fill("Beta record");
+    await beta.getByRole("button", { name: "Add" }).click();
+    await expect(beta.getByText("Beta record")).toBeVisible();
+    await page.getByLabel("Record name").fill("Second record");
+    await page.getByRole("button", { name: "Add" }).click();
+    await expect(page.getByText("Second record")).toBeVisible();
+    await page.reload();
+    await beta.reload();
+    await expect(page.getByText("Second record")).toBeVisible();
+    await expect(page.getByText("First record")).toBeVisible();
+    await expect(page.getByText("Beta record")).toHaveCount(0);
+    await expect(beta.getByText("Beta record")).toBeVisible();
+    await expect(beta.getByText("First record")).toHaveCount(0);
+    await beta.close();
+
+    // An org that doesn't exist (or isn't theirs) says so, without switching to another.
+    await page.goto("/o/no-such-org");
+    await expect(
+      page.getByRole("heading", { name: "Not found, or you don't have access" })
+    ).toBeVisible();
+    await expectAccessible(page);
+    await page.goto("/o/alpha-co");
 
     // Settings open from the account menu, over the page. The only admin can't leave; they
     // delete the org instead, and land in the other one. (In this test rather than its own:
@@ -80,11 +116,12 @@ test.describe("signed in", () => {
     await settings.getByLabel("Type Alpha Co to confirm").fill("Alpha Co");
     await settings.getByRole("button", { name: "Delete organization" }).click();
     await expect(settings).toBeHidden();
+    await expect(page).toHaveURL(/\/o\/beta-co$/);
     await expect(page.getByRole("heading", { name: "Beta Co" })).toBeVisible();
-    await expect(page.getByText("No records yet.")).toBeVisible();
+    await expect(page.getByText("Beta record")).toBeVisible();
 
-    // A section's address opens it directly.
-    await page.goto("/app?settings=organization");
+    // A section's address opens it directly, for the org it names.
+    await page.goto("/o/beta-co?settings=organization");
     await settings.getByLabel("Type Beta Co to confirm").fill("Beta Co");
     await settings.getByRole("button", { name: "Delete organization" }).click();
     await expect(page.getByRole("heading", { name: "Create your organization" })).toBeVisible();
@@ -97,9 +134,11 @@ test.describe("signed in", () => {
   }) => {
     await signIn(page, E2E_USERS.inviter);
     await page.goto("/app");
-    await page.getByLabel("Organization name").fill("Gamma Co");
+    await page.getByLabel("Name").fill("Gamma Co");
+    await expect(page.getByText("Available", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Create" }).click();
     await page.getByRole("link", { name: "Members" }).click();
+    await expect(page).toHaveURL(/\/o\/gamma-co\?settings=members$/);
     await expect(page.getByText("Who belongs to Gamma Co, and who's invited")).toBeVisible();
     await expect(page.getByText("No pending invitations.")).toBeVisible();
     await expectAccessible(page);
@@ -127,10 +166,13 @@ test.describe("signed in", () => {
     await expect(invitee.getByRole("button", { name: "Accept invitation" })).toBeVisible();
     await expectAccessible(invitee);
     await invitee.getByRole("button", { name: "Accept invitation" }).click();
+    await expect(invitee).toHaveURL(/\/o\/gamma-co$/);
     await expect(invitee.getByRole("heading", { name: "Gamma Co" })).toBeVisible();
     await inviteeContext.close();
 
+    // The settings section's address, reloaded, opens it again over the same org.
     await page.reload();
+    await expect(page.getByText("Who belongs to Gamma Co, and who's invited")).toBeVisible();
     await expect(page.getByText(E2E_USERS.invitee)).toBeVisible();
     await expect(page.getByText("No pending invitations.")).toBeVisible();
 
@@ -157,7 +199,7 @@ test.describe("signed in", () => {
     await page.goBack();
     await page.getByRole("button", { name: "Discard" }).click();
     await expect(page.getByRole("dialog", { name: "Settings" })).toBeHidden();
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/o\/gamma-co$/);
   });
 
   test("keeps the person's own profile in settings, with Clerk's pages inside", async ({
