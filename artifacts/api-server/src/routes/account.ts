@@ -1,4 +1,6 @@
 import {
+  CheckOrgHandleQueryParams,
+  CheckOrgHandleResponse,
   CreateOrgBody,
   CreateOrgResponse,
   DeleteCurrentOrgBody,
@@ -9,7 +11,13 @@ import { orgsTable, orgUsersTable } from "@repo/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { type Request, Router } from "express";
 import { isOrgRole } from "../lib/authz/policy.js";
-import { freeHandle } from "../lib/handles.js";
+import {
+  freeHandle,
+  HANDLE_PROBLEM_MESSAGES,
+  HANDLE_TAKEN,
+  handleProblem,
+  handleTaken,
+} from "../lib/handles.js";
 import { changeMembership, LAST_ORG_ADMIN } from "../lib/memberships.js";
 import { sendValidated } from "../lib/send-validated.js";
 import type { Access } from "../middleware/access.js";
@@ -31,7 +39,12 @@ export function createMeRouter(db: Db, access: Access): Router {
   router.get("/", access.signedIn, async (req, res) => {
     const user = signedInUser(req);
     const memberships = await db
-      .select({ id: orgsTable.id, name: orgsTable.name, role: orgUsersTable.role })
+      .select({
+        id: orgsTable.id,
+        name: orgsTable.name,
+        handle: orgsTable.handle,
+        role: orgUsersTable.role,
+      })
       .from(orgUsersTable)
       .innerJoin(orgsTable, eq(orgsTable.id, orgUsersTable.orgId))
       .where(eq(orgUsersTable.userId, user.id))
@@ -53,20 +66,51 @@ export function createOrgsRouter(db: Db, access: Access): Router {
   const router = Router();
   router.post("/", access.signedIn, validate({ body: CreateOrgBody }), async (req, res) => {
     const user = signedInUser(req);
+    const chosen = req.body.handle?.toLowerCase();
+    const problem = chosen === undefined ? undefined : handleProblem(chosen);
+    if (problem) {
+      res.status(400).json({
+        error: { fieldErrors: { handle: [HANDLE_PROBLEM_MESSAGES[problem]] }, formErrors: [] },
+      });
+      return;
+    }
     const org = await db.transaction(async (tx) => {
-      const handle = await freeHandle(tx, req.body.name);
+      // Without a chosen handle (a client from before handles), one from the name.
+      const handle = chosen ?? (await freeHandle(tx, req.body.name));
       const [created] = await tx
         .insert(orgsTable)
         .values({ name: req.body.name, handle })
+        .onConflictDoNothing({ target: orgsTable.handle })
         .returning();
-      if (!created) throw new Error("insert returned no row");
+      if (!created) return undefined;
       await tx
         .insert(orgUsersTable)
         .values({ orgId: created.id, userId: user.id, role: "org_admin" });
-      return created;
+      return { ...created, handle };
     });
-    sendValidated(res, CreateOrgResponse, { id: org.id, name: org.name, role: "org_admin" }, 201);
+    if (!org) {
+      res.status(409).json(HANDLE_TAKEN);
+      return;
+    }
+    sendValidated(
+      res,
+      CreateOrgResponse,
+      { id: org.id, name: org.name, handle: org.handle, role: "org_admin" },
+      201
+    );
   });
+
+  router.get(
+    "/handle-available",
+    access.signedIn,
+    validate({ query: CheckOrgHandleQueryParams }),
+    async (req, res) => {
+      const handle = req.query.handle.toLowerCase();
+      const reason =
+        handleProblem(handle) ?? ((await handleTaken(db, handle)) ? "taken" : undefined);
+      sendValidated(res, CheckOrgHandleResponse, { handle, available: !reason, reason });
+    }
+  );
 
   router.delete(
     "/current",

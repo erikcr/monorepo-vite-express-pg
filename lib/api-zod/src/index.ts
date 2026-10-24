@@ -73,6 +73,7 @@ export const GetMeResponse = zod.object({
   "orgs": zod.array(zod.object({
   "id": zod.uuid(),
   "name": zod.string(),
+  "handle": zod.string().describe('The org\'s address in the web app, /o/<handle>. Fixed once chosen.'),
   "role": zod.enum(['org_admin', 'org_member'])
 })).describe('Every org the person belongs to; send one\'s id as X-Org-Id')
 })
@@ -83,16 +84,40 @@ export const GetMeResponse = zod.object({
  */
 export const createOrgBodyNameMax = 100;
 
+export const createOrgBodyHandleMax = 100;
+
 
 
 export const CreateOrgBody = zod.object({
-  "name": zod.string().min(1).max(createOrgBodyNameMax)
+  "name": zod.string().min(1).max(createOrgBodyNameMax),
+  "handle": zod.string().max(createOrgBodyHandleMax).optional().describe('The org\'s address, /o/<handle>: 3–40 lowercase letters, digits and single hyphens,\nwith no hyphen at either end, and not a reserved word. Taken lowercased. Without one,\nthe API makes one from the name.\n')
 })
 
 export const CreateOrgResponse = zod.object({
   "id": zod.uuid(),
   "name": zod.string(),
+  "handle": zod.string().describe('The org\'s address in the web app, /o/<handle>. Fixed once chosen.'),
   "role": zod.enum(['org_admin', 'org_member'])
+})
+
+
+/**
+ * Answers for the handle lowercased, as creating the org would. A handle that breaks the
+ * rules is `invalid` here rather than a 400, so the form can say why.
+ * @summary Whether a handle can be chosen for a new org, for checking it as it's typed
+ */
+export const checkOrgHandleQueryHandleMax = 100;
+
+
+
+export const CheckOrgHandleQueryParams = zod.object({
+  "handle": zod.string().min(1).max(checkOrgHandleQueryHandleMax)
+})
+
+export const CheckOrgHandleResponse = zod.object({
+  "handle": zod.string().describe('The handle checked, lowercased'),
+  "available": zod.boolean(),
+  "reason": zod.enum(['invalid', 'reserved', 'taken']).optional().describe('Why it\'s not available')
 })
 
 
@@ -254,6 +279,7 @@ export const AcceptInvitationBody = zod.object({
 export const AcceptInvitationResponse = zod.object({
   "id": zod.uuid(),
   "name": zod.string(),
+  "handle": zod.string().describe('The org\'s address in the web app, /o/<handle>. Fixed once chosen.'),
   "role": zod.enum(['org_admin', 'org_member'])
 })
 

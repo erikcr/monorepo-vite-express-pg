@@ -113,6 +113,42 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "409":
+          description: The handle is taken (`code` is handle_taken)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/orgs/handle-available:
+    get:
+      operationId: checkOrgHandle
+      summary: Whether a handle can be chosen for a new org, for checking it as it's typed
+      description: |
+        Answers for the handle lowercased, as creating the org would. A handle that breaks the
+        rules is `invalid` here rather than a 400, so the form can say why.
+      tags: [account]
+      parameters:
+        - name: handle
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandleAvailability"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /api/orgs/current:
     delete:
@@ -629,12 +665,15 @@ components:
 
     OrgMembership:
       type: object
-      required: [id, name, role]
+      required: [id, name, handle, role]
       properties:
         id:
           type: string
           format: uuid
         name:
+          type: string
+        handle:
+          description: The org's address in the web app, /o/<handle>. Fixed once chosen.
           type: string
         role:
           $ref: "#/components/schemas/OrgRole"
@@ -756,6 +795,27 @@ components:
           type: string
           minLength: 1
           maxLength: 100
+        handle:
+          description: |
+            The org's address, /o/<handle>: 3–40 lowercase letters, digits and single hyphens,
+            with no hyphen at either end, and not a reserved word. Taken lowercased. Without one,
+            the API makes one from the name.
+          type: string
+          maxLength: 100
+
+    HandleAvailability:
+      type: object
+      required: [handle, available]
+      properties:
+        handle:
+          description: The handle checked, lowercased
+          type: string
+        available:
+          type: boolean
+        reason:
+          description: Why it's not available
+          type: string
+          enum: [invalid, reserved, taken]
 
     DeleteOrgInput:
       type: object

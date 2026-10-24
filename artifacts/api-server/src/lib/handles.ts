@@ -41,6 +41,34 @@ export const RESERVED_HANDLES: ReadonlySet<string> = new Set([
   "www",
 ]);
 
+export type HandleProblem = "invalid" | "reserved";
+
+/** Why `handle` (already lowercased) can't be chosen, if it can't; whether it's taken aside. */
+export function handleProblem(handle: string): HandleProblem | undefined {
+  if (handle.length < 3 || handle.length > 40 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(handle)) {
+    return "invalid";
+  }
+  if (RESERVED_HANDLES.has(handle)) return "reserved";
+  return undefined;
+}
+
+export const HANDLE_PROBLEM_MESSAGES: Record<HandleProblem, string> = {
+  invalid: "Use 3–40 lowercase letters, digits and single hyphens, with no hyphen at either end",
+  reserved: "That handle is reserved",
+};
+
+export const HANDLE_TAKEN = { error: "That handle is taken", code: "handle_taken" } as const;
+
+/** Whether an org already has `handle`. */
+export async function handleTaken(db: Pick<Db, "select">, handle: string): Promise<boolean> {
+  const [taken] = await db
+    .select({ id: orgsTable.id })
+    .from(orgsTable)
+    .where(eq(orgsTable.handle, handle))
+    .limit(1);
+  return Boolean(taken);
+}
+
 /**
  * A handle suggested by an org's name: "Acme, Inc." becomes "acme-inc". Too short or reserved
  * gains "-org"; a name with no letters or digits gives "org". Migration 0006 does the same in SQL.
@@ -61,11 +89,6 @@ export async function freeHandle(db: Pick<Db, "select">, name: string): Promise<
   const base = handleFromName(name);
   for (let n = 1; ; n++) {
     const candidate = n === 1 ? base : `${base}-${n}`;
-    const [taken] = await db
-      .select({ id: orgsTable.id })
-      .from(orgsTable)
-      .where(eq(orgsTable.handle, candidate))
-      .limit(1);
-    if (!taken) return candidate;
+    if (!(await handleTaken(db, candidate))) return candidate;
   }
 }

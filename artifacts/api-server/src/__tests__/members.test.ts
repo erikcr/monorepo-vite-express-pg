@@ -393,7 +393,7 @@ describe("POST /api/invitations/accept", () => {
     const { org, token } = await invited(invitee.user.email.toUpperCase(), "org_admin");
     const res = await accept(invitee.headers, token);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ id: org.id, name: org.name, role: "org_admin" });
+    expect(res.body).toEqual({ id: org.id, name: org.name, handle: org.handle, role: "org_admin" });
     expect(await roleIn(org.id, invitee.user.id)).toBe("org_admin");
     const again = await accept(invitee.headers, token);
     expect(again.status).toBe(404);
@@ -469,7 +469,12 @@ describe("POST /api/invitations/accept", () => {
       expiresAt: new Date(Date.now() + 60_000),
     });
     const res = await accept(member.headers, "already-in");
-    expect(res.body).toEqual({ id: org.id, name: org.name, role: "org_member" });
+    expect(res.body).toEqual({
+      id: org.id,
+      name: org.name,
+      handle: org.handle,
+      role: "org_member",
+    });
     expect((await accept(member.headers, "already-in")).status).toBe(404);
   });
 

@@ -14,6 +14,7 @@ const EXPECTED: Record<string, string> = {
   "GET /docs": "public",
   "GET /api/me": "signed-in",
   "POST /api/orgs": "signed-in",
+  "GET /api/orgs/handle-available": "signed-in",
   "DELETE /api/orgs/current": "org.delete",
   "DELETE /api/orgs/current/membership": "org.leave",
   "GET /api/orgs/current/members": "org.members.read",

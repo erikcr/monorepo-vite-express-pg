@@ -30,8 +30,8 @@ describe("GET /api/me", () => {
     expect(res.body).toEqual({
       user: { id: m.user.id, email: m.user.email, name: "" },
       orgs: [
-        { id: alpha.id, name: "Alpha", role: "org_member" },
-        { id: beta.id, name: "Beta", role: "org_member" },
+        { id: alpha.id, name: "Alpha", handle: "alpha", role: "org_member" },
+        { id: beta.id, name: "Beta", handle: "beta", role: "org_member" },
       ],
     });
   });
@@ -46,9 +46,17 @@ describe("GET /api/me", () => {
 describe("POST /api/orgs", () => {
   it("creates an org with the creator as org_admin, who can then use it", async () => {
     const session = bearer({ sub: "user_founder", email: "founder@x.test" });
-    const res = await request.post("/api/orgs").set(session).send({ name: "Acme" });
+    const res = await request
+      .post("/api/orgs")
+      .set(session)
+      .send({ name: "Acme", handle: "Acme-Co" });
     expect(res.status).toBe(201);
-    expect(res.body).toMatchObject({ name: "Acme", role: "org_admin" });
+    expect(res.body).toEqual({
+      id: expect.any(String),
+      name: "Acme",
+      handle: "acme-co",
+      role: "org_admin",
+    });
     // Their only org, so X-Org-Id is optional.
     const created = await request.post("/api/example").set(session).send({ name: "First" });
     expect(created.body.orgId).toBe(res.body.id);
@@ -86,6 +94,70 @@ describe("POST /api/orgs", () => {
       ).status
     ).toBe(400);
     expect((await request.post("/api/orgs").send({ name: "Anon" })).status).toBe(401);
+  });
+
+  it("refuses a handle that breaks the rules, or is reserved", async () => {
+    const session = bearer({ sub: "user_rules", email: "rules@x.test" });
+    const create = (handle: string) =>
+      request.post("/api/orgs").set(session).send({ name: "Rules", handle });
+    for (const handle of ["ab", "a".repeat(41), "-acme", "acme-", "ac--me", "ac me", "acmé"]) {
+      const res = await create(handle);
+      expect(res.status, handle).toBe(400);
+      expect(res.body.error.fieldErrors.handle, handle).toEqual([
+        "Use 3–40 lowercase letters, digits and single hyphens, with no hyphen at either end",
+      ]);
+    }
+    const reserved = await create("Settings");
+    expect(reserved.status).toBe(400);
+    expect(reserved.body.error.fieldErrors.handle).toEqual(["That handle is reserved"]);
+    expect((await create("x".repeat(101))).status).toBe(400);
+    expect(await db.select().from(orgsTable).where(eq(orgsTable.name, "Rules"))).toEqual([]);
+  });
+
+  it("answers 409 for a taken handle, whatever its case", async () => {
+    const session = bearer({ sub: "user_taken", email: "taken@x.test" });
+    await createOrg(db, "Taken Co");
+    for (const handle of ["taken-co", "TAKEN-co"]) {
+      const res = await request.post("/api/orgs").set(session).send({ name: "Another", handle });
+      expect(res.status).toBe(409);
+      expect(res.body).toEqual({ error: "That handle is taken", code: "handle_taken" });
+    }
+    expect(await db.select().from(orgsTable).where(eq(orgsTable.name, "Another"))).toEqual([]);
+  });
+});
+
+describe("GET /api/orgs/handle-available", () => {
+  const session = bearer({ sub: "user_check", email: "check@x.test" });
+  const check = (handle: string) =>
+    request.get("/api/orgs/handle-available").query({ handle }).set(session);
+
+  it("says whether a handle is free, lowercased, and why not", async () => {
+    await createOrg(db, "Checked Co");
+    expect((await check("Free-One")).body).toEqual({ handle: "free-one", available: true });
+    expect((await check("CHECKED-CO")).body).toEqual({
+      handle: "checked-co",
+      available: false,
+      reason: "taken",
+    });
+    expect((await check("admin")).body).toEqual({
+      handle: "admin",
+      available: false,
+      reason: "reserved",
+    });
+    expect((await check("-x")).body).toEqual({
+      handle: "-x",
+      available: false,
+      reason: "invalid",
+    });
+  });
+
+  it("requires a session and a handle", async () => {
+    expect((await request.get("/api/orgs/handle-available").query({ handle: "x" })).status).toBe(
+      401
+    );
+    expect((await request.get("/api/orgs/handle-available").set(session)).status).toBe(400);
+    expect((await check("")).status).toBe(400);
+    expect((await check("x".repeat(101))).status).toBe(400);
   });
 });
 

@@ -87,6 +87,8 @@ export const OrgRole = {
 export interface OrgMembership {
   id: string;
   name: string;
+  /** The org's address in the web app, /o/<handle>. Fixed once chosen. */
+  handle: string;
   role: OrgRole;
 }
 
@@ -162,6 +164,33 @@ export interface CreateOrgInput {
      * @maxLength 100
      */
   name: string;
+  /**
+     * The org's address, /o/<handle>: 3–40 lowercase letters, digits and single hyphens,
+     * with no hyphen at either end, and not a reserved word. Taken lowercased. Without one,
+     * the API makes one from the name.
+     * @maxLength 100
+     */
+  handle?: string;
+}
+
+/**
+ * Why it's not available
+ */
+export type HandleAvailabilityReason = typeof HandleAvailabilityReason[keyof typeof HandleAvailabilityReason];
+
+
+export const HandleAvailabilityReason = {
+  invalid: 'invalid',
+  reserved: 'reserved',
+  taken: 'taken',
+} as const;
+
+export interface HandleAvailability {
+  /** The handle checked, lowercased */
+  handle: string;
+  available: boolean;
+  /** Why it's not available */
+  reason?: HandleAvailabilityReason;
 }
 
 export interface DeleteOrgInput {
@@ -308,6 +337,14 @@ export type PageLimitParameter = number;
  * The nextCursor from the previous page; omit for the first page
  */
 export type PageCursorParameter = string;
+
+export type CheckOrgHandleParams = {
+/**
+ * @minLength 1
+ * @maxLength 100
+ */
+handle: string;
+};
 
 export type ListOrgMembersParams = {
 /**
@@ -814,7 +851,7 @@ return apiFetch<OrgMembership>(getCreateOrgUrl(),
 
 export const getCreateOrgMutationKey = () => ['createOrg'] as const;
 
-export const getCreateOrgMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+export const getCreateOrgMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,CreateOrgMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,CreateOrgMutationVariables, TContext> => {
 
@@ -843,13 +880,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateOrgMutationResult = NonNullable<Awaited<ReturnType<typeof createOrg>>>
     export type CreateOrgMutationBody = CreateOrgInput
-    export type CreateOrgMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+    export type CreateOrgMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ErrorResponse>
     export type CreateOrgMutationVariables = {data: CreateOrgInput}
 
     /**
  * @summary Create an org; the creator becomes its org_admin
  */
-export const useCreateOrg = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+export const useCreateOrg = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,CreateOrgMutationVariables, TContext>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createOrg>>,
@@ -859,6 +896,116 @@ export const useCreateOrg = <TError = ErrorType<BadRequestResponse | Unauthorize
       > => {
       return useMutation(getCreateOrgMutationOptions(options), queryClient);
     }
+
+export const getCheckOrgHandleUrl = (params: CheckOrgHandleParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/orgs/handle-available?${stringifiedParams}` : `/api/orgs/handle-available`
+}
+
+/**
+ * Answers for the handle lowercased, as creating the org would. A handle that breaks the
+ * rules is `invalid` here rather than a 400, so the form can say why.
+ * @summary Whether a handle can be chosen for a new org, for checking it as it's typed
+ */
+export const checkOrgHandle = async (params: CheckOrgHandleParams, options?: Parameters<typeof apiFetch>[1]): Promise<HandleAvailability> => {
+
+  return apiFetch<HandleAvailability>(getCheckOrgHandleUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getCheckOrgHandleQueryKey = (params?: CheckOrgHandleParams,) => {
+    return [
+    `/api/orgs/handle-available`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getCheckOrgHandleQueryOptions = <TData = Awaited<ReturnType<typeof checkOrgHandle>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(params: CheckOrgHandleParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof checkOrgHandle>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCheckOrgHandleQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof checkOrgHandle>>> = ({ signal }) => checkOrgHandle(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof checkOrgHandle>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type CheckOrgHandleQueryResult = NonNullable<Awaited<ReturnType<typeof checkOrgHandle>>>
+export type CheckOrgHandleQueryError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+
+export function useCheckOrgHandle<TData = Awaited<ReturnType<typeof checkOrgHandle>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params: CheckOrgHandleParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof checkOrgHandle>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof checkOrgHandle>>,
+          TError,
+          Awaited<ReturnType<typeof checkOrgHandle>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCheckOrgHandle<TData = Awaited<ReturnType<typeof checkOrgHandle>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params: CheckOrgHandleParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof checkOrgHandle>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof checkOrgHandle>>,
+          TError,
+          Awaited<ReturnType<typeof checkOrgHandle>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useCheckOrgHandle<TData = Awaited<ReturnType<typeof checkOrgHandle>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params: CheckOrgHandleParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof checkOrgHandle>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Whether a handle can be chosen for a new org, for checking it as it's typed
+ */
+
+export function useCheckOrgHandle<TData = Awaited<ReturnType<typeof checkOrgHandle>>, TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>>(
+ params: CheckOrgHandleParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof checkOrgHandle>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getCheckOrgHandleQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getDeleteCurrentOrgUrl = () => {
 

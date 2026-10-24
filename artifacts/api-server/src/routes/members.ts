@@ -324,7 +324,12 @@ export function createInvitationsRouter(db: Db, access: Access): Router {
           .values({ orgId: invitation.orgId, userId: user.id, role: invitation.role })
           .onConflictDoNothing();
         const [membership] = await tx
-          .select({ id: orgsTable.id, name: orgsTable.name, role: orgUsersTable.role })
+          .select({
+            id: orgsTable.id,
+            name: orgsTable.name,
+            handle: orgsTable.handle,
+            role: orgUsersTable.role,
+          })
           .from(orgUsersTable)
           .innerJoin(orgsTable, eq(orgsTable.id, orgUsersTable.orgId))
           .where(and(eq(orgUsersTable.orgId, invitation.orgId), eq(orgUsersTable.userId, user.id)));
