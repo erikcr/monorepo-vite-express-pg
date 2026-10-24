@@ -29,7 +29,7 @@ Every screen is a stack of layers, and the address says what each one shows. A r
 |---|---|---|---|
 | **Shell** | The top bar, the account menu | Never | `RootLayout` in `router.tsx` |
 | **Scope** | Which org the screen is about | The path: `/o/<handle>`, with the org's places under it | `OrgLayout`, `active-org.ts` |
-| **Place** | A page: where people work | The path | `src/pages/` |
+| **Place** | A page: where people work | The path; an org's places sit under its scope, `/o/<handle>/<place>` | `src/pages/`, children of `orgRoute` |
 | **Panel** | Content beside the place, which stays usable | The query, e.g. `?record=<id>` | None yet (`CAPABILITIES.md`) |
 | **Dialog** | A detour over the place, which is blocked behind it | The query, e.g. `?settings=<section>` | The settings dialog |
 

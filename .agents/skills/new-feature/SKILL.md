@@ -5,7 +5,7 @@ description: Checklist for adding a feature across the stack — schema/migratio
 
 # Add a feature
 
-Follow `routes/example.ts` (with `__tests__/example.test.ts`), `src/jobs/registry.ts` (with `jobs.test.ts`) and web's `AppPage.tsx` (with `app-page.test.tsx`) as the worked example of every step.
+Follow `routes/example.ts` (with `__tests__/example.test.ts`), `src/jobs/registry.ts` (with `jobs.test.ts`) and web's `OrgHomePage.tsx` (with `app-page.test.tsx`) as the worked example of every step.
 
 **Tests are written with each layer, not at the end.** Before starting, list the tests the feature needs from the required-tests table in `docs/TESTING.md` (if a plan task has a **Tests:** line, start from it). Each step below says which ones it owns. Prove every new test red: break the behaviour, watch it fail for the right reason, restore.
 
@@ -18,7 +18,7 @@ Follow `routes/example.ts` (with `__tests__/example.test.ts`), `src/jobs/registr
 5. **Background work:** define the job in `src/jobs/registry.ts`, add it to `jobs`, and enqueue it from the route through the injected `queue`.
    - *Tests:* the route test asserts the enqueue with `createFakeQueue()`; `jobs.test.ts` runs the handler on pg-boss + PGlite and asserts its effect (and a fixed clock for a scheduled job).
 6. **UI, page or settings first:** ask whether people will use it all the time or set it up and revisit it now and then (`docs/UI.md`), and say which answer applies and why (when it isn't clear, ask the user).
-   - **Used all the time** (the work the product is for): add a page in `src/pages/` and a route const in `src/router.tsx` (search params via `validateSearch`, prefetch in a `loader`), and use the generated hook.
+   - **Used all the time** (the work the product is for): add a page in `src/pages/` and a route const in `src/router.tsx`: a page of org data is a child of `orgRoute`, at `/o/$org/<place>`, and gets its org from `useOrgOnScreen()` (search params via `validateSearch`, prefetch in a `loader`). Use the generated hook.
    - **Set up and revisited** (profile, preferences, members, billing, integrations, danger zone): add a section to the settings dialog (`src/settings/`, "Adding a section" in `docs/UI.md`), never a page of its own. Preferences apply as they change; anything that reaches other people or can't be undone is an explicit button, and its unsaved input reports `useUnsavedChanges`.
    - Before inventing a pattern, check `docs/CAPABILITIES.md`: if one listed there fits and the feature reaches its "build it when" point, build that one (and move it out of the list).
    - Semantic theme tokens only.

@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 describe("apiFetch", () => {
-  it("sends the session token and the selected org", async () => {
+  it("sends the session token and the org to act in", async () => {
     vi.stubGlobal("fetch", fetchMock);
     configureApiClient({ getToken: async () => "tok_123", getOrgId: () => "org-1" });
     await apiFetch("/api/example");
@@ -22,7 +22,7 @@ describe("apiFetch", () => {
     expect(sentHeaders().get("x-org-id")).toBe("org-1");
   });
 
-  it("sends neither when signed out with no org selected", async () => {
+  it("sends neither when signed out with no org to act in", async () => {
     vi.stubGlobal("fetch", fetchMock);
     configureApiClient({ getToken: async () => null, getOrgId: () => null });
     await apiFetch("/health");

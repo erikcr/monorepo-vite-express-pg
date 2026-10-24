@@ -89,7 +89,7 @@ Add an entry when a review or discussion turns up something worth having later.
 ### Choosing where someone lands after signing in
 
 - **Build it when:** there are different kinds of people, whose work starts in different places: consultants with a portfolio, members of one org, staff.
-- **Shape:** one `homePath(me)` decides from what `/me` says they can reach. It's used by `/`, by sign-in's redirect, and wherever "no org" would otherwise send someone to onboarding. The last place used comes first, if they can still reach it.
+- **Shape:** one `homePath(me)` decides from what `/me` says they can reach. It's used by `/`, by sign-in's redirect, and wherever "no org" would otherwise send someone to onboarding. The last place used comes first, if they can still reach it. `/app` (`AppPage`) already does this for one kind of person (the last org, else the first, else the create form): `homePath` grows out of it.
 - **Start from:** Trust XP's Plan 50 D1.
 
 ### Renaming an org's handle
