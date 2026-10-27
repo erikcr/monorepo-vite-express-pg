@@ -151,3 +151,25 @@ These change the template's assumptions (`ARCHITECTURE.md`, "What the template a
     3. Run a separate public site beside the app, sharing the API client.
   - Choose when the first page that must be indexed exists.
 
+### Turning a feature on for some orgs or people
+
+- **Build it when:** a feature should be on for some orgs or people and not others: a beta for one customer, a feature that waits on each org's agreement, features by plan, a gradual rollout. A switch for a whole environment stays an environment variable ("Ship it switched off", `DEPLOYMENTS.md`).
+- **Shape:**
+  - **Per org, decided by people (most cases):** in our own tables, like any other access. An `org_features` table (`org_id` with cascade, a feature name from a fixed list, who turned it on and when) that staff manage in the admin app under a `platform.*` permission. `OrgMembership` in `/me` lists the org's features, so the sites hide what's off. A route for a feature that's off answers 404, as one for another org's record does.
+  - **Percentage rollouts or kill switches that act in seconds:** a flag service. Try Railway Feature Flags first, since the API already runs there: typed flags, targeting rules and percentage rollouts, read from an in-memory copy through its TypeScript SDK, and managed through the Railway MCP. Its flags belong to the whole Railway project rather than one environment, so pass the environment as an attribute and target it. Reads go through one module in the API, so the service can be replaced.
+  - **Never a flag service for security policy** (requiring MFA, who may sign in): a click in someone else's dashboard shouldn't turn it off. That stays in environment variables or our tables.
+  - LaunchDarkly and similar services pay off with many teams running experiments. Until then they add a vendor, keys, CSP entries and a browser SDK.
+- **Start from:** Trust XP's `PARTNERS_ENABLED` (`lib/authz/access.ts`), the environment-wide version.
+
+### A desktop app (Tauri)
+
+- **Build it when:** the product needs what a browser can't give: files on disk, a tray icon, global shortcuts, working offline, or a listing in an app store. A dock icon and a window of its own aren't enough on their own: installing the site as a PWA gives both, with no new code.
+- **Shape:**
+  - `artifacts/desktop`, a Tauri 2 shell around `web`'s build. It reuses `web`'s pages rather than forking them. Native calls go behind a small module that `web` checks for, so the site keeps working without it.
+  - It calls the production API through `VITE_API_URL`. The client already sends a bearer token, not cookies, so calls from another origin work.
+  - Its origins join `CORS_ORIGIN`, per environment. Clerk checks a token's origin against that same list (`authorizedParties` in `src/lib/identity.ts`). Tauri pages run on `tauri://localhost` (macOS, Linux) and `http://tauri.localhost` (Windows).
+  - Signing in is the decision to make first. Clerk is built for web origins, and its redirects and OAuth don't work inside the webview as they do on a site. The usual way is to sign in in the system browser and come back through a deep link. Choose it, and prove it with a social sign-in, before building anything else.
+  - The CSP from `lib/csp` applies, with the app's own origin. The headers in `vercel.json` don't reach it, so Tauri's own CSP setting carries them.
+  - Releases are their own workflow, separate from the deploy chain: builds for each platform, code signing (Apple notarization, a Windows certificate) and Tauri's updater. An app that's installed keeps running old code, so the API must keep serving the oldest supported version. The additive-migrations rule already works this way for the database.
+- **Start from:** Tauri's Vite guide (https://v2.tauri.app/start/frontend/vite/).
+

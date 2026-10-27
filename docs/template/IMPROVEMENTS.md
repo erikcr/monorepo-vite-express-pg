@@ -667,6 +667,52 @@ Every project built from the template inherits this. Moving it later is a breaki
 
 ---
 
+## Phase F — Feature switches (2026-10-27)
+
+### F.1 `[ ]` The API says which features are on
+
+**Status:** proposed 2026-10-27, decisions open. Phase O deferred feature switches until a project needed them; Trust XP now has six (`PARTNERS_ENABLED`, `AI_CHAT_ENABLED`, `MFA_REQUIRED`, …), and it shows what the template's pattern is missing. **Origin:** a review of Trust XP's switches against flag services (LaunchDarkly, Railway Feature Flags). Per-org targeting and rollouts went to `CAPABILITIES.md`, since no project needs them yet.
+
+**Why.** "Ship it switched off" (`DEPLOYMENTS.md`) uses an environment variable per switch, which is right for a switch per environment. But the sites read their own `VITE_*` copy:
+- flipping one means redeploying the site as well as setting the API's variable;
+- the two copies can disagree, so a site shows a feature whose API answers 404, or hides one that's on;
+- the workarounds are ad hoc: Trust XP's admin app infers "partners are off" from a 404, and the API has an endpoint just to say whether its AI features are on.
+
+**The shape.**
+- **One list of switches in the API**, `src/lib/features.ts`: each feature's name and the `env` getter that turns it on. Each variable is declared once in `@repo/env` with the existing `flag()` helper, off by default, and added to `.env.example`.
+- **`/me` reports them:** `Me.features`, an object with one boolean per feature, declared in the spec so the generated types name each one. The sites read it through a `useFeature("x")` hook and never from `VITE_*`. Flipping a switch is setting one Railway variable; the API redeploys and the sites follow on the next `/me`.
+- **Routes of a feature that's off answer 404**, through `requireFeature("x")`, which comes after the route's access rule. The route-access test keeps the access rule first.
+- **Removing a switch** once the feature is on everywhere is part of the release: the variable, its entry and its checks. A switch is temporary; anything permanent is configuration and stays out of `features`.
+- Security policy (Trust XP's `MFA_REQUIRED`) is configuration, not a feature, and stays out of `/me`.
+
+**Decisions.**
+- **D1: where the sites read them.**
+
+  | Option | For | Against |
+  |---|---|---|
+  | **A. `Me.features` (recommended)** | No new request: every signed-in page loads `/me`. Per-org features (`CAPABILITIES.md`) later sit next to it on `OrgMembership`. | Signed-out pages can't read them |
+  | B. A public `GET /api/features` | Signed-out pages can read them | Another request and another public route, for pages that rarely need a switch |
+- **D2: what the template ships with.** A. An empty list, with the tests using a switch defined only in tests (recommended: the template has no feature to switch). B. An example switch on the example routes, removed by `/new-project`.
+
+**Tasks** (one commit each, every test shown red):
+1. **API:** `features.ts`, `requireFeature`, `Me.features` in the spec, then codegen.
+   **Tests:** API: `/me` reports each switch on and off; a switched-off route answers 404 to someone with access, after 401 and 403 as usual. `contract.test.ts` covers the new field.
+2. **Web and admin:** `useFeature`, reading `/me`'s cached response.
+   **Tests:** component tests: a feature's link hidden while off and shown while on.
+3. **Docs:**
+   - `DEPLOYMENTS.md`'s "Ship it switched off": one API variable, no site redeploy, and removing the switch afterwards.
+   - AGENTS.md's code patterns gain a line on switches.
+   - The `new-feature` skill says where a switch goes.
+
+   **Tests:** none, as these are docs.
+
+**Exit criteria.**
+- Turning a feature on is one API variable, with no site redeploy (component test against `/me`'s answer).
+- A switched-off feature's routes answer 404 and its UI is hidden (API and component tests).
+- No `VITE_*` variable turns a feature on or off (`DEPLOYMENTS.md`, and a review of both apps' `vite-env.d.ts`).
+
+---
+
 ## Session Log
 
 | Date | Items completed | Notes |
@@ -696,3 +742,5 @@ Every project built from the template inherits this. Moving it later is a breaki
 | 2026-10-24 | A.1 | The org is in the address, `/o/<handle>`, in five commits on `feat/org-in-address`. Schema: `orgs.handle`, unique and nullable, with migration 0006 backfilling existing orgs from their names, in SQL that matches the API's `handleFromName()` (a test checks the two agree). API: `OrgMembership.handle`; `POST /orgs` takes an optional handle (400 for the rules or a reserved word, 409 `handle_taken`), making one from the name when a client from before handles sends none; `GET /orgs/handle-available` checks it as typed, covered by the global rate limiter rather than one of its own. Web: the `/o/$org` layout makes the org on screen the one requests are for, in memory per tab; `/app` is home (last org, else first, else the create form); settings over a page outside an org show only "You"; the create form has a handle field, prefilled and checked as typed. URLs match handles whatever their case. E2E shown red by taking the request's org from storage again: a second tab then lists the other org's record. Follow-up A.2 makes handles `NOT NULL`. Commits went on a branch: auto mode wouldn't allow `--no-verify` past the hook guarding `main` |
 | 2026-10-24 | A.2 | `orgs.handle` is `NOT NULL` (migration 0007), after a backfill like 0006's for any org the previous API created during A.1's deploy. Shown red twice: without the backfill the migration fails on the null, and without `NOT NULL` an insert without a handle succeeds. The API's create route no longer re-adds the handle to the row it returns, now that the type says it's there. A.1 also needed a `body-parser` 2.4.0 lockfile bump (GHSA-27r3-jxmh-p828, published while it was in CI) before it could deploy |
 | 2026-10-24 | Docs alignment | A last pass after A.1 and A.2. The `new-feature` skill's worked example is now `OrgHomePage.tsx`, and it and `UI.md`'s place layer say an org's pages are children of `orgRoute`, at `/o/$org/<place>`, reading the org with `useOrgOnScreen()`. `CAPABILITIES.md`'s "where someone lands" notes that `/app` already does it for one kind of person. Every file path the docs and skills name was checked: the only ones missing are made later (`docs/PROJECT.md`), belong to Trust XP, or are placeholders. Open: O.4 (deferred) |
+| 2026-10-27 | Desktop app note | Asked whether the template should support Tauri: not built in, since most projects never need a desktop shell, and sign-in through Clerk inside a webview is a decision each project makes for itself. `CAPABILITIES.md`'s Structure part gains "A desktop app (Tauri)": when it's worth building (native features or a store listing; a PWA covers an icon and a window of its own), and its shape: a shell around `web`, its origins in `CORS_ORIGIN` (which Clerk's `authorizedParties` also reads), signing in through the system browser chosen first, the CSP, and a release workflow of its own |
+| 2026-10-27 | Feature switches review | Asked whether to build a flag system or use LaunchDarkly. Trust XP's six switches are environment variables, which is right for a switch per environment; security policy (`MFA_REQUIRED`) stays one. Two gaps: turning a feature on for some orgs or people, and sites reading their own `VITE_*` copy of a switch. The first went to `CAPABILITIES.md` ("Turning a feature on for some orgs or people": our own tables for per-org grants, Railway Feature Flags before LaunchDarkly for rollouts). The second is proposed as F.1 (the API says which features are on, through `/me`), revisiting Phase O's deferral; D1 and D2 open |
