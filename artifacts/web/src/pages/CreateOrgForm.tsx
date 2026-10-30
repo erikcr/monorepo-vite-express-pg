@@ -7,9 +7,7 @@ import {
 } from "@repo/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useState } from "react";
-
-const input = "bg-surface border border-border rounded-input px-3 py-2 text-sm";
-const button = "bg-brand text-brand-fg rounded-button px-4 py-2 text-sm disabled:opacity-50";
+import { Button, Field, Input } from "../components/ui.tsx";
 
 /** The handle a name suggests: "Acme, Inc." gives "acme-inc". The API has the final say. */
 const suggestHandle = (name: string) =>
@@ -68,23 +66,16 @@ export function CreateOrgForm({ onCreated }: { onCreated: (org: OrgMembership) =
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        Name
-        <input
-          className={input}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          maxLength={100}
-        />
-      </label>
+      <Field label="Name">
+        <Input value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
+      </Field>
       <div className="flex flex-col gap-1 text-sm">
         <label htmlFor="org-handle">Handle</label>
         <span className="flex items-center gap-1">
           <span className="text-text-muted">/o/</span>
-          <input
+          <Input
             id="org-handle"
-            className={`${input} flex-1`}
+            className="flex-1"
             value={handle}
             onChange={(e) => setEditedHandle(e.target.value.toLowerCase())}
             required
@@ -107,13 +98,13 @@ export function CreateOrgForm({ onCreated }: { onCreated: (org: OrgMembership) =
         ) : null}
       </p>
       {createOrg.error && <p className="text-destructive text-sm">{createOrg.error.message}</p>}
-      <button
+      <Button
         type="submit"
-        className={`${button} self-start`}
+        className="self-start"
         disabled={createOrg.isPending || answer?.available === false}
       >
         Create
-      </button>
+      </Button>
     </form>
   );
 }

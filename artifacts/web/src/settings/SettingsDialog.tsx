@@ -151,7 +151,7 @@ export function SettingsDialog<Id extends string>({
             {groups.map((group) => (
               <div key={group} className="mb-4">
                 <div className="px-3 mb-1 text-xs font-semibold text-text-muted">{group}</div>
-                <ul>
+                <ul className="flex flex-col gap-1">
                   {sections
                     .filter((s) => s.group === group)
                     .map((s) => (

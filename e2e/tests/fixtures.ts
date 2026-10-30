@@ -36,7 +36,6 @@ export async function expectAccessible(page: Page) {
     const { violations } = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .exclude(".cl-rootBox")
-      .exclude(".cl-userButtonBox")
       .analyze();
     // One line per element, with axe's reason (for contrast: the two colours and the ratio).
     for (const v of violations) {

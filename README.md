@@ -96,6 +96,10 @@ message and the API answers 401 to anything that needs a session.
 
 Optionally run `pnpm db:seed` to add sample data (it prints how to give yourself access).
 
+The admin app is for staff, and nobody is staff by default. Give yourself access with
+`pnpm staff:grant <your email> staff_admin`; it links to your account the next time you visit
+admin. A fresh database needs it again, and `pnpm staff:revoke <your email>` undoes it.
+
 ### Git hooks
 
 `pnpm install` points git at `.githooks/`:

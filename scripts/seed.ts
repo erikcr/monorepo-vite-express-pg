@@ -29,6 +29,7 @@ async function main() {
   console.log(`seed complete: orgs ${SEED_ORGS.map((o) => `${o.name} (${o.id})`).join(", ")}`);
   // Nobody belongs to these orgs yet.
   console.log(`to see them, sign in once, then: pnpm org:grant <your email> ${one.id} org_admin`);
+  console.log("to use the admin app: pnpm staff:grant <your email> staff_admin");
   await closeDb();
 }
 

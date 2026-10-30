@@ -1,16 +1,16 @@
-import { RedirectToSignIn, Show, UserButton } from "@clerk/react";
+import { RedirectToSignIn, Show } from "@clerk/react";
 import { reportError } from "@repo/api-client-react/errors";
 import type { QueryClient } from "@tanstack/react-query";
 import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
-  Link,
   Outlet,
   type RouterHistory,
 } from "@tanstack/react-router";
 import type { ComponentType } from "react";
 import { z } from "zod";
+import { Header } from "./components/Header.tsx";
 import { CrashScreen } from "./pages/CrashScreen.tsx";
 import { DashboardPage } from "./pages/DashboardPage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
@@ -22,21 +22,11 @@ export interface RouterContext {
 }
 
 function RootLayout() {
-  const link = "text-text-muted hover:text-text";
   return (
-    <>
-      <nav className="px-page-x pt-3 flex items-center gap-4 text-xs border-b border-border bg-surface-raised pb-3">
-        <Link to="/" className={link} activeProps={{ className: "text-text font-medium" }}>
-          Dashboard
-        </Link>
-        <span className="ml-auto">
-          <Show when="signed-in">
-            <UserButton />
-          </Show>
-        </span>
-      </nav>
+    <div className="min-h-dvh flex flex-col">
+      <Header />
       <Outlet />
-    </>
+    </div>
   );
 }
 

@@ -6,11 +6,11 @@ import { useEffect } from "react";
 import { useOrgOnScreen } from "../active-org.ts";
 import { MembersSection } from "./MembersSection.tsx";
 import { OrganizationSection } from "./OrganizationSection.tsx";
-import { ProfileSection } from "./ProfileSection.tsx";
+import { ProfileSection, SecuritySection } from "./ProfileSection.tsx";
 import { SettingsDialog, type SettingsNavItem } from "./SettingsDialog.tsx";
 
 /** Every settings section, in the order the dialog lists them. */
-export const SETTINGS_SECTIONS = ["organization", "members", "profile"] as const;
+export const SETTINGS_SECTIONS = ["organization", "members", "profile", "security"] as const;
 type SettingsSectionId = (typeof SETTINGS_SECTIONS)[number];
 
 // The org's sections are listed under its name, so nobody changes settings for the wrong org.
@@ -20,6 +20,7 @@ const orgSections = (orgName: string): SettingsNavItem<SettingsSectionId>[] => [
 ];
 const YOU: SettingsNavItem<SettingsSectionId>[] = [
   { id: "profile", label: "Profile", group: "You" },
+  { id: "security", label: "Security", group: "You" },
 ];
 
 const root = getRouteApi("__root__");
@@ -39,10 +40,10 @@ export function Settings() {
   );
 }
 
-/** Opens settings over the current page, on no section in particular. */
+/** Opens settings over the current page, on Profile: the one section everyone has. */
 export function useOpenSettings() {
   const navigate = useNavigate();
-  return () => navigate({ to: ".", search: (prev) => ({ ...prev, settings: "" }) });
+  return () => navigate({ to: ".", search: (prev) => ({ ...prev, settings: "profile" }) });
 }
 
 /**
@@ -109,6 +110,7 @@ function SettingsForPerson({ requested }: { requested: SettingsSectionId | "" })
         <MembersSection key={active.id} org={active} myId={me.data?.user.id} />
       )}
       {shownId === "profile" && <ProfileSection />}
+      {shownId === "security" && <SecuritySection />}
     </SettingsDialog>
   );
 }

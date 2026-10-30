@@ -6,6 +6,10 @@ import { requireClerk, sessionToken, signIn } from "./signed-in";
 test("shows the 404 page for an unknown path", async ({ page }) => {
   await page.goto("/no-such-page");
   await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollHeight - window.innerHeight
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
   await expectAccessible(page);
 });
 

@@ -20,6 +20,17 @@ test("shows the real API and database as healthy", async ({ page }) => {
   await expectAccessible(page);
 });
 
+test("doesn't scroll a page whose content fits the window", async ({ page }) => {
+  for (const path of ["/", "/about"]) {
+    await page.goto(path);
+    await expect(page.getByRole("main")).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollHeight - window.innerHeight
+    );
+    expect(overflow, `${path} overflows the window`).toBeLessThanOrEqual(0);
+  }
+});
+
 test("navigates client-side, deep-links, and shows a 404 page", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: "About" }).click();
@@ -106,9 +117,11 @@ test.describe("signed in", () => {
     // Settings open from the account menu, over the page. The only admin can't leave; they
     // delete the org instead, and land in the other one. (In this test rather than its own:
     // tests share the member account, and run in parallel.)
-    await page.locator(".cl-userButtonTrigger").click();
-    await page.getByRole("group", { name: "Account actions" }).getByText("Settings").click();
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.getByRole("menuitem", { name: "Settings" }).click();
     const settings = page.getByRole("dialog", { name: "Settings" });
+    await expect(page).toHaveURL(/\?settings=profile$/);
+    await settings.getByRole("button", { name: "Organization" }).click();
     await expect(settings.getByRole("region", { name: "Organization" })).toBeVisible();
     await expectAccessible(page);
     await settings.getByRole("button", { name: "Leave Alpha Co" }).click();
@@ -202,6 +215,28 @@ test.describe("signed in", () => {
     await expect(page).toHaveURL(/\/o\/gamma-co$/);
   });
 
+  test("moves nothing on the page as the account loads in", async ({ page }) => {
+    await signIn(page, E2E_USERS.member);
+    for (const path of ["/", "/about"]) {
+      await page.goto(path);
+      await expect(page.getByRole("button", { name: "Account menu" })).toBeVisible();
+      // Chromium's own measure of content moving after it first appeared.
+      const shift = await page.evaluate(
+        () =>
+          new Promise<number>((resolve) => {
+            let total = 0;
+            new PerformanceObserver((list) => {
+              for (const entry of list.getEntries()) {
+                total += (entry as unknown as { value: number }).value;
+              }
+            }).observe({ type: "layout-shift", buffered: true });
+            setTimeout(() => resolve(total), 300);
+          })
+      );
+      expect(shift, `layout shift on ${path}`).toBe(0);
+    }
+  });
+
   test("keeps the person's own profile in settings, with Clerk's pages inside", async ({
     page,
   }) => {
@@ -220,10 +255,22 @@ test.describe("signed in", () => {
     await page.keyboard.press("Escape");
     await expect(menu).toBeHidden();
     await expect(settings).toBeVisible();
-    // Clerk moves between its own pages without leaving the section or the page behind.
+    // Clerk's own navigation is hidden: Profile and Security are the dialog's sections.
+    await expect(settings.getByRole("navigation", { name: "Settings sections" })).toBeVisible();
+    await expect(settings.locator(".cl-navbar")).toBeHidden();
+    await page.setViewportSize({ width: 390, height: 780 });
+    await expect(settings.locator(".cl-navbarMobileMenuRow")).toBeHidden();
+    await page.setViewportSize({ width: 1280, height: 720 });
     await settings.getByRole("button", { name: "Security" }).click();
     await expect(settings.getByText(/Active devices/)).toBeVisible();
-    await expect(page).toHaveURL(/\/about\?settings=profile/);
+    await expect(settings.getByText("Profile details")).toBeHidden();
+    await expect(page).toHaveURL(/\/about\?settings=security#\/security$/);
+    // The section's address opens it directly, and going back to Profile leaves Clerk's page.
+    await page.reload();
+    await expect(settings.getByText(/Active devices/)).toBeVisible();
+    await settings.getByRole("button", { name: "Profile" }).click();
+    await expect(settings.getByText("Profile details")).toBeVisible();
+    await expect(page).toHaveURL(/\/about\?settings=profile$/);
     await page.keyboard.press("Escape");
     await expect(settings).toBeHidden();
     await expect(page.getByRole("heading", { name: "About" })).toBeVisible();

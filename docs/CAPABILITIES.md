@@ -150,6 +150,17 @@ These change the template's assumptions (`ARCHITECTURE.md`, "What the template a
   - Decide whether the org's change history records what staff did; a member's history usually shows only its members' changes.
 - **Start from:** Jig & Kerf's plan 02 (`sims-labs/jig-and-kerf`, 2026-10-29): `src/routes/admin.ts`, admin's `NewShopPage.tsx`, and the `shopFor` E2E fixture.
 
+### Staff sign in through their own Clerk application
+
+- **Build it when:** the product has outside customers and staff accounts shouldn't sit among theirs, or admin's sign-up has to be closed to the public. Until then one Clerk application is safe: being in it grants nothing, because access comes only from `platform_staff`, and a non-staff account gets a 403 from the API.
+- **Shape:**
+  - **A second Clerk application for staff,** with sign-up restricted to invitations, per project. It has its own development and production instances, and staff are its only accounts.
+  - **The API verifies staff tokens with that application's key** (`STAFF_CLERK_SECRET_KEY`), in a second path beside `identity.ts`, and `requireStaff` uses only that path. A customer session can no longer reach an admin route at all, even with a grant.
+  - **Admin gets its own publishable key.** Both apps read `VITE_CLERK_PUBLISHABLE_KEY` from the repo-root `.env` today, so admin's comes from `artifacts/admin/.env` locally and from its Vercel project when deployed.
+  - **Staff's grants link as they do now,** by verified email on first sign-in, so moving is cheap: an existing `platform_staff` row needs its `clerk_user_id` cleared, and each person signs in to the new application.
+  - **Its costs:** a second application in every project's setup, two more secrets, changes to `/provision-railway` and `/provision-vercel`, `deploy-targets.ts`, and the E2E job's staff keys. Staff need a separate account to use the web app as a customer. Requiring MFA in a production instance needs Clerk Pro; TrustXP switches it with `MFA_REQUIRED`.
+- **Start from:** TrustXP's `docs/plans/38-access-foundation.md` (D3, D12) and `artifacts/api-server/src/lib/staff-clerk.ts`.
+
 ### Sharing with people who have no account
 
 - **Build it when:** an org shares a record with someone outside it who shouldn't need an account: a customer reviewing and approving a proposal, a client checking progress, someone signing. If they'll come back often across many records, a portal with sign-in may fit better; a link page is a good first step toward one.

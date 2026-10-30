@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderAt } from "../test-helpers/render.tsx";
 import { clerk } from "./clerk-mock.tsx";
@@ -37,11 +37,53 @@ describe("routes (admin)", () => {
     vi.useRealTimers();
   });
 
+  it("has an account menu with Clerk's profile, and holds its place while Clerk loads", async () => {
+    renderAt("/");
+    fireEvent.click(await screen.findByRole("button", { name: "Account menu" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Manage account" }));
+    expect(clerk.openUserProfile).toHaveBeenCalledOnce();
+    cleanup();
+
+    clerk.loaded = false;
+    renderAt("/no-such-page");
+    await screen.findByRole("heading", { name: "Page not found" });
+    expect(screen.queryByRole("button", { name: "Account menu" })).toBeNull();
+    expect(document.querySelector("header [aria-hidden]")).toBeTruthy();
+    clerk.loaded = true;
+  });
+
+  it("has no account menu when signed out", async () => {
+    clerk.signedIn = false;
+    renderAt("/no-such-page");
+    await screen.findByRole("heading", { name: "Page not found" });
+    expect(screen.queryByRole("button", { name: "Account menu" })).toBeNull();
+    expect(document.querySelector("header [aria-hidden]")).toBeNull();
+  });
+
   it("requires sign-in for every page", async () => {
     clerk.signedIn = false;
     renderAt("/");
     expect(await screen.findByText("redirecting to sign-in")).toBeTruthy();
     expect(listOrgs).not.toHaveBeenCalled();
+  });
+
+  it("shows nothing of the dashboard until the API has said this person is staff", async () => {
+    listOrgs.mockReturnValue({ ...page([]), data: undefined, isLoading: true });
+    renderAt("/");
+    expect(await screen.findByText("Loading…")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Admin Dashboard" })).toBeNull();
+    expect(screen.queryByText("Overview")).toBeNull();
+    expect(screen.queryByText("Theme tokens")).toBeNull();
+  });
+
+  it("says when the list fails to load, keeping the rest of the dashboard", async () => {
+    listOrgs.mockReturnValue(
+      page([], { data: undefined, error: { status: 500, message: "boom" } })
+    );
+    renderAt("/");
+    expect(await screen.findByText("Failed to load: boom")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Admin Dashboard" })).toBeTruthy();
+    expect(screen.queryByRole("table")).toBeNull();
   });
 
   it("lists organizations with member counts", async () => {

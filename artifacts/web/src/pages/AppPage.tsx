@@ -1,6 +1,7 @@
 import { RedirectToSignIn, Show } from "@clerk/react";
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { useOrgOnScreen } from "../active-org.ts";
+import { Loading, Page, PageTitle } from "../components/ui.tsx";
 import { getLastOrgId } from "../org.ts";
 import { CreateOrgForm } from "./CreateOrgForm.tsx";
 
@@ -23,12 +24,18 @@ function Home() {
     orgs,
   } = useOrgOnScreen();
 
-  if (isLoading) return <p className="px-page-x py-page-y text-text-muted text-sm">Loading…</p>;
+  if (isLoading) {
+    return (
+      <Page>
+        <Loading />
+      </Page>
+    );
+  }
   if (error) {
     return (
-      <p className="px-page-x py-page-y text-destructive text-sm">
-        Couldn't load your account: {error.message}
-      </p>
+      <Page>
+        <p className="text-destructive text-sm">Couldn't load your account: {error.message}</p>
+      </Page>
     );
   }
 
@@ -37,11 +44,11 @@ function Home() {
   if (org) return <Navigate to="/o/$org" params={{ org: org.handle }} replace />;
 
   return (
-    <main className="px-page-x py-page-y max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Create your organization</h1>
+    <Page>
+      <PageTitle>Create your organization</PageTitle>
       <CreateOrgForm
         onCreated={(created) => navigate({ to: "/o/$org", params: { org: created.handle } })}
       />
-    </main>
+    </Page>
   );
 }

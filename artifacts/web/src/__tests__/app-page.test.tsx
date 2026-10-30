@@ -78,7 +78,9 @@ describe("/app, home", () => {
   it("shows the account loading, then failing to load", async () => {
     me.mockReturnValue({ data: undefined, isLoading: true, error: null });
     renderAt("/app");
-    expect(await screen.findByText("Loading…")).toBeTruthy();
+    const loading = await screen.findByText("Loading…");
+    // In the same centered column as what replaces it, not against the left edge.
+    expect(loading.closest("main")?.className).toContain("max-w-content mx-auto");
     me.mockReturnValue({ data: undefined, isLoading: false, error: new Error("boom") });
     renderAt("/app");
     expect(await screen.findByText(/Couldn't load your account: boom/)).toBeTruthy();
@@ -137,7 +139,9 @@ describe("/o/<handle>, the org scope", () => {
   it("shows the account loading, then failing to load", async () => {
     me.mockReturnValue({ data: undefined, isLoading: true, error: null });
     renderAt("/o/alpha");
-    expect(await screen.findByText("Loading…")).toBeTruthy();
+    const loading = await screen.findByText("Loading…");
+    // In the same centered column as what replaces it, not against the left edge.
+    expect(loading.closest("main")?.className).toContain("max-w-content mx-auto");
     me.mockReturnValue({ data: undefined, isLoading: false, error: new Error("boom") });
     renderAt("/o/alpha");
     expect(await screen.findByText(/Couldn't load your account: boom/)).toBeTruthy();
