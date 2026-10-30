@@ -86,6 +86,36 @@ hammer the DB, returns 503 when unreachable. Point `railway.toml` `healthcheckPa
 codegen, tests.
 **Accept:** Test: ready → 200, broken db → 503; liveness reports `sha`.
 
+### 0.5 `[ ]` A staff account's first two requests together: one is refused
+**Problem:** found in Jig & Kerf (2026-10-29), where its E2E admin test got 403 "Staff access
+required" now and then. `loadStaff()` links a staff grant to the account on its first staff
+request. When two arrive together (admin's first page makes several), both read the grant as
+unlinked. One links it; the other's `UPDATE … WHERE clerk_user_id IS NULL` then matches no row,
+and that request is refused.
+**Change:** when the update returns no row, read the grant by `clerk_user_id` again, since the
+other request has just linked it. Built in Jig & Kerf (`lib/authz/access.ts`), ready to copy.
+**Files:** `artifacts/api-server/src/lib/authz/access.ts`, `access.test.ts`.
+**Accept:** a test makes two first staff requests at once, holding the profile lookup until both
+have read the grant unlinked; both are admitted. In Jig & Kerf it failed before the fix.
+
+### 0.6 `[ ]` Jobs: each queue takes one job every 2 seconds
+**Problem:** `startWorker()` uses pg-boss's defaults, so each queue fetches one job (`batchSize` 1)
+per 2-second poll. One API instance sends at most 30 emails a minute, and a burst (inviting a
+team, a digest) waits in line. Jig & Kerf's E2E hit it first: several tests' emails queued at
+once, and the last one arrived after its test's 5-second wait. Its fix covers only the E2E server:
+`startWorker(boss, db, { pollingIntervalSeconds })`, 0.5 there (pg-boss's minimum), production
+unchanged.
+**Change:** copy that option and the E2E server's 0.5. Then decide production's, from pg-boss 12's:
+- `notify: true` on each queue, so sending a job wakes the worker through LISTEN/NOTIFY, with
+  polling only as a backstop (recommended: one job per fetch is kept);
+- `localConcurrency`, several workers per queue in each instance;
+- `batchSize` with `burstWhenBatchFull`. But today a batch fails as a whole: the handler rethrows
+  the first failure, so the jobs already done in it would run again (an email sent twice).
+  Batches first need each job failed on its own.
+**Files:** `jobs/worker.ts`, `jobs/queue.ts`, `e2e-server.ts`, `jobs.test.ts`.
+**Accept:** `jobs.test.ts`: the options reach every queue, and none are passed when unset (as in
+Jig & Kerf); a burst of jobs finishes without waiting a poll for each.
+
 ---
 
 ## Phase P — Merge & promotion process
@@ -671,7 +701,7 @@ Every project built from the template inherits this. Moving it later is a breaki
 
 ### F.1 `[ ]` The API says which features are on
 
-**Status:** proposed 2026-10-27, decisions open. Phase O deferred feature switches until a project needed them; Trust XP now has six (`PARTNERS_ENABLED`, `AI_CHAT_ENABLED`, `MFA_REQUIRED`, …), and it shows what the template's pattern is missing. **Origin:** a review of Trust XP's switches against flag services (LaunchDarkly, Railway Feature Flags). Per-org targeting and rollouts went to `CAPABILITIES.md`, since no project needs them yet.
+**Status:** proposed 2026-10-27, decisions open. Phase O deferred feature switches until a project needed them; Trust XP now has six (`PARTNERS_ENABLED`, `AI_CHAT_ENABLED`, `MFA_REQUIRED`, …), and it shows what the template's pattern is missing. Jig & Kerf's `SELF_SERVE_ORGS` (2026-10-29) is built to this shape with one boolean, `Me.canCreateOrg` (`CAPABILITIES.md`, "Staff set up each org"); once F.1 lands it becomes an entry in the list. **Origin:** a review of Trust XP's switches against flag services (LaunchDarkly, Railway Feature Flags). Per-org targeting and rollouts went to `CAPABILITIES.md`, since no project needs them yet.
 
 **Why.** "Ship it switched off" (`DEPLOYMENTS.md`) uses an environment variable per switch, which is right for a switch per environment. But the sites read their own `VITE_*` copy:
 - flipping one means redeploying the site as well as setting the API's variable;
@@ -713,6 +743,40 @@ Every project built from the template inherits this. Moving it later is a breaki
 
 ---
 
+## Phase L — Local development (2026-10-28)
+
+### L.1 `[ ]` Several projects running side by side
+
+**Status:** built and tested in Jig & Kerf (`sims-labs/jig-and-kerf`, uncommitted on 2026-10-28), ready to copy here. **Origin:** that project's E2E run failed at once: another project's dev server held 5174, and the ports are fixed. Its Postgres had already moved to 5434 with a hand-written `docker-compose.override.yaml`.
+
+**Why.** Every project made from the template wants the same ports: Postgres 5432, the API 3000, web 5173, admin 3001, E2E 3100, 5174 and 3002. Running a second project means editing configs by hand. Vite makes it worse: web's dev server quietly moves to the next free port, which the API's `CORS_ORIGIN` then refuses.
+
+**The shape.**
+- **One list of ports**, `lib/env/src/ports.ts` (`@repo/env/ports`, no side effects on import): `DB_PORT`, `PORT`, `WEB_PORT`, `ADMIN_PORT`, `E2E_API_PORT`, `E2E_WEB_PORT`, `E2E_ADMIN_PORT`, each overridable in the repo-root `.env`, defaults unchanged. `localPort()` reads one, and pure `planPortMoves()` and `applyPortMoves()` decide and write the moves (unit-tested, 100% coverage).
+- **Everything reads it:** both Vite configs (`loadEnv` from the root, `strictPort`, the proxy's API port); admin's `dev` script loses `--port 3001`; `playwright.config.ts`; docker compose (`${DB_PORT:-5432}:5432`, `${PORT:-3000}:3000`); and `@repo/env`'s `CORS_ORIGIN` and `WEB_URL` defaults. `.env.example` lists the ports commented out and leaves `CORS_ORIGIN` to its default.
+- **`pnpm ports [dev|e2e]`** (`scripts/ports.ts`):
+  - It finds ports in use by trying to listen on 127.0.0.1, ::1, 0.0.0.0 and ::.
+  - It leaves alone a port this project holds itself: a process whose working directory is in the repo (`lsof`), or its own Postgres container (`docker compose port`).
+  - Any other held port moves to the next free one that isn't another of the project's ports. The new value goes into `.env`, and so do the `localhost:<port>` addresses in `DATABASE_URL`, `CORS_ORIGIN` and `WEB_URL`.
+  - `pnpm dev` runs it for its group first, and so does the E2E script (`pnpm -w ports e2e`). It skips itself under `CI`.
+- **One app at a time:** root aliases `pnpm api:dev`, `pnpm web:dev` and `pnpm admin:dev`, beside `pnpm dev`. Each runs the same `dev` group check, then that app's own `dev` script through `pnpm --filter`. The check covers all three ports, which is harmless: the project's own running servers are left alone, so starting web while the API runs moves nothing. Modelled on Trust XP's root `<app>:dev` aliases, without its ports on the command line (`vite --port 5174`), which `.env` can't override and which caused the clash.
+- **Docs:** README's "Several projects at once" and the one-app aliases, `TESTING.md`'s Running tests, AGENTS.md's Commands.
+
+**Verified there:**
+- With 5174 held by another project, the full E2E suite passed on 5175.
+- With 5173 held by a dummy server, `pnpm dev` moved web to 5177 (skipping two other held ports) and rewrote `CORS_ORIGIN`. The proxy reached the API, and the API allowed the new origin.
+- A second `pnpm ports` changes nothing, and the project's own Postgres on 5434 stayed put.
+- An `ADMIN_PORT` override is honoured.
+- lint, typecheck, knip and every test pass.
+
+**Tasks** (one commit): copy `lib/env/src/ports.ts` and its test, `scripts/ports.ts`, and the changes to `lib/env` (`index.ts`, its test, `package.json`), both Vite configs and `package.json`s, `e2e/playwright.config.ts` and `package.json`, `docker-compose.yaml`, `.env.example`, root `package.json` (`ports` and the three `<app>:dev` aliases), README, `TESTING.md` and AGENTS.md, then run `pnpm install`. **Tests:** `ports.test.ts` and the env defaults test, each shown red there; the E2E suite under a held port.
+
+**Open.**
+- The owner check uses `lsof`, so on Windows a project's own running servers look like another program's and get moved. That's harmless but noisy.
+- One run in Jig & Kerf had the invitation E2E test fail on Back, waiting for "Discard unsaved changes?". It passed alone three times and in the next two full runs. The test is flaky under parallel load, which `TESTING.md` counts as a bug to fix, separate from this item.
+
+---
+
 ## Session Log
 
 | Date | Items completed | Notes |
@@ -744,3 +808,15 @@ Every project built from the template inherits this. Moving it later is a breaki
 | 2026-10-24 | Docs alignment | A last pass after A.1 and A.2. The `new-feature` skill's worked example is now `OrgHomePage.tsx`, and it and `UI.md`'s place layer say an org's pages are children of `orgRoute`, at `/o/$org/<place>`, reading the org with `useOrgOnScreen()`. `CAPABILITIES.md`'s "where someone lands" notes that `/app` already does it for one kind of person. Every file path the docs and skills name was checked: the only ones missing are made later (`docs/PROJECT.md`), belong to Trust XP, or are placeholders. Open: O.4 (deferred) |
 | 2026-10-27 | Desktop app note | Asked whether the template should support Tauri: not built in, since most projects never need a desktop shell, and sign-in through Clerk inside a webview is a decision each project makes for itself. `CAPABILITIES.md`'s Structure part gains "A desktop app (Tauri)": when it's worth building (native features or a store listing; a PWA covers an icon and a window of its own), and its shape: a shell around `web`, its origins in `CORS_ORIGIN` (which Clerk's `authorizedParties` also reads), signing in through the system browser chosen first, the CSP, and a release workflow of its own |
 | 2026-10-27 | Feature switches review | Asked whether to build a flag system or use LaunchDarkly. Trust XP's six switches are environment variables, which is right for a switch per environment; security policy (`MFA_REQUIRED`) stays one. Two gaps: turning a feature on for some orgs or people, and sites reading their own `VITE_*` copy of a switch. The first went to `CAPABILITIES.md` ("Turning a feature on for some orgs or people": our own tables for per-org grants, Railway Feature Flags before LaunchDarkly for rollouts). The second is proposed as F.1 (the API says which features are on, through `/me`), revisiting Phase O's deferral; D1 and D2 open |
+| 2026-10-27 | Native shells unsupported | Replaces the "Desktop app note" row above. A Tauri and a Capacitor shell around `web` were tried on an iPad simulator in a project made from the template. Sign-in failed until each shell's URL scheme was allowed as a Clerk redirect, and the session was lost on restart (Clerk keeps it in cookies, which WebKit doesn't store for a custom-scheme page). Clerk has no SDK for either. `CAPABILITIES.md` loses "A desktop app (Tauri)"; `ARCHITECTURE.md` gains "Browsers only, no native shells": unsupported unless the identity provider changes, or a native app uses one of Clerk's native SDKs |
+| 2026-10-27 | Native app with Expo | Tested an Expo app with `@clerk/expo` on an iPad simulator in a project made from the template: sign-in, a session that survived restarting the app and the simulator, and the generated hooks calling `/api/me` all worked. It needed the workspace on Expo's React version, a `baseUrl` option on `configureApiClient`, and `identity.ts` checking `azp` itself (native tokens have none). `ARCHITECTURE.md`'s "Browsers only, no native shells" becomes "Web first; a native app is a second codebase"; `CAPABILITIES.md` gains "A native app (Expo)", with the web/admin split for native left open; the `new-project` skill asks early whether a project needs a native app. The code changes stay in projects until one plans a native app |
+| 2026-10-27 | Installable web app (PWA) | Asked whether the template should make the sites PWAs by default. No: installable is cheap, but a service worker can keep serving old code after a deploy and offline data needs a sync design, and `admin` doesn't need it. Each project decides per app instead. The `new-project` skill's Section 3 becomes "Browser, installable, or native", recorded one line per app in `PROJECT.md`'s Platforms; `ARCHITECTURE.md`'s "Web first" section lists the three levels; `CAPABILITIES.md` gains "An installable web app (PWA)": online-only installable first (manifest, icons, iOS meta tags), offline as a second step, and the iOS details (Add to Home Screen, separate storage and sign-in, web push, `Permissions-Policy`) |
+| 2026-10-27 | White label and custom domains | Asked what a white-label, domain-level version of a multi-tenant app needs. `CAPABILITIES.md` gains "An org under its own brand and domain (white label)" in three levels: the org's brand on our domain, a subdomain of ours (wildcard domain; Clerk needs nothing new), and the customer's own domain (verified `org_domains`, Vercel's domains API, origins and `azp` from the database, Clerk satellite domains with a paid plan and a CNAME per customer, a per-host CSP, Clerk's emails not per org). The domain only chooses the org on screen; grants still decide access. A separate deployment per customer is noted as the alternative |
+| 2026-10-27 | Org in the path, not a subdomain | Researched why Slack moved from `<workspace>.slack.com` to `app.slack.com/client/<id>`. Slack published no reason for the URL change; its engineering posts on the 2019 one-client rewrite, its same-origin service worker and Unified Grid point to one origin for an app that holds many workspaces. The white-label entry in `CAPABILITIES.md` gains "Why the org is in the path, not a subdomain", with the sources, when subdomains fit instead, and a redirect-only vanity subdomain |
+| 2026-10-27 | Change history | From planning a project's estimate-against-actual tracking: the template has no change history. `CAPABILITIES.md` gains "A change history for org data": baselines kept as immutable versions with original values beside current ones, actuals as append-only ledgers corrected by offsetting entries, and a `change_events` table written in the same transaction through one helper (not a trigger, which loses who and why), with reasons on the changes that matter and no hard deletes for records that matter |
+| 2026-10-27 | One product, many ways of working | From planning a project where shops pay crews differently (hourly, per piece, per crew for installs). `ARCHITECTURE.md` gains "One product, many ways of working": facts recorded in one shape for every org, per-org dated rules that interpret them, results someone relied on kept as versions, and only the first customer's rules built until a second org needs another kind |
+| 2026-10-27 | Sharing without an account | From planning a project's customer links (estimates approved by people with no account). `CAPABILITIES.md` gains "Sharing with people who have no account": a link per outside person, an `access.sharedLink` rule beside the other three, hashed and revocable tokens, a separate `/api/shared/…` read path whose response types leave internal fields out, a one-time email code before any approval, frozen approved versions, view times, and keeping tokens out of logs and referrers |
+| 2026-10-28 | File uploads | From planning a project's job photos and drawings: the template stores no files. `CAPABILITIES.md` gains "File uploads to a private bucket": a private Railway bucket per environment, keys by org and file id that are never overwritten, a `files` table with a visibility per file, uploads straight to the bucket through presigned POSTs checked before they count, short-lived presigned URLs handed out after the record's access checks (shared links too), untrusted types served as downloads, photos resized in the browser (which also strips location), and removal that hides at once and erases after a grace period |
+| 2026-10-28 | L.1 proposed | From Jig & Kerf, whose E2E run hit another project's server on 5174. Ports become variables in `.env` with today's defaults (`lib/env/src/ports.ts`), and `pnpm ports` moves any another program holds, rewriting the `localhost` addresses that use them; `pnpm dev`, the per-app `api:dev`/`web:dev`/`admin:dev` aliases and the E2E run check theirs first. Built and verified in that project; copying it here is L.1's one task |
+| 2026-10-29 | Staff set up orgs | From Jig & Kerf's plan 02, where shops are billed outside the app. `CAPABILITIES.md` gains "Staff set up each org, with self-serve creation switched off": staff create the org and invite its owner (who can already have an employee record the invitation names), `SELF_SERVE_ORGS` off by default with `POST /api/orgs` answering 404, `/me`'s `canCreateOrg` the one value the sites read, and tests that run with it off. `ARCHITECTURE.md`'s Access points to it, and F.1 notes it as a second instance of its shape |
+| 2026-10-29 | 0.5 and 0.6 proposed | Two defects Jig & Kerf's E2E turned up. 0.5: a staff account's first two requests at once, one refused 403 (fixed there, ready to copy). 0.6: the worker takes one job per queue every 2 seconds, so a burst of emails waits in line; the E2E server's polling is fixed there, production's choice is open |
