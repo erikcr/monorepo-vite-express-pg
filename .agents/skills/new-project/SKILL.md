@@ -142,6 +142,7 @@ The template line records where the project came from: to see what the template 
 Make the repo this project's rather than the template's:
 - `README.md`: replace the first heading and the sentence under it with the product name and its one-line objective. Keep the rest (setup and deploy notes still apply).
 - Remove the template's own maintenance docs, which don't apply to this project: `git rm -r -q docs/template`.
+- Give it its own local ports, so it never shares them with another project on this machine: `pnpm ports assign` (first `cp .env.example .env` if there's no `.env`). They go in `.env`, which isn't committed. Tell the user the ports it printed. If Postgres or the API were already running, they need restarting: `docker compose up -d postgres`, then `pnpm dev`.
 
 Then commit on a branch (the git hooks block commits on `main` and `staging`):
 ```bash

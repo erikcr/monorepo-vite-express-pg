@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "e2e": "playwright test",
+    "e2e": "pnpm -w ports e2e && playwright test",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
@@ -12,6 +12,7 @@
     "@clerk/backend": "~3.25.0",
     "@clerk/testing": "~2.2.47",
     "@playwright/test": "^1.64.1",
+    "@repo/env": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   }

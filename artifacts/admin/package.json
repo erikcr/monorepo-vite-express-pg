@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 3001",
+    "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview --port 3001",
     "typecheck": "tsc -b",
@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@repo/csp": "workspace:*",
+    "@repo/env": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "@testing-library/dom": "catalog:",
     "@testing-library/jest-dom": "catalog:",

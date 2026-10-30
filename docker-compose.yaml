@@ -6,7 +6,8 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: appdb
     ports:
-      - "5432:5432"
+      # The host port: DB_PORT in .env, set by `pnpm ports assign`.
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
@@ -18,7 +19,7 @@ services:
   api:
     build: .
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/appdb
       PORT: "3000"

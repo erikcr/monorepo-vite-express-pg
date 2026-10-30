@@ -1,12 +1,18 @@
 import { defineConfig, devices } from "@playwright/test";
+import { localPort } from "@repo/env/ports";
 import { clerkKeys, E2E_USERS } from "./clerk-env";
 
 // Full-stack E2E: the real API (on an in-process Postgres, see artifacts/api-server/src/
 // e2e-server.ts) behind both real frontends. Own ports, so a dev stack you're running (and its
-// database) is never reused.
-export const API = "http://localhost:3100";
-export const WEB = "http://localhost:5174";
-const ADMIN = "http://localhost:3002";
+// database) is never reused; `pnpm ports e2e` moves any another program holds (lib/env/src/ports.ts).
+const ports = {
+  api: localPort("E2E_API_PORT"),
+  web: localPort("E2E_WEB_PORT"),
+  admin: localPort("E2E_ADMIN_PORT"),
+};
+export const API = `http://localhost:${ports.api}`;
+export const WEB = `http://localhost:${ports.web}`;
+const ADMIN = `http://localhost:${ports.admin}`;
 const keys = clerkKeys();
 // Without keys (local runs only; CI requires them), a well-formed but fake key lets the apps
 // render: public pages work, and the signed-in tests skip themselves.
@@ -48,7 +54,7 @@ export default defineConfig({
       command: `pnpm --filter @repo/api-server e2e:server --staff ${E2E_USERS.staff}`,
       url: `${API}/health/ready`,
       env: {
-        PORT: "3100",
+        PORT: String(ports.api),
         RATE_LIMIT_MAX: "0",
         CLERK_SECRET_KEY: keys?.secretKey ?? "",
         // Session tokens must come from these origins (Clerk's authorizedParties).
@@ -60,14 +66,14 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
-      command: site("@repo/web", 5174),
+      command: site("@repo/web", ports.web),
       url: WEB,
       env: frontendEnv,
       reuseExistingServer: false,
       timeout: 120_000,
     },
     {
-      command: site("@repo/admin", 3002),
+      command: site("@repo/admin", ports.admin),
       url: ADMIN,
       env: frontendEnv,
       reuseExistingServer: false,

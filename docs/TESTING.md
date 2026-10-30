@@ -153,3 +153,6 @@ pnpm --filter @repo/api-server exec vitest run src/__tests__/example.test.ts   #
 pnpm --filter @repo/web exec vitest    # watch mode in one package
 pnpm --filter @repo/e2e e2e        # Playwright; signed-in tests need the Clerk dev keys in .env
 ```
+
+The E2E run starts its own API and sites on their own ports (`E2E_*_PORT`). It moves any that
+another program holds first (`pnpm ports e2e`, see the README's "Several projects at once").

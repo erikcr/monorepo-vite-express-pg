@@ -745,9 +745,9 @@ Every project built from the template inherits this. Moving it later is a breaki
 
 ## Phase L — Local development (2026-10-28)
 
-### L.1 `[ ]` Several projects running side by side
+### L.1 `[x]` Several projects running side by side
 
-**Status:** built and tested in Jig & Kerf (`sims-labs/jig-and-kerf`, uncommitted on 2026-10-28), ready to copy here. **Origin:** that project's E2E run failed at once: another project's dev server held 5174, and the ports are fixed. Its Postgres had already moved to 5434 with a hand-written `docker-compose.override.yaml`.
+**Status:** copied here from Jig & Kerf on 2026-10-30, with one addition, `pnpm ports assign` (below). **Origin:** that project's E2E run failed at once: another project's dev server held 5174, and the ports are fixed. Its Postgres had already moved to 5434 with a hand-written `docker-compose.override.yaml`.
 
 **Why.** Every project made from the template wants the same ports: Postgres 5432, the API 3000, web 5173, admin 3001, E2E 3100, 5174 and 3002. Running a second project means editing configs by hand. Vite makes it worse: web's dev server quietly moves to the next free port, which the API's `CORS_ORIGIN` then refuses.
 
@@ -762,12 +762,18 @@ Every project built from the template inherits this. Moving it later is a breaki
 - **One app at a time:** root aliases `pnpm api:dev`, `pnpm web:dev` and `pnpm admin:dev`, beside `pnpm dev`. Each runs the same `dev` group check, then that app's own `dev` script through `pnpm --filter`. The check covers all three ports, which is harmless: the project's own running servers are left alone, so starting web while the API runs moves nothing. Modelled on Trust XP's root `<app>:dev` aliases, without its ports on the command line (`vite --port 5174`), which `.env` can't override and which caused the clash.
 - **Docs:** README's "Several projects at once" and the one-app aliases, `TESTING.md`'s Running tests, AGENTS.md's Commands.
 
+**Added here: `pnpm ports assign`, a step for every new project.** `pnpm ports` only sees what is listening right now, so two stopped projects both sit on the defaults (this template and Jig & Kerf did). Worse, `pnpm dev` leaves `DB_PORT` alone, and on one machine a native PostgreSQL 16 held 5432: the API connected to it, to an old `appdb` with one migration applied, so `/health` passed and every signed-in request answered 500. `assign` gives a project a block of seven ports at 20000 + 10 × a number from 0 to 999 hashed from its folder name (`projectBlock`, `blockPorts`, `portMoves`): no registry, the same block every time, and well away from the defaults. If another program is on a port in the block, it takes the next block. It's a step in `/new-project`, `DEPLOYMENTS.md`'s setup and the README's quickstart. Hashing can pick the same block for two projects (one pair in a thousand); the `pnpm dev` check is what catches that.
+
 **Verified there:**
 - With 5174 held by another project, the full E2E suite passed on 5175.
 - With 5173 held by a dummy server, `pnpm dev` moved web to 5177 (skipping two other held ports) and rewrote `CORS_ORIGIN`. The proxy reached the API, and the API allowed the new origin.
 - A second `pnpm ports` changes nothing, and the project's own Postgres on 5434 stayed put.
 - An `ADMIN_PORT` override is honoured.
 - lint, typecheck, knip and every test pass.
+
+**Verified here:** this template went from 3000/5173/3001 on the native Postgres to 21570–21576 on its own Postgres 18 container. The same signed-in `GET /api/me` answered 500 before and 200 after. A second `assign` changes nothing. With 21571 held it took the next block, and went back once released, leaving `.env` byte-identical. `pnpm dev` served both sites through their proxies with the ports overridden, and the API refused the old 5173 origin. The full E2E suite passed on 21574–21576 (8 of 8, signed in through Clerk).
+
+**Fixed in the copy:** two `env.test.ts` tests and one in `members.test.ts` asserted port 5173 or 3001, but `@repo/env` loads the developer's `.env`, so they failed as soon as a project set `WEB_PORT`. Jig & Kerf has the same tests and would fail the same way after `assign`; it passes today only because `WEB_PORT` is unset there.
 
 **Tasks** (one commit): copy `lib/env/src/ports.ts` and its test, `scripts/ports.ts`, and the changes to `lib/env` (`index.ts`, its test, `package.json`), both Vite configs and `package.json`s, `e2e/playwright.config.ts` and `package.json`, `docker-compose.yaml`, `.env.example`, root `package.json` (`ports` and the three `<app>:dev` aliases), README, `TESTING.md` and AGENTS.md, then run `pnpm install`. **Tests:** `ports.test.ts` and the env defaults test, each shown red there; the E2E suite under a held port.
 
@@ -819,4 +825,5 @@ Every project built from the template inherits this. Moving it later is a breaki
 | 2026-10-28 | File uploads | From planning a project's job photos and drawings: the template stores no files. `CAPABILITIES.md` gains "File uploads to a private bucket": a private Railway bucket per environment, keys by org and file id that are never overwritten, a `files` table with a visibility per file, uploads straight to the bucket through presigned POSTs checked before they count, short-lived presigned URLs handed out after the record's access checks (shared links too), untrusted types served as downloads, photos resized in the browser (which also strips location), and removal that hides at once and erases after a grace period |
 | 2026-10-28 | L.1 proposed | From Jig & Kerf, whose E2E run hit another project's server on 5174. Ports become variables in `.env` with today's defaults (`lib/env/src/ports.ts`), and `pnpm ports` moves any another program holds, rewriting the `localhost` addresses that use them; `pnpm dev`, the per-app `api:dev`/`web:dev`/`admin:dev` aliases and the E2E run check theirs first. Built and verified in that project; copying it here is L.1's one task |
 | 2026-10-29 | Staff set up orgs | From Jig & Kerf's plan 02, where shops are billed outside the app. `CAPABILITIES.md` gains "Staff set up each org, with self-serve creation switched off": staff create the org and invite its owner (who can already have an employee record the invitation names), `SELF_SERVE_ORGS` off by default with `POST /api/orgs` answering 404, `/me`'s `canCreateOrg` the one value the sites read, and tests that run with it off. `ARCHITECTURE.md`'s Access points to it, and F.1 notes it as a second instance of its shape |
+| 2026-10-30 | L.1 | Copied from Jig & Kerf, plus `pnpm ports assign`: each project's own block of ports, hashed from its folder name, as a step in `/new-project`, setup and the quickstart. Found through a 500 on every signed-in request: a native PostgreSQL 16 on 5432 answered in place of the project's container, with a stale `appdb`, while `/health` passed |
 | 2026-10-29 | 0.5 and 0.6 proposed | Two defects Jig & Kerf's E2E turned up. 0.5: a staff account's first two requests at once, one refused 403 (fixed there, ready to copy). 0.6: the worker takes one job per queue every 2 seconds, so a burst of emails waits in line; the E2E server's polling is fixed there, production's choice is open |

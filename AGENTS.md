@@ -66,7 +66,10 @@ docs/                 PROJECT.md, ARCHITECTURE.md, UI.md, CAPABILITIES.md, DEPLO
 ## Commands
 
 ```bash
-pnpm dev                       # api-server, web, admin in parallel
+pnpm dev                       # api-server, web, admin in parallel (checks ports first)
+pnpm api:dev | web:dev | admin:dev   # one app, same port check
+pnpm ports assign              # once per project: its own local ports, in .env (README)
+pnpm ports                     # move local ports another program holds
 pnpm lint | format             # Biome
 pnpm typecheck                 # strict TS everywhere (incl. .railway)
 pnpm test | test:coverage      # vitest; test:coverage enforces coverage floors (CI runs it)
