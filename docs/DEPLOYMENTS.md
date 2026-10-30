@@ -9,7 +9,9 @@ Run these once, in order, after creating the GitHub repo from this template:
 0. Create a [Clerk](https://dashboard.clerk.com) application: its **development** instance serves
    local work, staging, PR previews and E2E; its **production** instance (needs your domain) serves
    production. Keep both instances' keys at hand.
-1. `pnpm install` — also points git at `.githooks/`; put the development keys in `.env`.
+1. `pnpm install` — also points git at `.githooks/`. Then `cp .env.example .env`, put the
+   development keys in it, and run `pnpm ports assign` to give this project its own local ports, so
+   it never shares them with another project on the machine (README, "Several projects at once").
 2. `/provision-github` — creates `staging` and the rulesets that protect `staging` and `main`, and
    stores the development instance's keys as the E2E job's secrets.
 3. `/provision-railway` — API + Postgres in `production` (deploys `main`) and `staging` (deploys

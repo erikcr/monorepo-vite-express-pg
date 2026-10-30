@@ -1,6 +1,6 @@
 ---
 name: new-project
-description: Structured planning session that writes and commits docs/PROJECT.md (objective, users, V1 features, data model, success criteria, out of scope, brand color) and clears the template's own docs. Use when starting a new project from this template, before any code.
+description: Structured planning session that writes and commits docs/PROJECT.md (objective, users, browser/PWA/native per app, V1 features, data model, success criteria, out of scope, brand color) and clears the template's own docs. Use when starting a new project from this template, before any code.
 ---
 
 Guide the user through a structured project planning session and produce a committed `docs/PROJECT.md`. This must be run **before any code changes** when starting a new project from the template.
@@ -13,7 +13,7 @@ Then stop.
 
 ## Instructions
 
-Work through the seven sections below **one at a time**. Ask each question, wait for the user's response, then proceed to the next. Do not batch questions. Record answers exactly as given — do not paraphrase.
+Work through the eight sections below **one at a time**. Ask each question, wait for the user's response, then proceed to the next. Do not batch questions. Record answers exactly as given — do not paraphrase.
 
 ---
 
@@ -31,7 +31,23 @@ Ask:
 
 ---
 
-### Section 3 — V1 Feature List
+### Section 3 — Browser, installable, or native
+
+Decide these early, one answer per app (`web`, `admin`, and a native app if there is one): what each choice means is in `docs/ARCHITECTURE.md`, "Web first; a native app is a second codebase".
+
+Ask:
+> "How will people use this? Three levels, cheapest first:
+> 1. **In the browser.** Works on phones and tablets too.
+> 2. **Installable (PWA).** An icon on the home screen and a full-screen window, still the same site. It can work offline on top of that, but that costs real work.
+> 3. **A native app (Expo).** For what a browser can't give: reliable offline use, uploads that carry on in the background, push notifications, managed devices, an App Store listing. It means building and maintaining a second set of screens.
+>
+> Which does `web` need? `admin` (staff only) normally stays in the browser."
+
+For an installable `web`, ask whether it must work offline, and say what that costs (`docs/CAPABILITIES.md`, "An installable web app (PWA)"). If they want a native app, ask which users need it (often only the people who work away from a desk) and whether staff work stays on the web, as `admin` does now; recommend that it does. Record one line per app, for example: **web: installable (PWA), online only · admin: browser · native: none**, with who uses each and why. An installable app or a native app is built to its `CAPABILITIES.md` entry, as its own plan.
+
+---
+
+### Section 4 — V1 Feature List
 
 Ask:
 > "List the features that must be in V1 for this to be worth shipping. Be specific — each item should describe a concrete action a user can take."
@@ -46,7 +62,7 @@ Mark each feature in the list with **(page)** or **(settings)**.
 
 ---
 
-### Section 4 — Data Model
+### Section 5 — Data Model
 
 Ask:
 > "What are the core data entities (database tables) in this product? For each, give its name and 3–5 key fields."
@@ -55,7 +71,7 @@ Example: `User (id, email, orgId, role, createdAt)`
 
 ---
 
-### Section 5 — Success Criteria
+### Section 6 — Success Criteria
 
 Ask:
 > "How will you know V1 is done? Give 2–4 concrete, testable statements."
@@ -66,14 +82,14 @@ Each criterion becomes an end-to-end acceptance test (`e2e/tests/`, named after 
 
 ---
 
-### Section 6 — Out of Scope
+### Section 7 — Out of Scope
 
 Ask:
 > "What are you deliberately NOT building in V1? List 3–5 things to keep scope tight."
 
 ---
 
-### Section 7 — Brand Color
+### Section 8 — Brand Color
 
 Ask:
 > "What is your brand color? Provide a hex code (e.g. `#3B82F6`) or a color name (indigo, teal, rose, orange…). Press Enter to keep the neutral slate placeholder and update it later."
@@ -91,7 +107,7 @@ If the user skips: leave the slate placeholder in place. Note that they can upda
 
 ## Write the Output
 
-After collecting all seven sections, create `docs/PROJECT.md` with this exact structure:
+After collecting all eight sections, create `docs/PROJECT.md` with this exact structure:
 
 ```markdown
 # <Product Name> — Project Definition
@@ -104,18 +120,21 @@ After collecting all seven sections, create `docs/PROJECT.md` with this exact st
 ## Users
 <Section 2 answer>
 
+## Platforms
+<Section 3 answer: one line per app (browser, installable (PWA) online or offline, or native app (Expo)), with who uses each and why>
+
 ## V1 Features
-<Section 3 answer as a bulleted list, each marked (page) or (settings)>
+<Section 4 answer as a bulleted list, each marked (page) or (settings)>
 
 ## Data Model
-<Section 4 answer — one entity per line>
+<Section 5 answer — one entity per line>
 
 ## Success Criteria
 Each one is proven by an E2E acceptance test of the same name in `e2e/tests/` (see `docs/TESTING.md`).
-<Section 5 answer as a numbered list>
+<Section 6 answer as a numbered list>
 
 ## Out of Scope (V1)
-<Section 6 answer as a bulleted list>
+<Section 7 answer as a bulleted list>
 ```
 
 The template line records where the project came from: to see what the template has gained since, run `git log --since=<that date>` in the template repo.
@@ -123,6 +142,7 @@ The template line records where the project came from: to see what the template 
 Make the repo this project's rather than the template's:
 - `README.md`: replace the first heading and the sentence under it with the product name and its one-line objective. Keep the rest (setup and deploy notes still apply).
 - Remove the template's own maintenance docs, which don't apply to this project: `git rm -r -q docs/template`.
+- Give it its own local ports, so it never shares them with another project on this machine: `pnpm ports assign` (first `cp .env.example .env` if there's no `.env`). They go in `.env`, which isn't committed. Tell the user the ports it printed. If Postgres or the API were already running, they need restarting: `docker compose up -d postgres`, then `pnpm dev`.
 
 Then commit on a branch (the git hooks block commits on `main` and `staging`):
 ```bash

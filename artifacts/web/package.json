@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@repo/csp": "workspace:*",
+    "@repo/env": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "@testing-library/dom": "catalog:",
     "@testing-library/jest-dom": "catalog:",

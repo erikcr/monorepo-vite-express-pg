@@ -45,27 +45,45 @@ beforeEach(() => {
 describe("the settings dialog", () => {
   it("opens from the account menu over the page, which stays where it was", async () => {
     const { router } = renderAt("/o/alpha");
-    fireEvent.click(await screen.findByRole("button", { name: "Settings" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Account menu" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
     expect(await screen.findByRole("dialog", { name: "Settings" })).toBeTruthy();
     expect(dialog().getAttribute("aria-modal")).toBe("true");
     expect(router.state.location.pathname).toBe("/o/alpha");
     expect(screen.getByRole("heading", { name: "Alpha" })).toBeTruthy();
-    // No section asked for: the first one shows (on a phone, the list alone).
-    expect(screen.getByRole("region", { name: "Organization" })).toBeTruthy();
+    // Always on a named section, so the address says what's on screen.
+    expect(router.state.location.search).toEqual({ settings: "profile" });
+    expect(await screen.findByRole("region", { name: "Profile" })).toBeTruthy();
+  });
+
+  it("shows the first section for an address with none named", async () => {
+    renderAt("/o/alpha?settings=");
+    expect(await screen.findByRole("region", { name: "Organization" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "← All settings" })).toBeNull();
+  });
+
+  it("keeps Security as a section of its own, on Clerk's security page", async () => {
+    window.history.replaceState(null, "", "/");
+    renderAt("/o/alpha?settings=security");
+    expect(await screen.findByRole("region", { name: "Security" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Security" }).getAttribute("aria-current")).toBe(
+      "page"
+    );
+    expect(window.location.hash).toBe("#/security");
+    expect(screen.getByText("clerk user profile")).toBeTruthy();
   });
 
   it("shows only the person's own settings over a page outside an org", async () => {
     renderAt("/about?settings=members");
     const nav = await screen.findByRole("navigation", { name: "Settings sections" });
-    expect(nav.textContent).toBe("YouProfile");
+    expect(nav.textContent).toBe("YouProfileSecurity");
     expect(screen.getByRole("region", { name: "Profile" })).toBeTruthy();
   });
 
   it("lists the org's sections under its name, and the person's under You", async () => {
     renderAt("/o/alpha?settings=profile");
     const nav = await screen.findByRole("navigation", { name: "Settings sections" });
-    expect(nav.textContent).toBe("AlphaOrganizationMembersYouProfile");
+    expect(nav.textContent).toBe("AlphaOrganizationMembersYouProfileSecurity");
     expect(screen.getByRole("button", { name: "Profile" }).getAttribute("aria-current")).toBe(
       "page"
     );
@@ -74,9 +92,9 @@ describe("the settings dialog", () => {
 
   it("takes focus, and gives it back to what opened it", async () => {
     renderAt("/o/alpha");
-    const opener = await screen.findByRole("button", { name: "Settings" });
-    opener.focus();
+    const opener = await screen.findByRole("button", { name: "Account menu" });
     fireEvent.click(opener);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Settings" }));
     const opened = await screen.findByRole("dialog", { name: "Settings" });
     expect(document.activeElement).toBe(opened);
     fireEvent.click(screen.getByRole("button", { name: "Close settings" }));

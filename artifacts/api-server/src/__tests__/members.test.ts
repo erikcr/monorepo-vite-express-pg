@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Db, Org } from "@repo/db";
 import { orgInvitationsTable, orgsTable, orgUsersTable, usersTable } from "@repo/db/schema";
+import { env } from "@repo/env";
 import { eq } from "drizzle-orm";
 import supertest from "supertest";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -195,7 +196,7 @@ describe("POST /api/orgs/current/invitations", () => {
     expect(email).toMatchObject({ to: "new@x.test", tags: { kind: "invitation" } });
     expect(email?.subject).toContain(org.name);
     expect(email?.text).toContain(admin.user.email);
-    expect(email?.text).toContain("http://localhost:5173/invite#");
+    expect(email?.text).toContain(`${env.WEB_URL}/invite#`);
     const token = tokenFrom(email as Email);
     const [row] = await db
       .select()

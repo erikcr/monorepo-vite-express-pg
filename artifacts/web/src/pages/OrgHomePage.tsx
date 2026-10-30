@@ -7,10 +7,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useOrgOnScreen } from "../active-org.ts";
+import { Button, Card, Input, Loading, Page, PageTitle, Select } from "../components/ui.tsx";
 import { CreateOrgForm } from "./CreateOrgForm.tsx";
-
-const input = "bg-surface border border-border rounded-input px-3 py-2 text-sm";
-const button = "bg-brand text-brand-fg rounded-button px-4 py-2 text-sm disabled:opacity-50";
 
 /** /o/<handle>: the org's home. Its layout (OrgLayout) has already resolved the org. */
 export function OrgHomePage() {
@@ -21,8 +19,8 @@ export function OrgHomePage() {
 
   if (creating) {
     return (
-      <main className="px-page-x py-page-y max-w-xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">New organization</h1>
+      <Page>
+        <PageTitle>New organization</PageTitle>
         <CreateOrgForm
           onCreated={(created) => navigate({ to: "/o/$org", params: { org: created.handle } })}
         />
@@ -33,17 +31,16 @@ export function OrgHomePage() {
         >
           Cancel
         </button>
-      </main>
+      </Page>
     );
   }
 
   return (
-    <main className="px-page-x py-page-y max-w-xl mx-auto">
+    <Page>
       <div className="flex items-center justify-between gap-3 mb-6">
         {orgs.length > 1 ? (
-          <select
+          <Select
             aria-label="Organization"
-            className={input}
             value={org.handle}
             onChange={(e) => navigate({ to: "/o/$org", params: { org: e.target.value } })}
           >
@@ -52,7 +49,7 @@ export function OrgHomePage() {
                 {o.name}
               </option>
             ))}
-          </select>
+          </Select>
         ) : (
           <h1 className="text-2xl font-bold">{org.name}</h1>
         )}
@@ -71,7 +68,7 @@ export function OrgHomePage() {
         </span>
       </div>
       <ExamplesPanel key={org.id} />
-    </main>
+    </Page>
   );
 }
 
@@ -94,10 +91,7 @@ function ExamplesPanel() {
   const items = list.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
-    <section className="bg-surface-raised border border-border rounded-card p-5">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted mb-4">
-        Records
-      </h2>
+    <Card title="Records">
       <form
         className="flex gap-2 mb-4"
         onSubmit={(e) => {
@@ -105,20 +99,20 @@ function ExamplesPanel() {
           create.mutate({ data: { name } });
         }}
       >
-        <input
+        <Input
           aria-label="Record name"
           placeholder="Record name"
-          className={`${input} flex-1`}
+          className="flex-1"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
           maxLength={100}
         />
-        <button type="submit" className={button} disabled={create.isPending}>
+        <Button type="submit" disabled={create.isPending}>
           Add
-        </button>
+        </Button>
       </form>
-      {list.isLoading && <p className="text-text-muted text-sm">Loading…</p>}
+      {list.isLoading && <Loading />}
       {list.error && <p className="text-destructive text-sm">{list.error.message}</p>}
       {!list.isLoading && items.length === 0 && (
         <p className="text-text-muted text-sm">No records yet.</p>
@@ -132,15 +126,14 @@ function ExamplesPanel() {
         ))}
       </ul>
       {list.hasNextPage && (
-        <button
-          type="button"
-          className={`${button} mt-3`}
+        <Button
+          className="mt-3"
           onClick={() => list.fetchNextPage()}
           disabled={list.isFetchingNextPage}
         >
           {list.isFetchingNextPage ? "Loading…" : "Load more"}
-        </button>
+        </Button>
       )}
-    </section>
+    </Card>
   );
 }

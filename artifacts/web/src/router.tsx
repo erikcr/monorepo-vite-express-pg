@@ -1,15 +1,14 @@
-import { Show, UserButton } from "@clerk/react";
 import { reportError } from "@repo/api-client-react/errors";
 import type { QueryClient } from "@tanstack/react-query";
 import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
-  Link,
   Outlet,
   type RouterHistory,
 } from "@tanstack/react-router";
 import { z } from "zod";
+import { Header } from "./components/Header.tsx";
 import { AboutPage } from "./pages/AboutPage.tsx";
 import { AppPage } from "./pages/AppPage.tsx";
 import { CrashScreen } from "./pages/CrashScreen.tsx";
@@ -19,12 +18,7 @@ import { NotFoundPage } from "./pages/NotFoundPage.tsx";
 import { OrgHomePage } from "./pages/OrgHomePage.tsx";
 import { OrgLayout } from "./pages/OrgLayout.tsx";
 import { SignInPage } from "./pages/SignInPage.tsx";
-import {
-  SETTINGS_SECTIONS,
-  Settings,
-  SettingsShortcut,
-  useOpenSettings,
-} from "./settings/Settings.tsx";
+import { SETTINGS_SECTIONS, Settings } from "./settings/Settings.tsx";
 
 // Route loaders get the QueryClient, so they can prefetch into the same cache the hooks read.
 export interface RouterContext {
@@ -32,63 +26,14 @@ export interface RouterContext {
 }
 
 function RootLayout() {
-  const openSettings = useOpenSettings();
-  const link = "text-text-muted hover:text-text";
-  const active = { className: "text-text font-medium" };
   return (
-    <>
-      <nav className="px-page-x pt-4 flex items-center gap-4 text-sm max-w-xl mx-auto">
-        <Link to="/" className={link} activeProps={active} activeOptions={{ exact: true }}>
-          Home
-        </Link>
-        <Link to="/about" className={link} activeProps={active}>
-          About
-        </Link>
-        <Link to="/app" className={link} activeProps={active}>
-          App
-        </Link>
-        <span className="ml-auto">
-          <Show when="signed-in">
-            {/* Settings open from the account menu, over the page (docs/UI.md). Clerk's own
-                "Manage account" is hidden: its profile is the Profile section. */}
-            <UserButton
-              appearance={{
-                elements: { userButtonPopoverActionButton__manageAccount: { display: "none" } },
-              }}
-            >
-              <UserButton.MenuItems>
-                <UserButton.Action
-                  label="Settings"
-                  labelIcon={<GearIcon />}
-                  onClick={openSettings}
-                />
-              </UserButton.MenuItems>
-            </UserButton>
-            <SettingsShortcut />
-          </Show>
-          <Show when="signed-out">
-            <Link to="/sign-in/$" params={{ _splat: "" }} className={link}>
-              Sign in
-            </Link>
-          </Show>
-        </span>
-      </nav>
+    <div className="min-h-dvh flex flex-col">
+      <Header />
       <Outlet />
       <Settings />
-    </>
+    </div>
   );
 }
-
-const GearIcon = () => (
-  <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" aria-hidden>
-    <circle cx="8" cy="8" r="2.5" strokeWidth="1.5" />
-    <path
-      d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-    />
-  </svg>
-);
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,

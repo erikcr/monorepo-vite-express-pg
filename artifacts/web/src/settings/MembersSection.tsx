@@ -13,11 +13,10 @@ import {
 } from "@repo/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Button, Input, Loading, Select } from "../components/ui.tsx";
 import { Confirmation, SettingsGroup, SettingsSection } from "./SettingsSection.tsx";
 import { useUnsavedChanges } from "./unsaved-changes.ts";
 
-const input = "bg-surface border border-border rounded-input px-3 py-2 text-sm";
-const button = "bg-brand text-brand-fg rounded-button px-4 py-2 text-sm disabled:opacity-50";
 const ROLE_LABELS: Record<OrgRole, string> = { org_admin: "Admin", org_member: "Member" };
 const paging = {
   getNextPageParam: (page: { nextCursor: string | null }) => page.nextCursor ?? undefined,
@@ -50,7 +49,7 @@ function MemberList({ org, myId }: { org: OrgMembership; myId: string | undefine
 
   return (
     <SettingsGroup title="Members">
-      {list.isLoading && <p className="text-text-muted text-sm">Loading…</p>}
+      {list.isLoading && <Loading />}
       {list.error && <p className="text-destructive text-sm">{list.error.message}</p>}
       {error && <p className="text-destructive text-sm mb-2">{error.message}</p>}
       <ul className="divide-y divide-border-subtle">
@@ -66,9 +65,8 @@ function MemberList({ org, myId }: { org: OrgMembership; myId: string | undefine
               </span>
               <span className="flex items-center gap-2">
                 {isAdmin ? (
-                  <select
+                  <Select
                     aria-label={`Role of ${label}`}
-                    className={input}
                     value={m.role}
                     disabled={update.isPending}
                     onChange={(e) =>
@@ -77,7 +75,7 @@ function MemberList({ org, myId }: { org: OrgMembership; myId: string | undefine
                   >
                     <option value="org_admin">{ROLE_LABELS.org_admin}</option>
                     <option value="org_member">{ROLE_LABELS.org_member}</option>
-                  </select>
+                  </Select>
                 ) : (
                   <span className="text-text-muted">{ROLE_LABELS[m.role]}</span>
                 )}
@@ -99,14 +97,13 @@ function MemberList({ org, myId }: { org: OrgMembership; myId: string | undefine
         })}
       </ul>
       {list.hasNextPage && (
-        <button
-          type="button"
-          className={`${button} mt-3`}
+        <Button
+          className="mt-3"
           onClick={() => list.fetchNextPage()}
           disabled={list.isFetchingNextPage}
         >
           {list.isFetchingNextPage ? "Loading…" : "Load more"}
-        </button>
+        </Button>
       )}
     </SettingsGroup>
   );
@@ -145,11 +142,11 @@ function Invitations({ org }: { org: OrgMembership }) {
             invite.mutate({ data: { email, role } });
           }}
         >
-          <input
+          <Input
             type="email"
             aria-label="Email address"
             placeholder="name@example.com"
-            className={`${input} flex-1`}
+            className="flex-1"
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
@@ -158,24 +155,23 @@ function Invitations({ org }: { org: OrgMembership }) {
             required
             maxLength={254}
           />
-          <select
+          <Select
             aria-label="Role"
-            className={input}
             value={role}
             onChange={(e) => setRole(e.target.value as OrgRole)}
           >
             <option value="org_member">{ROLE_LABELS.org_member}</option>
             <option value="org_admin">{ROLE_LABELS.org_admin}</option>
-          </select>
-          <button type="submit" className={button} disabled={invite.isPending}>
+          </Select>
+          <Button type="submit" disabled={invite.isPending}>
             Invite
-          </button>
+          </Button>
         </form>
       )}
       <Confirmation>{sentTo && `Invitation sent to ${sentTo}`}</Confirmation>
       {invite.error && <p className="text-destructive text-sm mb-2">{invite.error.message}</p>}
       {revoke.error && <p className="text-destructive text-sm mb-2">{revoke.error.message}</p>}
-      {list.isLoading && <p className="text-text-muted text-sm">Loading…</p>}
+      {list.isLoading && <Loading />}
       {list.error && <p className="text-destructive text-sm">{list.error.message}</p>}
       {!list.isLoading && !list.error && invitations.length === 0 && (
         <p className="text-text-muted text-sm">No pending invitations.</p>
@@ -210,14 +206,13 @@ function Invitations({ org }: { org: OrgMembership }) {
         })}
       </ul>
       {list.hasNextPage && (
-        <button
-          type="button"
-          className={`${button} mt-3`}
+        <Button
+          className="mt-3"
           onClick={() => list.fetchNextPage()}
           disabled={list.isFetchingNextPage}
         >
           {list.isFetchingNextPage ? "Loading…" : "Load more"}
-        </button>
+        </Button>
       )}
     </SettingsGroup>
   );

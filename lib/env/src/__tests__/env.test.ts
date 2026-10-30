@@ -45,14 +45,28 @@ describe("env getters", () => {
 
   it("CORS_ORIGIN defaults to the local dev servers, but to none in production", () => {
     vi.stubEnv("CORS_ORIGIN", undefined);
+    // A developer's .env usually sets these (`pnpm ports assign`).
+    vi.stubEnv("WEB_PORT", undefined);
+    vi.stubEnv("ADMIN_PORT", undefined);
     vi.stubEnv("NODE_ENV", "development");
     expect(env.CORS_ORIGIN).toEqual(["http://localhost:5173", "http://localhost:3001"]);
     vi.stubEnv("NODE_ENV", "production");
     expect(env.CORS_ORIGIN).toEqual([]);
   });
 
+  it("CORS_ORIGIN and WEB_URL defaults follow WEB_PORT and ADMIN_PORT", () => {
+    vi.stubEnv("CORS_ORIGIN", undefined);
+    vi.stubEnv("WEB_URL", undefined);
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("WEB_PORT", "5183");
+    vi.stubEnv("ADMIN_PORT", "3011");
+    expect(env.CORS_ORIGIN).toEqual(["http://localhost:5183", "http://localhost:3011"]);
+    expect(env.WEB_URL).toBe("http://localhost:5183");
+  });
+
   it("WEB_URL is the web site's origin: the local dev server by default, none in production", () => {
     vi.stubEnv("WEB_URL", undefined);
+    vi.stubEnv("WEB_PORT", undefined);
     vi.stubEnv("NODE_ENV", "development");
     expect(env.WEB_URL).toBe("http://localhost:5173");
     vi.stubEnv("NODE_ENV", "production");

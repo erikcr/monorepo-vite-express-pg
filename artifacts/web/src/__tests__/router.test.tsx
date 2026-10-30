@@ -56,16 +56,16 @@ describe("routes (web)", () => {
     expect(await screen.findByText("Status")).toBeTruthy(); // retry renders the page again
   });
 
-  it("offers sign-in when signed out, and the user menu when signed in", async () => {
+  it("offers sign-in when signed out, and the account menu when signed in", async () => {
     renderAt("/");
     expect(await screen.findByRole("link", { name: "Sign in" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "user menu" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Account menu" })).toBeNull();
   });
 
-  it("shows the user menu once signed in", async () => {
+  it("shows the account menu once signed in", async () => {
     clerk.signedIn = true;
     renderAt("/");
-    expect(await screen.findByRole("button", { name: "user menu" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Account menu" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
   });
 

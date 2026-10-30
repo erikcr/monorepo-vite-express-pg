@@ -1,4 +1,5 @@
 import { useGetHealth } from "@repo/api-client-react";
+import { Card, Page, PageTitle } from "../components/ui.tsx";
 
 // Labelled for screen readers (and tests): the color alone doesn't say which state it is.
 function StatusDot({ ok, label }: { ok: boolean | undefined; label: string }) {
@@ -30,15 +31,12 @@ export function HomePage() {
   const dbOk = data?.db === "ok";
 
   return (
-    <main className="min-h-screen px-page-x py-page-y max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-1">Monorepo Template</h1>
-      <p className="text-text-muted mb-8 text-sm">React 19 + Vite + Express 5 + PostgreSQL</p>
+    <Page className="space-y-6">
+      <PageTitle description="React 19 + Vite + Express 5 + PostgreSQL">
+        Monorepo Template
+      </PageTitle>
 
-      {/* Status */}
-      <section className="bg-surface-raised border border-border rounded-card p-5 mb-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted mb-4">
-          Status
-        </h2>
+      <Card title="Status">
         <ul className="space-y-3">
           <li className="flex items-center gap-3">
             <StatusDot ok={apiOk} label="API server" />
@@ -57,13 +55,9 @@ export function HomePage() {
             <span className="text-sm">Database</span>
           </li>
         </ul>
-      </section>
+      </Card>
 
-      {/* Theme preview */}
-      <section className="bg-surface-raised border border-border rounded-card p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-text-muted mb-4">
-          Theme tokens
-        </h2>
+      <Card title="Theme tokens">
         <div className="flex flex-wrap gap-2">
           {swatches.map(({ label, bg, text }) => (
             <div key={label} className={`${bg} ${text} rounded-button px-3 py-1 text-xs font-mono`}>
@@ -75,7 +69,7 @@ export function HomePage() {
           Edit <code className="font-mono">src/index.css</code> to change the brand color. Run{" "}
           <code className="font-mono">/new-project</code> to set brand + project scope.
         </p>
-      </section>
-    </main>
+      </Card>
+    </Page>
   );
 }

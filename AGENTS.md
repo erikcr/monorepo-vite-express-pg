@@ -60,13 +60,17 @@ docs/                 PROJECT.md, ARCHITECTURE.md, UI.md, CAPABILITIES.md, DEPLO
 - **Routing:** code-based TanStack routes in each app's `src/router.tsx`, pages in `src/pages/`. Declare every route as its own `const` (inline `createRoute()` in `addChildren` silently loses the types). Validate search params with Zod, prefetch in loaders via `context.queryClient`, read route state with `getRouteApi()`, navigate with `<Link>`/`useNavigate`.
 - **Frontend auth:** each app wraps itself in `ClerkProvider` and calls `configureApiClient({ getToken, getOrgId })` (`@repo/api-client-react/client`) once, so every request carries the session token (and, in web, the org the address names, `/o/<handle>`, set by `OrgLayout`, never from browser storage); shared code never imports Clerk. Gate signed-in UI with `<Show when="signed-in" fallback={<RedirectToSignIn />}>`. Switching org is going to its address, which clears every cached query except `/me`. Hooks' errors are `ApiError` (`status`, `code`).
 - **Frontend errors:** `createQueryClient()`; crashes reported via `@repo/api-client-react/errors` to `POST /api/client-errors`; route errors use the router's `defaultOnCatch`/`defaultErrorComponent` (`CrashScreen`).
+- **UI:** build pages from each app's `src/components/` (`Page`, `Button`, `Field`…, `docs/UI.md`). Every state of a page sits in `Page`, and nothing moves once it has appeared.
 - **Theming:** only semantic tokens from each app's `src/index.css` (`bg-brand text-brand-fg rounded-button`, `text-text-muted`, `bg-surface-raised`, `bg-destructive`, `px-page-x`, `rounded-card`…), never raw Tailwind scales like `bg-blue-600`. Dark mode comes from the tokens; no `dark:` prefixes. Text keeps 4.5:1 contrast in both modes.
 - **Dependencies:** `workspace:*` for internal packages, shared versions in the pnpm `catalog`, React pinned exactly. `minimumReleaseAge` (1 day) stays on; Renovate opens weekly update PRs into `staging`.
 
 ## Commands
 
 ```bash
-pnpm dev                       # api-server, web, admin in parallel
+pnpm dev                       # api-server, web, admin in parallel (checks ports first)
+pnpm api:dev | web:dev | admin:dev   # one app, same port check
+pnpm ports assign              # once per project: its own local ports, in .env (README)
+pnpm ports                     # move local ports another program holds
 pnpm lint | format             # Biome
 pnpm typecheck                 # strict TS everywhere (incl. .railway)
 pnpm test | test:coverage      # vitest; test:coverage enforces coverage floors (CI runs it)

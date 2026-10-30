@@ -4,9 +4,8 @@ import {
   useLeaveCurrentOrg,
 } from "@repo/api-client-react";
 import { useState } from "react";
+import { Input } from "../components/ui.tsx";
 import { SettingsGroup, SettingsSection } from "./SettingsSection.tsx";
-
-const input = "bg-surface border border-border rounded-input px-3 py-2 text-sm";
 
 /** Settings → Organization: leaving the org (any member) and deleting it (org admins). */
 export function OrganizationSection({
@@ -49,9 +48,8 @@ export function OrganizationSection({
             <label htmlFor="confirm-org-name" className="text-sm">
               Type <strong>{org.name}</strong> to confirm
             </label>
-            <input
+            <Input
               id="confirm-org-name"
-              className={input}
               value={confirmName}
               onChange={(e) => setConfirmName(e.target.value)}
               autoComplete="off"

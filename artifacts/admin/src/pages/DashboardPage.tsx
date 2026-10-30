@@ -1,6 +1,8 @@
 import { useGetHealth, useListAdminOrgsInfinite } from "@repo/api-client-react";
+import { keepPreviousData } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { Button, Loading, Page, PageTitle } from "../components/ui.tsx";
 import { StaffRequired } from "./StaffRequired.tsx";
 
 const route = getRouteApi("/");
@@ -57,43 +59,55 @@ export function DashboardPage() {
   }, [search, q, navigate]);
 
   const orgs = useListAdminOrgsInfinite(q ? { q } : {}, {
-    query: { getNextPageParam: (page) => page.nextCursor ?? undefined },
+    query: {
+      getNextPageParam: (page) => page.nextCursor ?? undefined,
+      // Searching keeps the page up (and the search box focused) while new results load.
+      placeholderData: keepPreviousData,
+    },
   });
   const items = orgs.data?.pages.flatMap((page) => page.items);
 
   const apiOk = !healthLoading && !healthError && health?.status === "ok";
   const dbOk = health?.db === "ok";
 
+  // Nothing of the dashboard shows until the API has said this person is staff.
+  if (orgs.isLoading) {
+    return (
+      <Page>
+        <Loading />
+      </Page>
+    );
+  }
   // Signed in but not staff (or no second factor): explain, rather than show an empty table.
   if (orgs.error?.status === 403) return <StaffRequired code={orgs.error.code} />;
 
   return (
-    <div className="min-h-screen">
-      {/* Header */}
-      <header className="border-b border-border bg-surface-raised px-page-x py-4 flex items-center justify-between">
-        <div>
-          <h1 className="font-semibold">Admin Dashboard</h1>
-          <p className="text-xs text-text-muted">Internal use only</p>
-        </div>
-        <div className="flex items-center gap-4 text-xs">
-          <span className="flex items-center gap-1.5">
-            <span
-              className={`inline-block w-1.5 h-1.5 rounded-full ${apiOk ? "bg-success" : healthLoading ? "bg-border" : "bg-destructive"}`}
-            />
-            API
-            <StatusBadge ok={apiOk} loading={healthLoading} />
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span
-              className={`inline-block w-1.5 h-1.5 rounded-full ${!apiOk ? "bg-border" : dbOk ? "bg-success" : "bg-destructive"}`}
-            />
-            DB
-            <StatusBadge ok={apiOk ? dbOk : undefined} loading={healthLoading} />
-          </span>
-        </div>
-      </header>
+    <Page>
+      <PageTitle
+        description="Internal use only"
+        aside={
+          <div className="flex items-center gap-4 text-xs">
+            <span className="flex items-center gap-1.5">
+              <span
+                className={`inline-block w-1.5 h-1.5 rounded-full ${apiOk ? "bg-success" : healthLoading ? "bg-border" : "bg-destructive"}`}
+              />
+              API
+              <StatusBadge ok={apiOk} loading={healthLoading} />
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span
+                className={`inline-block w-1.5 h-1.5 rounded-full ${!apiOk ? "bg-border" : dbOk ? "bg-success" : "bg-destructive"}`}
+              />
+              DB
+              <StatusBadge ok={apiOk ? dbOk : undefined} loading={healthLoading} />
+            </span>
+          </div>
+        }
+      >
+        Admin Dashboard
+      </PageTitle>
 
-      <main className="px-page-x py-page-y space-y-8">
+      <div className="space-y-8">
         {/* Stats */}
         <section>
           <h2 className="text-xs font-semibold uppercase tracking-wide text-text-muted mb-3">
@@ -111,9 +125,7 @@ export function DashboardPage() {
             />
             <StatCard
               label="Organizations"
-              value={
-                orgs.isLoading ? "…" : items ? `${items.length}${orgs.hasNextPage ? "+" : ""}` : "—"
-              }
+              value={items ? `${items.length}${orgs.hasNextPage ? "+" : ""}` : "—"}
               sub={q ? `matching "${q}"` : "loaded"}
             />
           </div>
@@ -135,11 +147,10 @@ export function DashboardPage() {
             />
           </div>
           <div className="bg-surface-raised border border-border rounded-card overflow-hidden">
-            {orgs.isLoading && <p className="text-sm text-text-muted p-4">Loading…</p>}
             {orgs.error && (
               <p className="text-sm text-destructive p-4">Failed to load: {orgs.error.message}</p>
             )}
-            {!orgs.isLoading && !orgs.error && (
+            {!orgs.error && (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-text-muted text-xs uppercase tracking-wide">
@@ -174,14 +185,13 @@ export function DashboardPage() {
             )}
           </div>
           {orgs.hasNextPage && (
-            <button
-              type="button"
+            <Button
+              className="mt-3"
               onClick={() => orgs.fetchNextPage()}
               disabled={orgs.isFetchingNextPage}
-              className="mt-3 bg-brand text-brand-fg rounded-button px-3 py-1.5 text-xs disabled:opacity-50"
             >
               {orgs.isFetchingNextPage ? "Loading…" : "Load more"}
-            </button>
+            </Button>
           )}
         </section>
 
@@ -211,7 +221,7 @@ export function DashboardPage() {
             <code className="font-mono">/new-project</code> to set brand color + project scope.
           </p>
         </section>
-      </main>
-    </div>
+      </div>
+    </Page>
   );
 }

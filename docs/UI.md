@@ -21,13 +21,24 @@ A second test, for when how often isn't clear: **what is it about?** Anything ab
 
 When a plan or request adds UI, say which answer applies and why. When it's unclear, ask.
 
+## Components and layout
+
+Each app has its own small `src/components/` (no shared package until a third app, `docs/template/IMPROVEMENTS.md` 3.4): `Header` and `AccountMenu`, and in `ui.tsx` `Page`, `PageTitle`, `Card`, `Loading`, `Button`, `Input`, `Select` and `Field`. They're deliberately plain: only the theme's tokens, so a project restyles them there and in `src/index.css`. Use them rather than repeating their classes.
+
+Nothing on screen should move once it has appeared:
+- **Every page sits in `Page`**, loading and error states included, so what replaces them starts in the same place. It fills the height under the header, so a short page never scrolls: don't add `min-h-screen` inside it.
+- **The header has a fixed height** (`--spacing-header`) and shares `--container-content` with pages, so their edges line up. Change the width per app there.
+- **Whatever loads late holds its place:** the account menu shows a skeleton in the same box as its button until Clerk has loaded. A list's loading state goes where the list will be.
+
+`e2e/tests/web.spec.ts` checks both in a real browser: no scrollbar on a page that fits, and no layout shift as the account loads.
+
 ## Layers: the address is the state
 
 Every screen is a stack of layers, and the address says what each one shows. A refresh or a link restores the screen exactly, and each browser tab is independent because each tab has its own address. Changing a deeper layer never reloads the ones above it.
 
 | Layer | What it is | In the address | Here |
 |---|---|---|---|
-| **Shell** | The top bar, the account menu | Never | `RootLayout` in `router.tsx` |
+| **Shell** | The top bar, the account menu | Never | `RootLayout` in `router.tsx`, `src/components/Header.tsx` |
 | **Scope** | Which org the screen is about | The path: `/o/<handle>`, with the org's places under it | `OrgLayout`, `active-org.ts` |
 | **Place** | A page: where people work | The path; an org's places sit under its scope, `/o/<handle>/<place>` | `src/pages/`, children of `orgRoute` |
 | **Panel** | Content beside the place, which stays usable | The query, e.g. `?record=<id>` | None yet (`CAPABILITIES.md`) |
@@ -62,7 +73,7 @@ Settings people visit every so often are a detour from their work. A dialog keep
 
 - **The address:**
   - `?settings=<section>` on any route opens the dialog over that page; `?settings=` alone opens it with no section chosen.
-  - The account menu opens it, and so does ⌘, (Ctrl+, off a Mac), as in most desktop apps (`useOpenSettings()` opens it from code). A link can open a section: `<Link to="/o/$org" params={{ org: org.handle }} search={{ settings: "members" }}>`. An email can link to one too.
+  - The account menu opens it on Profile, the one section everyone has, and so does ⌘, (Ctrl+, off a Mac), as in most desktop apps (`useOpenSettings()` opens it from code). A link can open a section: `<Link to="/o/$org" params={{ org: org.handle }} search={{ settings: "members" }}>`. An email can link to one too.
   - Switching section replaces the address, so one Back leaves settings. Closing removes the parameter.
   - An unknown section, or one the person can't use, opens their first.
 - **Groups:**
@@ -78,12 +89,12 @@ Settings people visit every so often are a detour from their work. A dialog keep
   - An explicit action says what it did next to its control, in a `Confirmation` ("Invitation sent to …"), until the person starts on the next one. Inline rather than a toast: it stays where they're looking, and screen readers announce it. Errors show in the same place.
 - **No overlay on an overlay:**
   - A step inside a section replaces the section's content, with a way back, rather than opening another dialog.
-  - Third-party account UI is embedded as a section rather than opened as its own modal. Clerk's `<UserProfile>` is the Profile section, and Clerk's own "Manage account" is hidden from the account menu.
+  - Third-party account UI is embedded as a section rather than opened as its own modal. Clerk's `<UserProfile>` supplies the Profile and Security sections, with its own navigation hidden so there's one list of places. Clerk keeps those flows (email changes, passwords, second factors, devices) rather than our rebuilding them; `ProfileSection.tsx` picks its page from the address's hash.
 - **Accessibility:**
   - The dialog is `role="dialog"` and `aria-modal`, named "Settings", and the app behind it is `inert`.
   - Focus moves in when it opens and returns to whatever opened it.
   - Escape, ×, and the backdrop close it.
-  - On a phone it fills the screen: the list first, then a section with a way back to the list.
+  - On a phone it fills the screen: a section, with a way back to the list.
 - **Moving a page into settings:** redirect its old path to `?settings=<section>` so existing links keep working.
 
 Patterns that fit here only once a project needs them, such as preferences that save as they change, search in settings, a side panel for a record's details, and a command palette, are in [`CAPABILITIES.md`](CAPABILITIES.md).

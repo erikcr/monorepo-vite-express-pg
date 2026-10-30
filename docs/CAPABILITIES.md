@@ -140,6 +140,40 @@ These change the template's assumptions (`ARCHITECTURE.md`, "What the template a
   - A record with two owners carries both ids, and each side reads it under its own rule: the seller through `requireOrg`, the buyer through `signedIn`. Deleting either one's account says what happens to the record.
   - Someone without an org needs a home other than "create your organization" ("Choosing where someone lands after signing in", above).
 
+### Staff set up each org, with self-serve creation switched off
+
+- **Build it when:** we set orgs up for customers rather than letting anyone sign up: they're billed outside the app, onboarding is hands-on, or open signup would invite spam. Until then anyone signed in can create an org.
+- **Shape:**
+  - **Staff create the org in admin** (`POST /api/admin/orgs`, under a `platform.orgs.create` permission): its name and handle, and its first owner's name and email. One transaction writes the org and an emailed invitation for the owner, with no inviter and outside the per-person daily limit. If the product keeps records of people before they sign in (employees, say), the owner's record is written too and the invitation names it, so accepting links their account to it. Admin's org list says which orgs still wait for their owner, with a resend for a lost or expired link.
+  - **Self-serve creation stays in the code, switched off** by one API variable (`SELF_SERVE_ORGS`, off by default, so off wherever nobody sets it). While it's off, `POST /api/orgs` answers 404 after its access rule. `/me` says `canCreateOrg`, the one value the sites read: someone in no org is told to ask their org's owner for an invitation instead of seeing the create form, and "New organization" is hidden. No `VITE_*` copy can disagree with the API (F.1 in `docs/template/IMPROVEMENTS.md` makes this the general pattern). Turning signup on later, once billing is in the app, is that variable.
+  - **Tests run with it off, as production does.** An E2E fixture gives a test an org the way production makes one: staff create it through the API, and the owner accepts the emailed link. API tests that create orgs themselves turn it on with `vi.stubEnv`.
+  - Decide whether the org's change history records what staff did; a member's history usually shows only its members' changes.
+- **Start from:** Jig & Kerf's plan 02 (`sims-labs/jig-and-kerf`, 2026-10-29): `src/routes/admin.ts`, admin's `NewShopPage.tsx`, and the `shopFor` E2E fixture.
+
+### Staff sign in through their own Clerk application
+
+- **Build it when:** the product has outside customers and staff accounts shouldn't sit among theirs, or admin's sign-up has to be closed to the public. Until then one Clerk application is safe: being in it grants nothing, because access comes only from `platform_staff`, and a non-staff account gets a 403 from the API.
+- **Shape:**
+  - **A second Clerk application for staff,** with sign-up restricted to invitations, per project. It has its own development and production instances, and staff are its only accounts.
+  - **The API verifies staff tokens with that application's key** (`STAFF_CLERK_SECRET_KEY`), in a second path beside `identity.ts`, and `requireStaff` uses only that path. A customer session can no longer reach an admin route at all, even with a grant.
+  - **Admin gets its own publishable key.** Both apps read `VITE_CLERK_PUBLISHABLE_KEY` from the repo-root `.env` today, so admin's comes from `artifacts/admin/.env` locally and from its Vercel project when deployed.
+  - **Staff's grants link as they do now,** by verified email on first sign-in, so moving is cheap: an existing `platform_staff` row needs its `clerk_user_id` cleared, and each person signs in to the new application.
+  - **Its costs:** a second application in every project's setup, two more secrets, changes to `/provision-railway` and `/provision-vercel`, `deploy-targets.ts`, and the E2E job's staff keys. Staff need a separate account to use the web app as a customer. Requiring MFA in a production instance needs Clerk Pro; TrustXP switches it with `MFA_REQUIRED`.
+- **Start from:** TrustXP's `docs/plans/38-access-foundation.md` (D3, D12) and `artifacts/api-server/src/lib/staff-clerk.ts`.
+
+### Sharing with people who have no account
+
+- **Build it when:** an org shares a record with someone outside it who shouldn't need an account: a customer reviewing and approving a proposal, a client checking progress, someone signing. If they'll come back often across many records, a portal with sign-in may fit better; a link page is a good first step toward one.
+- **Shape:**
+  - **A link per person, not per record.** Give each outside person (a customer contact) their own link to a page for the thing shared (a job, a project), and link emails straight to the item that needs them. Every view and action is then tied to a named person, and one person's access can be removed alone.
+  - **A fourth access rule**, beside `public`, `signedIn` and `requireOrg`: `access.sharedLink`, which resolves the token to its link, its org and its record, and sets them on `req.ctx`, so routes never read an org from the request. `route-access.test.ts` lists these routes like the others.
+  - **Tokens:** at least 128 random bits in the URL; only a hash is stored, with the person, the record, who created it, an expiry and a revoked time. The org can revoke a link or issue a new one. Lookups return 404 for an unknown, expired or revoked token alike.
+  - **A separate read path.** These routes live under their own prefix (`/api/shared/…`), return their own response types, and show only what was marked for outside people: visibility is set per item, new items start hidden, and internal fields (costs, notes) aren't in those response types at all, rather than filtered out.
+  - **Approving needs more than the link.** Viewing takes only the link; an approval or signature also takes a one-time code sent to that person's email (`lib/email.ts`), so a forwarded link can't approve. The approval records the typed name, an agreement box, the time, IP and browser, and the exact version approved, frozen ("A change history for org data", below).
+  - **Record views:** first and last opened per link, so the org can see a proposal was read.
+  - Rate-limit the token routes, keep tokens out of logs and error reports, and tighten these pages to `Referrer-Policy: no-referrer` (the sites send `strict-origin-when-cross-origin`) so the token never travels with a link followed from them.
+  - The pages carry the org's name and brand, so outside people know whose page it is ("An org under its own brand and domain", level 1).
+
 ### Pages search engines can read
 
 - **Build it when:** pages are meant to be found through search, or shared with link previews: public profiles, listings, and the marketing pages if search matters for them.
@@ -161,15 +195,80 @@ These change the template's assumptions (`ARCHITECTURE.md`, "What the template a
   - LaunchDarkly and similar services pay off with many teams running experiments. Until then they add a vendor, keys, CSP entries and a browser SDK.
 - **Start from:** Trust XP's `PARTNERS_ENABLED` (`lib/authz/access.ts`), the environment-wide version.
 
-### A desktop app (Tauri)
+### A change history for org data
 
-- **Build it when:** the product needs what a browser can't give: files on disk, a tray icon, global shortcuts, working offline, or a listing in an app store. A dock icon and a window of its own aren't enough on their own: installing the site as a PWA gives both, with no new code.
+- **Build it when:** people need to see what changed on a record, who changed it and why, or the business wants to compare what was planned with what happened (an estimate against the finished job, a dispute, accountability). Most business products reach this early, so plan for it with the first records people edit. The rule is to record more than today's screens need: what was never recorded can't be analysed later.
+- **Shape**, in three layers:
+  1. **Baselines.** When something is approved or signed off (an estimate, a contract, a plan), keep that version as its own immutable record, and keep the original values next to the current ones on what it generated. "Original against now" is then a comparison, not a replay of history.
+  2. **Actuals as ledgers.** What happened (time worked, money spent, quantities done) goes in append-only tables. Nothing is edited: a correction is a new entry that offsets the old one.
+  3. **A change history for everything people edit.** One `change_events` table:
+     - columns: `org_id` (with cascade, like every org-owned table), the actor (a user id, or null for a job), the record's type and id, the action (create, update, cancel, restore), the changed fields as JSON (`{"quantity": [4, 5]}`), an optional reason and note, the request id, and the time;
+     - written in the **same transaction** as the change, through one helper the routes call (`recordChange(tx, …)`). A database trigger would catch every write but loses who did it and why, so it's the helper;
+     - append-only: no route updates or deletes it, and each write route's tests check its entry;
+     - indexed on (`org_id`, record type, record id, time) for a record's History panel, the first thing it powers.
+- **Reasons:** where a change matters for analysis (a quantity, a size, a price, a cancellation), the UI asks for a reason from a fixed list, plus an optional note. That's what turns history into answers ("most overruns came from mis-measures").
+- **No hard deletes for records that matter:** they're cancelled or archived, so the history, the ledgers and other records still point at something that exists. Deleting an org still removes everything it owns (`tenancy-schema.test.ts`).
+- **Never recorded:** secrets and tokens. Personal data in the history follows the same deletion rules as the record it came from.
+- **Start from:** the shape above; nothing in the template writes history yet.
+
+### File uploads to a private bucket
+
+- **Build it when:** people attach files to records: photos from a phone or tablet, drawings, PDFs, documents shared with people outside the org.
 - **Shape:**
-  - `artifacts/desktop`, a Tauri 2 shell around `web`'s build. It reuses `web`'s pages rather than forking them. Native calls go behind a small module that `web` checks for, so the site keeps working without it.
-  - It calls the production API through `VITE_API_URL`. The client already sends a bearer token, not cookies, so calls from another origin work.
-  - Its origins join `CORS_ORIGIN`, per environment. Clerk checks a token's origin against that same list (`authorizedParties` in `src/lib/identity.ts`). Tauri pages run on `tauri://localhost` (macOS, Linux) and `http://tauri.localhost` (Windows).
-  - Signing in is the decision to make first. Clerk is built for web origins, and its redirects and OAuth don't work inside the webview as they do on a site. The usual way is to sign in in the system browser and come back through a deep link. Choose it, and prove it with a social sign-in, before building anything else.
-  - The CSP from `lib/csp` applies, with the app's own origin. The headers in `vercel.json` don't reach it, so Tauri's own CSP setting carries them.
-  - Releases are their own workflow, separate from the deploy chain: builds for each platform, code signing (Apple notarization, a Windows certificate) and Tauri's updater. An app that's installed keeps running old code, so the API must keep serving the oldest supported version. The additive-migrations rule already works this way for the database.
-- **Start from:** Tauri's Vite guide (https://v2.tauri.app/start/frontend/vite/).
+  - **A private bucket per environment**, beside the API: Railway Storage Buckets (S3-compatible, private, free egress through presigned URLs), defined in `.railway/railway.ts`. The S3 client lives in one module in the API, so the provider can be replaced.
+  - **Keys say whose, not what:** `orgs/<org_id>/<file_id>`, never the filename, which stays a column. An object is never overwritten: a new version is a new file, so anything approved still points at the exact bytes ("A change history for org data", baselines).
+  - **A `files` table** like any org-owned table: `org_id` with cascade, the record it's attached to, who uploaded it, the original name, content type, size, a visibility, a status (pending, ready, removed) and the time. An org's storage used is a sum over it.
+  - **Uploads go straight to the bucket.** The API checks the person may attach to that record, creates the pending row and returns a presigned POST whose conditions fix the key, the content type and a size range. The browser posts the file to the bucket, then tells the API, which checks the object (a HEAD request: size and type) before marking it ready. The bytes never pass through the API. The bucket's CORS allows only the sites' origins.
+  - **Downloads are short-lived presigned URLs** (about an hour), handed out after the same access checks as the record, from the org's routes and from the shared-link routes ("Sharing with people who have no account"). An `<img>` can't send the API's auth header, so responses carry the URLs rather than redirecting to them.
+  - **Visibility per file**, with levels the product decides: usually everyone in the org, a narrower group (a permission such as seeing costs), and outside people. New files start internal; the shared routes return only files marked for outside people.
+  - **Uploads are untrusted.** Accept a fixed list of types and sizes. Serve anything that isn't an image or a PDF with `Content-Disposition: attachment` (set through the presigned URL's response headers), so an uploaded HTML file never opens as a page. Add the bucket's host to `img-src` and `connect-src` in `lib/csp`.
+  - **Photos are resized in the browser** before upload (`createImageBitmap`, a canvas, JPEG): a display size (about 2560px) and a thumbnail (about 480px). Uploads stay quick on a phone connection, the server never processes images, and re-encoding drops EXIF, location included; read the time taken first if it matters. A file input with `accept="image/*"` and `multiple`, without `capture`, offers both the camera and the photo library and needs no camera permission.
+  - **An upload queue on the page:** progress per file, retries on failure, and a warning before leaving with uploads unfinished. Unless the app works offline, uploads stop when the page closes.
+  - **Removing is two steps:** the row is marked removed, with a reason, and the file disappears at once; a job erases the object after a grace period (30 days) unless something approved refers to it. Deleting an org erases its prefix.
+- **Start from:** the shape above; the template stores no files yet.
 
+### An org under its own brand and domain (white label)
+
+- **Build it when:** a customer wants the product to look like theirs: their name, logo and colors, and later their own address (`app.theircompany.com`), while it still runs as part of our one shared platform. Until then every org lives at `/o/<handle>` on our domain.
+- **Why the org is in the path, not a subdomain:** a browser treats every subdomain as a separate site, with its own cookies, storage, service worker and cache. One app that holds all of a person's orgs, switches between them without reloading, and boots from one cache has to live at one address. Products where people belong to many tenants put the tenant in the path (Notion, Linear, GitHub, Vercel). Slack moved its web app from `<workspace>.slack.com` to `app.slack.com/client/<workspace ID>` alongside rebuilding the client to hold every workspace in one app, with a service worker that "handle[s] every network request from the same origin". The subdomain stayed only as an address that redirects into the app. Slack never published a reason for the URL change itself, so the link is inferred: https://slack.engineering/rebuilding-slack-on-the-desktop/, https://slack.engineering/service-workers-at-slack-our-quest-for-faster-boot-times-and-offline-support/, https://slack.engineering/unified-grid-how-we-re-architected-slack-for-our-largest-customers/. Subdomains and custom domains fit when a tenant's own customers see the site and the address is part of their brand (Shopify stores, Zendesk help centers). A cheap vanity address: `theirs.ourapp.com` that only redirects to `/o/<handle>`.
+- **Levels**, each one a plan of its own:
+  1. **Their brand on our domain.** The org stores a display name, a logo and a brand color. `web` sets the `--color-brand*` variables at runtime from it (the semantic tokens make that a variable swap), and uses the logo and name in the header, the page title and the favicon. Check contrast as `new-project` does for the template's own color: compute `--color-brand-fg` and the lightness rather than trusting the customer's hex. Everything a customer's client sees uses it too: shared links, PDFs, emails.
+  2. **A subdomain of ours** (`theirs.ourapp.com`). A wildcard domain on the `web` project (Vercel's wildcard certificates need Vercel's nameservers), and the org comes from the host. Clerk sessions already cover our own subdomains, so sign-in needs nothing new.
+  3. **Their own domain** (`app.theircompany.com`). Feasible, but the most work, mostly because of Clerk (below).
+- **Shape** for levels 2 and 3:
+  - An `org_domains` table (`org_id` with cascade, `host` unique, `verified_at`). A domain is verified with a DNS TXT record before anything serves it, so nobody can attach a domain they don't control. The customer points it at us with a CNAME. Staff manage domains in `admin`, which stays on our own domain.
+  - Vercel: add each verified domain to the `web` project through its API; certificates are issued automatically once DNS points at Vercel. Pro allows up to 100,000 domains per project (a soft limit), and the domains API has hourly rate limits, so adding them goes through a job (https://vercel.com/docs/multi-tenant/limits).
+  - `web` resolves its host when it loads, through a public endpoint (`GET /api/public/domains/:host`: the org's handle and brand). On such a domain the org is fixed: the domain's root is that org's home, and someone who belongs to other orgs sees only this one there. **The domain only chooses which org is on screen; access still comes from grants** (`requireOrg`), as it does now.
+  - Links the API makes (invitations, shared links, emails) use the org's domain instead of `WEB_URL`.
+  - The API's allowed origins stop being only `CORS_ORIGIN`: they're that list plus the verified domains, read from the database and cached, for both CORS and the token's `azp` check in `identity.ts` (which then checks `azp` itself, as "A native app (Expo)" describes).
+  - An installable app's manifest (name, icons, colors) is served per host.
+- **Clerk on a customer's own domain (level 3):** each one is a **satellite domain** (https://clerk.com/docs/guides/dashboard/dns-domains/satellite-domains). It needs Clerk's paid plan, a `clerk.` CNAME in the customer's DNS, and registering it with Clerk (dashboard or Backend API). People sign in on our primary domain and are sent back, so our domain shows during sign-in. `ClerkProvider` gets `isSatellite` and `domain` from the host at runtime, and the primary lists the satellites in `allowedRedirectOrigins`. The site's CSP is built once per site with Clerk's address in it (`lib/csp`), so per-domain Clerk addresses mean sending the CSP as a header per host instead. Clerk's own emails (sign-in codes) carry the Clerk application's name for every org, unless we turn off Clerk's delivery and send them ourselves from its webhooks. Prove sign-in on one real satellite before promising level 3.
+- **Emails we send:** from our domain with the org's name in the sender, or from the org's domain once that domain is verified with Resend (more DNS records for the customer).
+- **The other way: a separate deployment per customer** (its own Railway, Vercel and Clerk, from this template). Complete white label, including Clerk's emails, but every customer becomes a deployment to run, migrate and pay for. Only for a customer who requires it.
+- **Start from:** Vercel's multi-tenant platforms guide (https://vercel.com/docs/multi-tenant) and Clerk's satellite domains guide.
+
+### An installable web app (PWA)
+
+- **Build it when:** the project decided an app should be installable (`new-project` asks, per app): people open it many times a day on a phone or tablet, and a home-screen icon and a full-screen window help. Usually only `web`; staff use `admin` at a desk, in the browser.
+- **Not on by default:** an installable app adds files and checks to keep, and offline support adds a service worker that can keep serving old code after a deploy. Each project opts in.
+- **Shape**, in two levels:
+  - **Installable, online only (start here):** a web app manifest (name, icons, `display: "standalone"`, `start_url: "/app"`, theme and background colors from the brand tokens), icons including `apple-touch-icon` for iOS, and `theme-color` and `apple-mobile-web-app-*` meta tags in `index.html`. No service worker, so every load is the deployed version. The CSP needs nothing new: `manifest-src` falls back to `default-src 'self'`.
+  - **Offline:** a service worker, generated at build time (Workbox, for example through `vite-plugin-pwa`; check that it supports the Vite version). It precaches the app shell, so pages open without a network. Serve the worker with `Cache-Control: no-cache` (a header in `vercel.json`), and show "A new version is available" rather than updating silently. `worker-src 'self'` is already in the CSP. API data offline is the real work: which records are cached, how edits made offline are queued and synced, and what happens on conflict. Plan that as its own feature; the session token can't be refreshed offline, so writes wait for the connection.
+- **iPhone and iPad:** there's no install prompt; people use Share → Add to Home Screen, so the app should say how. An installed app has its own storage and cookies, separate from Safari's, so people sign in once more after installing. Web push works only for an installed app (iOS 16.4+). `vercel.json`'s `Permissions-Policy` turns off the camera, microphone and location: allow the ones a feature needs (a live camera view needs `camera`; a file input with `capture` that opens the camera app doesn't).
+- **Check it:** Lighthouse's installability checks in CI, and an E2E test that `/manifest.webmanifest` serves the expected name and start URL. Install it on a real iPad before calling it done.
+- **Start from:** web.dev's PWA guides (https://web.dev/learn/pwa/) and, for offline, `vite-plugin-pwa` (https://vite-pwa-org.netlify.app/).
+
+### A native app (Expo)
+
+- **Build it when:** the project decided it needs one (`new-project` asks), because people need what a browser can't give them: working offline (a job site with no signal), uploads that carry on in the background, reliable push notifications, devices managed by an MDM, or an App Store listing. Phones and tablets otherwise use the sites in their browser.
+- **What it costs:** a second set of screens, maintained alongside `web`'s. React Native doesn't render `web`'s pages, components or Tailwind classes. What's shared is the API contract: the OpenAPI types, the Zod schemas and the generated React Query hooks. Every feature a native app has is built twice.
+- **Shape** (proven on an iPad simulator on 2026-10-27, Expo SDK 58):
+  - `artifacts/mobile`, an Expo app in the workspace (`@repo/mobile`). pnpm needs no hoisting or extra Metro config.
+  - Sign-in through `@clerk/expo`: `ClerkProvider` with `tokenCache` from `@clerk/expo/token-cache` (the session lives in the device's secure storage, so it survives restarts), and the `expo-secure-store` plugin. Clerk's custom flows (`useSignIn()`), native components (`<AuthView />`) or hosted sign-in all work; enable the Native API in the Clerk dashboard, and for production register the app on its Native applications page (bundle ID and Apple Team ID).
+  - **One React version for the whole workspace, Expo's.** Each Expo SDK fixes its React version; the catalog's `react` and `react-dom` follow it, or `@repo/api-client-react` resolves a second copy of React and React Query and the hooks fail ("No QueryClient set"). Upgrading React then waits for Expo.
+  - `configureApiClient` gains a `baseUrl` option: `web` reads the API address from Vite's env, which React Native doesn't have (`EXPO_PUBLIC_API_URL`).
+  - **`src/lib/identity.ts` checks `azp` itself.** Native tokens have no `azp` (no web origin requested them), and since `@clerk/backend` 3.11.1 its `authorizedParties` option refuses a token without one. Verify with the secret key alone, then refuse a token whose `azp` is present and not in `CORS_ORIGIN`, as in Clerk's manual verification guide (https://clerk.com/docs/guides/sessions/manual-jwt-verification). Its tests cover our origin, another origin and none.
+  - Some packages Clerk pulls in want install scripts (`browser-tabs-lock`, `core-js`): deny them in `allowBuilds`. `minimumReleaseAge` can leave the app a patch behind Expo's newest, which is fine.
+  - Releases are their own workflow: EAS builds and signing, App Review, over-the-air updates. An installed app keeps running old code, so the API keeps serving the oldest supported version; the additive-migrations rule already works this way for the database. It needs its own E2E layer (Maestro or Detox) and a section in `TESTING.md`.
+- **Open question:** `web` and `admin` are separate apps. Does a native app need the same split, or does staff work stay on the web? Decide when the first native app is planned. Most likely only the people who work away from a desk get a native app, and admin stays on the web.
+- **Start from:** Clerk's Expo quickstart (https://clerk.com/docs/expo/getting-started/quickstart).

@@ -40,6 +40,8 @@
 @theme {
   --spacing-page-x: 2rem;
   --spacing-page-y: 3rem;
+  --spacing-header: 3.5rem; /* the top bar's height, fixed so nothing shifts */
+  --container-content: 48rem; /* the top bar and every page share this width */
   --radius-card: 0.75rem;
   --radius-button: 0.5rem;
   --radius-input: 0.375rem;
@@ -69,6 +71,22 @@
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */
 @layer base {
+  /* Pages with and without a scrollbar keep the same width, so they don't jump sideways. */
+  html {
+    scrollbar-gutter: stable;
+  }
+  button:not(:disabled),
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  /* Focused from code (a dialog, a menu), not reached by keyboard. */
+  [tabindex="-1"]:focus-visible {
+    outline: none;
+  }
   body {
     background-color: var(--color-surface);
     color: var(--color-text);

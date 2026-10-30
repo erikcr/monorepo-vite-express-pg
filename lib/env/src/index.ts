@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
+import { localPort, PORT_DEFAULTS } from "./ports.js";
 
 /**
  * Loads .env from the repo root, then the package dir (`cwd`), into process.env. Variables already
@@ -29,7 +30,7 @@ const list = z.string().transform((s) =>
 // Every server-side variable, in one place. Add new ones here (and to .env.example).
 const fields = {
   DATABASE_URL: z.string().min(1),
-  PORT: z.coerce.number().int().positive().default(3000),
+  PORT: z.coerce.number().int().positive().default(PORT_DEFAULTS.PORT),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   /** Run the job worker inside the API process. Set "false" to run dist/worker.js separately. */
   RUN_WORKER: flag("true"),
@@ -127,15 +128,19 @@ export const env = {
     return read("RUN_WORKER");
   },
   /**
-   * Allowed browser origins. Unset: the local Vite dev servers, but none in production (it is set
-   * per environment once the site URLs exist, and the API warns at startup until then).
+   * Allowed browser origins. Unset: the local Vite dev servers (WEB_PORT, ADMIN_PORT), but none in
+   * production (it is set per environment once the site URLs exist, and the API warns at startup
+   * until then).
    */
   get CORS_ORIGIN() {
     const origins = read("CORS_ORIGIN");
     if (origins) return origins;
     return read("NODE_ENV") === "production"
       ? []
-      : ["http://localhost:5173", "http://localhost:3001"];
+      : [
+          `http://localhost:${localPort("WEB_PORT")}`,
+          `http://localhost:${localPort("ADMIN_PORT")}`,
+        ];
   },
   /**
    * The web site's URL without a trailing slash, for links in emails. Unset: the local Vite dev
@@ -145,7 +150,7 @@ export const env = {
   get WEB_URL() {
     const url = read("WEB_URL");
     if (url) return url.replace(/\/+$/, "");
-    return read("NODE_ENV") === "production" ? null : "http://localhost:5173";
+    return read("NODE_ENV") === "production" ? null : `http://localhost:${localPort("WEB_PORT")}`;
   },
   get RATE_LIMIT_WINDOW_MS() {
     return read("RATE_LIMIT_WINDOW_MS");

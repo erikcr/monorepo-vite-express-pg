@@ -48,7 +48,8 @@ as its first handler (`route-access.test.ts` lists them all). People join an org
 by accepting an emailed invitation (single use, 7 days, only for the invited email, verified and checked with Clerk on accepting; at
 most 50 sent per person a day, since anyone can create an org and email from it;
 `src/routes/members.ts`). Memberships change only through `src/lib/memberships.ts`, which locks the
-org's row and never leaves an org without an org_admin.
+org's row and never leaves an org without an org_admin. A product that sets orgs up for its
+customers instead has staff create them, with self-serve creation switched off (`CAPABILITIES.md`).
 
 ### createApp(db, queue) factory
 The Express app takes its database and job queue as arguments. Production passes postgres-js and
@@ -89,6 +90,42 @@ Plan for none of them until a product needs them. The decisions that are hard to
 are already being made with them in mind: every route declares who may call it, and the org's
 address (`/o/<handle>`, `UI.md`'s scope layer) is a fixed, human-readable handle that can also be
 its public address.
+
+### One product, many ways of working
+Orgs on one product run their business differently: how they price, pay, approve and schedule.
+Record what happened the same way for every org, and keep how an org reads it in rules the org
+owns:
+- **Facts** have one shape everywhere: who did what, when, how many, how long. They're stored once
+  and never reshaped to fit one org's rule.
+- **Rules** are per org and dated (a rate from a given day, a pay basis per kind of work). Costs,
+  pay and totals are computed from the facts through the rules in force at the time. A result
+  someone relied on (an approved estimate, an invoice) is kept as a version, not recomputed.
+- **Build the first customer's rules first**, behind a shape that allows others. Add a second kind
+  of rule when a second org needs it; a setting nobody asked for is a guess that still has to be
+  supported.
+
+When an org's way of working doesn't fit the facts, change the facts' shape for everyone rather
+than branching for that org.
+
+### Web first; a native app is a second codebase
+The sites run in a browser, including on phones and tablets, and that covers most products.
+Decide early, for each app, whether it stays in the browser, becomes installable (a PWA), or also
+needs a native app (the `new-project` skill asks). None is the default:
+- **Installable (PWA)** is the same site with a manifest and icons, and optionally a service worker
+  for offline use. Cheap without offline, real work with it (`CAPABILITIES.md`, "An installable web
+  app (PWA)"). Usually only `web`; `admin` stays in the browser.
+- **A native app** doesn't reuse `web`'s pages: it means building and maintaining a second set of
+  screens.
+
+- **Native shells around `web` (Tauri, Capacitor) aren't supported** while Clerk is the identity
+  provider. Tested on an iPad simulator on 2026-10-27: Clerk has no SDK for either; sign-in inside
+  one lands back on "/" until the shell's URL scheme is allowed as a redirect; and the session is
+  lost when the app restarts, because Clerk keeps it in cookies and WebKit keeps none for the
+  `tauri://` or `capacitor://` page. Each has a workaround, but none is one Clerk supports.
+- **A native app is built with Expo and Clerk's Expo SDK** (`@clerk/expo`). Tested the same day:
+  sign-in, a session that survives restarting the app and the simulator, and the generated
+  React Query hooks calling the API all work. What it takes is in `CAPABILITIES.md`, "A native
+  app (Expo)".
 
 ### Browser security
 Each site's Content-Security-Policy is generated at build time from its own API address and Clerk

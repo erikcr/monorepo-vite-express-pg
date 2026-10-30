@@ -54,16 +54,51 @@ Requires Node 24 (`nvm use` reads `.nvmrc`), pnpm 12 (`npm install -g pnpm@12`),
 ```bash
 pnpm install
 cp .env.example .env              # local config (DATABASE_URL etc.)
+pnpm ports assign                 # give this project its own local ports (saved in .env)
 docker compose up -d postgres     # start local Postgres
 pnpm db:migrate                   # apply migrations
 pnpm dev                          # starts api-server, web, and admin in parallel
 ```
+
+To start one app instead: `pnpm api:dev`, `pnpm web:dev` or `pnpm admin:dev`. Each checks the
+ports first, as `pnpm dev` does.
+
+### Several projects at once
+
+Every project made from this template starts out on the same ports: Postgres 5432, the API 3000,
+web 5173, admin 3001, and E2E's own 3100, 5174 and 3002. So give each project its own, once, when
+you set it up:
+
+```bash
+pnpm ports assign
+```
+
+It picks a block of seven ports from the project's folder name (21570–21576 for this template, say:
+Postgres, API, web, admin, then E2E's three) and saves them to `.env` (`DB_PORT`, `PORT`,
+`WEB_PORT`, `ADMIN_PORT`, `E2E_*_PORT`), along with the `localhost` addresses in `DATABASE_URL`,
+`CORS_ORIGIN` and `WEB_URL`. The same folder name always gets the same block, so projects stay
+apart whether or not they are running; if something else is on the block, it takes the next one.
+Afterwards restart anything running, and run `docker compose up -d postgres` to start Postgres
+on its new port; the data stays in its volume.
+
+As a safety net, `pnpm dev` and the E2E run check their own ports first and move any another
+program holds, and `pnpm ports` does the same for all of them, Postgres included. A port this
+project's own servers or Postgres container hold is left alone. The ports are defined once, in
+`lib/env/src/ports.ts`.
+
+**A wrong Postgres on the port doesn't look wrong:** if another Postgres answers on `DB_PORT`, with
+a database of the same name, `/health` passes and signed-in requests fail with a 500 because the
+tables aren't there. `pnpm ports assign` avoids it; `psql "$DATABASE_URL" -c '\dt'` shows it.
 
 Sign-in uses [Clerk](https://clerk.com): create a development instance and put its keys in
 `.env` (`CLERK_SECRET_KEY`, `VITE_CLERK_PUBLISHABLE_KEY`). Without them the apps show a setup
 message and the API answers 401 to anything that needs a session.
 
 Optionally run `pnpm db:seed` to add sample data (it prints how to give yourself access).
+
+The admin app is for staff, and nobody is staff by default. Give yourself access with
+`pnpm staff:grant <your email> staff_admin`; it links to your account the next time you visit
+admin. A fresh database needs it again, and `pnpm staff:revoke <your email>` undoes it.
 
 ### Git hooks
 
@@ -75,7 +110,7 @@ Optionally run `pnpm db:seed` to add sample data (it prints how to give yourself
 
 Work on a feature branch and open a PR into `staging`; CI runs the full check suite.
 
-The API reference (from `lib/api-spec/openapi.yaml`) is at http://localhost:3000/docs; deployed,
+The API reference (from `lib/api-spec/openapi.yaml`) is at `/docs` on the API (`PORT`); deployed,
 it's on in staging and off in production (`API_DOCS`).
 
 See [`AGENTS.md`](AGENTS.md) for conventions and the full command reference (shared by every coding
@@ -211,4 +246,4 @@ VITE_API_URL=https://your-api.railway.app
 This value is baked into the JS bundle at build time by Vite. If you add or change it in the Vercel dashboard you must trigger a new deploy — existing deploys will not pick it up.
 
 **Why this is required in production.**
-In local development, Vite proxies `/health` and `/api/*` to `localhost:3000`, so no URL is needed. On Vercel there is no proxy — without `VITE_API_URL` all API calls go to the Vercel domain and fail with a 404.
+In local development, Vite proxies `/health` and `/api/*` to the local API (`PORT`), so no URL is needed. On Vercel there is no proxy — without `VITE_API_URL` all API calls go to the Vercel domain and fail with a 404.
