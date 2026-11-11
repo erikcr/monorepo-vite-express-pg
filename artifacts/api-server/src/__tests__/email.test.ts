@@ -95,6 +95,24 @@ describe("sendEmail", () => {
     await expect(sendEmail(email)).rejects.toThrow("Resend refused the email (502 unknown)");
   });
 
+  it("gives up on a send Resend hasn't answered in 10 seconds, so the job is retried", async () => {
+    // A send left hanging would hold the send-email queue for fetch's own limit, 5 minutes a try.
+    const timedOut = AbortSignal.abort(new DOMException("The operation timed out", "TimeoutError"));
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(timedOut);
+    // Resend never answers: only the request's signal ends the wait.
+    vi.stubGlobal(
+      "fetch",
+      (_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+          if (init.signal?.aborted) reject(init.signal.reason);
+        })
+    );
+    vi.stubEnv("RESEND_API_KEY", "re_test");
+    await expect(sendEmail(email)).rejects.toThrow("The operation timed out");
+    expect(timeout).toHaveBeenCalledWith(10_000);
+  });
+
   it("only logs the email without RESEND_API_KEY: all of it locally, the subject when deployed", async () => {
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);

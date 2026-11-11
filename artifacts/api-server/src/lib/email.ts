@@ -27,6 +27,9 @@ export const ENVIRONMENT_TAG = "environment";
 export const environmentTagValue = () => tagSafe(env.DEPLOY_ENVIRONMENT);
 
 const RESEND_URL = "https://api.resend.com/emails";
+// How long a send may take before it's given up and the job retried (safe: see idempotencyKey).
+// Without it a hung Resend holds the send-email queue for fetch's own limit, 5 minutes a try.
+const RESEND_TIMEOUT_MS = 10_000;
 
 /** A send Resend refused, or couldn't take. The job fails with it, so pg-boss retries. */
 export class EmailError extends Error {
@@ -52,6 +55,7 @@ export async function sendEmail(
   }
   const res = await fetch(RESEND_URL, {
     method: "POST",
+    signal: AbortSignal.timeout(RESEND_TIMEOUT_MS),
     headers: {
       authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
