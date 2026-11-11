@@ -65,6 +65,24 @@ describe("rate limiting", () => {
     expect((await from("203.0.113.2")).status).toBe(200); // a different client
     for (let i = 0; i < 4; i++) expect((await request.get("/health")).status).toBe(200);
   });
+
+  it("counts the client Railway's edge names in X-Real-IP, not the proxy before us", async () => {
+    // Behind Railway the hop X-Forwarded-For hands req.ip is a proxy: clients through one share
+    // it, and one client's requests can arrive through two. The edge's X-Real-IP is the client.
+    vi.stubEnv("RATE_LIMIT_MAX", "2");
+    const { request, headers } = await memberApp();
+    const from = (client: string, proxy: string) =>
+      request
+        .get("/api/example")
+        .set(headers)
+        .set("x-real-ip", client)
+        .set("x-forwarded-for", proxy);
+
+    expect((await from("198.51.100.1", "10.0.0.1")).status).toBe(200);
+    expect((await from("198.51.100.1", "10.0.0.2")).status).toBe(200);
+    expect((await from("198.51.100.1", "10.0.0.3")).status).toBe(429); // one client, any proxy
+    expect((await from("198.51.100.2", "10.0.0.1")).status).toBe(200); // same proxy, own count
+  });
 });
 
 describe("request body limit", () => {

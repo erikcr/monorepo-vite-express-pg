@@ -8,7 +8,7 @@ import express, {
   type Response,
   type Router,
 } from "express";
-import { rateLimit } from "express-rate-limit";
+import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import helmet from "helmet";
 import type { JobQueue } from "./jobs/queue.js";
 import { trackError } from "./lib/error-tracker.js";
@@ -43,10 +43,23 @@ export function createRouters(db: Db, queue: JobQueue): Record<string, Router> {
   };
 }
 
+/**
+ * Who the rate limiter counts: the client's address. Behind Railway `req.ip` isn't it, whatever
+ * `trust proxy` says: measured on Railway in production, one client's
+ * requests split across two limiter keys and clients through one Railway proxy shared a key.
+ * Railway's edge sets X-Real-IP to the address that connected, overwriting any the client sent,
+ * so the header is trusted only because the edge writes it; a proxy added in front of Railway
+ * would become "the client". Local runs have no edge and fall back to `req.ip`. ipKeyGenerator
+ * counts an IPv6 /56 as one client, as the library's default does.
+ */
+function clientKey(req: Request): string {
+  return ipKeyGenerator(req.get("x-real-ip") || req.ip || "unknown");
+}
+
 export function createApp(db: Db, queue: JobQueue): Express {
   const app = express();
-  // Railway's edge is one proxy hop: trust its X-Forwarded-For so req.ip is the client's address
-  // (the rate limiter keys on it). Raise this if you add another proxy (e.g. a CDN) in front.
+  // Railway's edge is a proxy: trust one hop of X-Forwarded-For so req.ip is at least not the
+  // edge itself. The rate limiter doesn't count on req.ip, though (see clientKey).
   app.set("trust proxy", 1);
 
   app.use(requestLogger);
@@ -67,6 +80,7 @@ export function createApp(db: Db, queue: JobQueue): Express {
       rateLimit({
         windowMs: env.RATE_LIMIT_WINDOW_MS,
         limit: env.RATE_LIMIT_MAX,
+        keyGenerator: clientKey,
         standardHeaders: "draft-8",
         legacyHeaders: false,
         // Health probes come from the platform and must never be throttled.
