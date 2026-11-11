@@ -82,7 +82,7 @@ Add an entry when a review or discussion turns up something worth having later.
 - **Shape:**
   - A separate environment whose seed tells a story: each stage or persona is its own seeded org with its own test sign-in, and a switcher moves between them.
   - Nothing leaves it: no worker, no email key.
-  - Actions that would change the story are simulated or disabled, and the API is read-only for visitors, so the next showing starts the same.
+  - Actions that would change the story are simulated or disabled, so the next showing starts the same. The API enforces it, not only the UI: a middleware refuses visitors' writes outside an allow-list. Trust XP's demo was read-only in its UI alone, and since the demo's sign-ins ship with the site, any visitor could rename an org until the next reseed (its Plan 57 S20). Block password changes in the demo's Clerk instance too.
   - It's reseeded on a schedule, so relative dates don't age.
 - **Start from:** Trust XP's `docs/reference/demo-environment.md` and Plan 49.
 
@@ -100,7 +100,8 @@ Add an entry when a review or discussion turns up something worth having later.
   - The old handle is kept as a redirect, in an `org_handle_redirects` table (`org_id` with cascade, the old handle unique), so links and bookmarks still work. Old handles count as taken.
   - `OrgLayout` follows a redirect with a `replace`, so Back doesn't return to the old address.
   - A public profile (below) redirects the same way.
-- **Start from:** GitHub's rename, which redirects from the old name.
+- **The lighter shape Trust XP shipped:** the replaced handles in a column on the org (its `orgs.former_slugs text[]`); `/me` lists each org's former handles, so `OrgLayout` follows one to the current address only among the orgs the person belongs to; a rename that loses a race answers 409 from the unique index, inside a savepoint. It needs no new table, but old handles aren't reserved: another org can take one, and then that address opens the other org. Choose it only if links to orgs rarely leave the org.
+- **Start from:** GitHub's rename, which redirects from the old name, and Trust XP's `fd9d8235` (Plan 51 task 3d).
 
 ### A command palette (⌘K)
 
@@ -110,6 +111,29 @@ Add an entry when a review or discussion turns up something worth having later.
   - Each command has a label, keywords, an optional shortcut it shows, and what it runs.
   - Arrow keys and Enter, with recent commands first.
   - ⌘K / Ctrl+K opens it from anywhere. It must not take over shortcuts the app already uses, such as ⌘, for settings.
+
+### Loading each page's code when it's opened
+
+- **Build it when:** a page brings a heavy library (charts, an editor, a PDF viewer), or a site's first load grows past what a phone on a slow connection should wait for. Today each site is one bundle of about 230 KB gzipped, almost all of it libraries, so splitting the template's small pages would save little.
+- **Shape**, all of it at once, since each part covers a failure another one brings:
+  - Pages load by route (`lazyRouteComponent` in `router.tsx`), and a dialog's or panel's code when it opens. The router already preloads a route when a link is hovered (`defaultPreload: "intent"`); links in a menu, which nobody hovers before it opens, use `preload="render"`.
+  - A `defaultPendingComponent` (a `Page` in its loading state), so the screen never goes blank while a page's code arrives.
+  - **A deploy removes the old files**, and a tab opened before it asks for chunks that are gone. A failed chunk, JS or CSS (Vite's `vite:preloadError`), reloads the page: at once if a navigation is waiting on it, otherwise at the next navigation, to the page it was going to (the address bar hasn't changed yet when the router starts one, so a plain reload would stay put). At most once a minute, so a chunk that's really missing ends at the crash screen, reported, instead of looping.
+  - If hashed assets are cached for a year, a missing one must answer 404, not `index.html` cached under its address.
+  - Tests that find a lazy page wait longer (`findBy…` with a timeout), since its code loads first.
+- **Measured** on Trust XP's platform: splitting by route took the dashboard's first load from 295 to 195 KB gzipped (−34%), and sign-in's to 150 KB (−49%).
+- **Start from:** Trust XP's `artifacts/platform/src/lib/chunk-reload.ts` (40 lines, and its test) and `router.tsx` (commits `fe4a5e56`, `65c7b6c7`, `9864cf2f`, `fa813f88`), and its Plan 54 task 5 for the measurements.
+
+### A searchable dropdown
+
+- **Build it when:** a choice has more than about eight options, or no fixed end: timezones, countries, an org's people. Until then the native `<select>` (`ui.tsx`) is better: accessible as it is, and a phone opens its own picker.
+- **Shape:**
+  - One component in each app's `src/components/`, for every such list, so they all behave the same.
+  - A search box only above the cutoff, matching regardless of case and accents. A list without one reserves no room for it, so a short list near the screen's edge shows every row.
+  - On a touch screen the search box isn't focused when the list opens, so the keyboard doesn't cover the list, and rows are at least 44px tall.
+  - In a dialog, Escape closes the list and not the dialog as well: the settings dialog already ignores an Escape something else handled (`e.defaultPrevented`).
+  - About 30 KB gzipped, with Radix Popover and cmdk.
+- **Start from:** Trust XP's `lib/ui/src/Dropdown.tsx`, with its tests' jsdom stubs and `chooseOption` helper (Plan 55).
 
 ## Structure
 
@@ -272,3 +296,74 @@ These change the template's assumptions (`ARCHITECTURE.md`, "What the template a
   - Releases are their own workflow: EAS builds and signing, App Review, over-the-air updates. An installed app keeps running old code, so the API keeps serving the oldest supported version; the additive-migrations rule already works this way for the database. It needs its own E2E layer (Maestro or Detox) and a section in `TESTING.md`.
 - **Open question:** `web` and `admin` are separate apps. Does a native app need the same split, or does staff work stay on the web? Decide when the first native app is planned. Most likely only the people who work away from a desk get a native app, and admin stays on the web.
 - **Start from:** Clerk's Expo quickstart (https://clerk.com/docs/expo/getting-started/quickstart).
+
+
+### A database role without superuser rights, and row-level security
+
+- **Build it when:** the data is sensitive enough that one missing `org_id` filter would be a reportable incident, or a buyer's security questionnaire asks how tenants are kept apart in the database. Until then the application is the control: `requireOrg`, every query filtered by `req.ctx.org`, and the cross-org 404 tests.
+- **What it adds:** a backstop. A query that forgets the org returns nothing instead of another org's rows.
+- **Shape**, in two releases:
+  1. **A runtime role that owns nothing.** The API connects as an app role that doesn't own the tables and has no `BYPASSRLS`; migrations run as the owner, through a `MIGRATION_DATABASE_URL`. The owner runs `ALTER DEFAULT PRIVILEGES`, so tables added later are granted to the app role. pg-boss runs on the owner's connection, since the app role can't reach the `pgboss` schema.
+  2. **Row-level security on every org table:** a policy `org_id = ANY(current_setting('app.org_ids', true)::uuid[])` for select, insert, update and delete (`USING` and `WITH CHECK`), so an unset setting matches nothing. `withTenant(orgIds, fn)` opens a short transaction, sets `app.org_ids` with `set_config(…, true)` (local to the transaction, so a pooled connection never carries it to the next request) and runs `fn`. Org routes and per-org jobs run inside it. Trust XP keeps the transaction in AsyncLocalStorage, so shared helpers needed no new parameter. Views get `security_invoker = true` (Postgres 15+).
+  - **A system connection** for work with no tenant yet, or across tenants: the grants loader, webhooks, staff routes, the worker's loops over orgs. It gets **its own pool**, even on the same URL: a system query inside a tenant transaction otherwise waits for the connection that transaction holds. Only allow-listed modules may import it (Biome's `noRestrictedImports`), and that list is what to review in every PR that touches it.
+  - Child tables carry their own `org_id`, rather than policies that join (the template already requires it: `tenancy-schema.test.ts`).
+- **Tests:** the whole API suite runs as the app role, not only an RLS test, so a query outside a tenant fails CI, and so does a new org table without a policy. The test database (`createTestDb`) creates the roles too.
+- **Risk:** a missing tenant context returns empty results, not an error, so a bug looks like "no data". `withTenant` throws on an empty org list, and staging soaks for days before production.
+- **Start from:** Trust XP's Plan 40 (closed; its last version is at `0cb4edd8^:docs/plans/40-row-level-security.md`) and `docs/reference/access-model.md` §7.
+
+### A log of security events
+
+- **Build it when:** a buyer's questionnaire asks for one (MVSP and SOC 2 do), or staff act inside customers' orgs and customers should be able to see it.
+- **Not the change history:** that's people's edits to records ("A change history for org data"). This is who was given access, who used it, and what was refused.
+- **Shape:**
+  - An `audit_events` table: who (a user or staff member), what (from a fixed list: a grant given or removed, staff opening an org, an org deleted, an invitation sent or accepted, a webhook signature refused), which org, when, and the request id. Never secrets, tokens or request bodies.
+  - **Append-only for the API:** its role can insert but not update or delete, which needs the role above. Written in the same transaction as the change, so nothing happens unrecorded, and a write that fails fails the change rather than passing silently.
+  - **Alerts** on what someone should look at: a new staff grant, a burst of 401s or 403s, refused webhook signatures.
+  - Orgs see their own events in settings; staff see everyone's in admin.
+- **Start from:** Trust XP's `lib/db/src/schema/audit-events.ts`, and its Plan 56 G13, which found its app role could change and delete those rows and that their writes failed silently.
+
+### The product in other languages
+
+- **Build it when:** a customer's people need it in their own language. European B2B products reach this early. Until then the sites and emails are English.
+- **Shape:**
+  - **One catalog** in a shared package (`lib/i18n`), with Paraglide JS: compiled, tree-shaken, typed `m.key()` calls. It compiles once there and the output is committed, like the generated API code, with a CI check that it's current. The sites and the API import it; the API renders each email with a per-call `{ locale }`.
+  - **Which language:** the person's (`users.locale`), else the org's default (`orgs.default_locale`), else English, by one resolver everywhere. Locales are an enum in the spec, so no free text reaches the database. The sites set `<html lang>` from it.
+  - **The API's English stays in the API:** errors already carry a `code`, and the sites map it to their own copy. Clerk's components take a `localization` prop; Clerk's own emails are set in its dashboard.
+  - **One formatter** for dates and numbers, never a hardcoded `"en-US"`.
+  - **Keys say what they mean** (`settings_members_invite`), so a changed meaning gets a new key and a stale translation can't hide behind the old one. English is the source and the fallback for a missing string; a test checks every language keeps each message's placeholders.
+  - **Plurals:** English has two forms; Slavic and Baltic languages need three or four. Use Paraglide's plural variants, not `_one`/`_many` pairs.
+- **Download size:** Paraglide puts every language's text into every compiled message. On Trust XP's platform 16 languages would have added 28% to 99% to an English visitor's first load. Splitting the site by route ("Loading each page's code when it's opened") brought it to +6%, if every language were as compact as Dutch, which leaves little margin; so before a fourth goes live it loads the reader's language as its own chunk at boot (about 19 KB gzipped). Measure before the third language.
+- **Translations:** LLM drafts, reviewed by someone who knows the product, with a glossary and a register (formal or informal) per language.
+- **Start from:** Trust XP's Plans 37 (closed; at `49e72a15^`) and 54, and its `docs/reference/i18n.md`.
+
+### Plans and payment (billing)
+
+- **Build it when:** orgs pay in the app. Orgs that staff set up and bill outside it don't need this ("Staff set up each org, with self-serve creation switched off").
+- **Shape:**
+  - Stripe Checkout and its customer portal, so no card data reaches the API. Its webhook is verified like Clerk's and Resend's (`routes/webhooks.ts`), and a refused one logs its id and type, never its payload.
+  - **One function decides the plan:** `entitledPlan(subscription)` gives the price's plan for `active`, `trialing` and `past_due`, and free for any other status. Checkout, `customer.subscription.updated` and `invoice.payment_succeeded` all go through it. Each event re-reads the subscription from Stripe instead of trusting its own copy, so a late or retried event sees the real status. A price we don't know keeps the current plan.
+  - In Stripe, "if all retries for a payment fail" cancels the subscription, so `past_due` ends.
+  - **Limits apply where they're used** (when something is sent or created), not only at checkout, so a downgrade or a failed payment takes effect.
+  - `/me` says each org's plan, so the sites show what's included; the API enforces it.
+- **Start from:** Trust XP's `routes/billing.ts` and `routes/webhooks.ts`, and its Plan 57 S16 and D5, which found a cancelled plan's limits never coming back.
+
+### AI features
+
+- **Build it when:** the product calls a language model for people.
+- **Shape:**
+  - **Spend ceilings per person,** not only per org: orgs cost nothing to create, so a per-org cap doesn't bind anyone with a second one. A global daily ceiling too, and `max_output_tokens` on every call. Count usage when a response ends incomplete or the client goes away.
+  - **Say it's AI:** generated text is labelled as such (the EU AI Act's Article 50 has applied since 2 August 2026).
+  - **What leaves:** prompts carry no more personal data than the answer needs. A provider's `store: false` isn't zero data retention; that's a contract with the provider.
+  - **People's text is untrusted:** a comment or an uploaded document never reaches a prompt that can act. Numbers and fixed fields are the safest inputs.
+  - **Evals:** tests that mock the provider check the plumbing, not the answers. Keep a small set of real cases to run against the model before a prompt or model changes.
+  - Calls go through one module in the API, so the provider can be replaced, and keys stay on the server.
+- **Start from:** Trust XP's `artifacts/api-server/src/lib/ai/`, its Plan 57 S17 and its Plan 56 G21.
+
+### Schedules per org
+
+- **Build it when:** jobs run at each org's own time: a weekly email at 9:00 where they are, a nightly report in their timezone. Today every schedule is fixed in UTC, in code (`registry.ts`).
+- **Shape:**
+  - Check a timezone where it's set (`Intl.supportedValuesOf("timeZone")`), and answer 400 for one that isn't real. Cron libraries accept `GMT+1` or `Mars/Olympus` and fail only when they run it.
+  - pg-boss checks every schedule in one pass, so **one bad schedule stops all of them**, everyone's, while readiness stays green. Register each org's schedule on its own, catching its failure, and have `/health/ready` fail when no cron has fired for longer than it should.
+  - Cron pickup is up to about 35 seconds late, and a change to or from daylight saving time shortens a period, so a "don't run it twice" window is a little shorter than the cadence (a day shorter for a weekly one).
+- **Start from:** Trust XP's Plan 56 G23, and commits `731b1196`, `fa02cd98` and `6548e3ac`.

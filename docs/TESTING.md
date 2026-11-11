@@ -27,7 +27,7 @@ and people follow the same rules; the `testing` skill applies them to a change.
 | **Job** | vitest + pg-boss on PGlite | `artifacts/api-server/src/__tests__/jobs.test.ts` | Handlers' effects, retries, schedules |
 | **Component** | vitest + Testing Library + jsdom | `artifacts/{web,admin}/src/__tests__/` | Pages through the real router: guards, search params, loading/empty/error/success states, interactions |
 | **E2E** | Playwright, real API on in-process Postgres, production builds of both sites, real Clerk dev instance | `e2e/tests/` | The main flows a person walks through, across both apps and the API; with them, every page's accessibility (axe, light and dark mode) and the Content-Security-Policy |
-| **Structural** | vitest | `route-access.test.ts`, `contract.test.ts`, `tenancy-schema.test.ts` | Rules that hold for every route or table at once: each route declares an access rule; the server implements exactly the spec; every table but the global ones belongs to an org |
+| **Structural** | vitest | `route-access.test.ts`, `contract.test.ts`, `tenancy-schema.test.ts` | Rules that hold for every route or table at once: each route declares an access rule; the server implements exactly the spec, and every string a request carries has a `maxLength`; every table but the global ones belongs to an org |
 | **Post-deploy** | `.github/workflows/deploy-check.yml` | `lib/ci/src/deploy-check.ts`, expectations in `deploy-targets.ts` | What CI can't see: how each live site was built (the environment's API address over https, the right Clerk key type, no secret keys) and served (security headers, a CSP that allows its API), after every site deploy |
 
 **What is faked, and how:**
@@ -133,7 +133,7 @@ A test that sometimes fails is a bug, in the test or the code. **Never retry it 
 | **Tests with code** (PRs into `staging`) | A package's source changed and none of its tests did, and the PR description has no `Tests: none needed — <reason>` line (`lib/ci/src/tests-with-code.ts` says what counts as source and where each package's tests live). After editing the description, re-run the failed jobs: `gh run rerun <run id> --failed` |
 | **Test** (`pnpm test:coverage`) | A test fails or coverage drops below a floor |
 | `route-access.test.ts` | A route has no access rule as its first handler, or its rule changed without the table |
-| `contract.test.ts` | The server and `openapi.yaml` disagree about which operations exist |
+| `contract.test.ts` | The server and `openapi.yaml` disagree about which operations exist, or a request string in the spec has no `maxLength` (give it one, or an `enum` or `format: uuid`) |
 | `tenancy-schema.test.ts` | A table isn't tied to an org and isn't listed as global |
 | **E2E** | A flow breaks in the browser, a page has an accessibility problem axe can see (contrast, labels, names, roles) in light or dark mode, the Content-Security-Policy blocks something, or a test is flaky. On private repos a failed run uploads the HTML report with traces (`playwright-report` artifact) |
 | **Dependency audit** | A high or critical advisory affects a production dependency (`pnpm deps:audit`) |

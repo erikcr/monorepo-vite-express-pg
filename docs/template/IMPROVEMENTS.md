@@ -783,6 +783,147 @@ Every project built from the template inherits this. Moving it later is a breaki
 
 ---
 
+## Phase S — From Trust XP's security and cost work (2026-11-10)
+
+A review of Trust XP's changes from 2026-10-22 to 2026-11-10 (Plans 53–58). Six defects it found
+were also the template's, and are fixed (Session Log, 2026-11-10). These are the rest that every
+project should have; what only some projects need went to `CAPABILITIES.md`.
+
+### S.1 `[ ]` Sites: hashed assets cached for a year, and a missing one a real 404
+**Problem:** both `vercel.json`s rewrite every path but `/api/` to `index.html` and set no
+`Cache-Control`. Checked on `web.template.erikcr.com`: a hashed JS file answers `max-age=0,
+must-revalidate`, so every visit revalidates every file, and `/assets/index-DOESNOTEXIST.js`
+answers 200 with `index.html`. The rewrite also catches `/.well-known/`.
+**Change:** from Trust XP `e5b0b688` and `72284082`: one `routes` list per site, `filesystem` first,
+then the rewrite with `check: true` and outside `assets/` and `.well-known/`, then
+`public, max-age=31536000, immutable` on `/assets/` in the `hit` phase only, so a 404 never gets
+the year-long header. The security headers move into the first route, since Vercel runs `routes`
+before `headers` and `rewrites`. Vercel marks `handle` deprecated but has no other way; proven in
+Trust XP's production.
+**Files:** `artifacts/{web,admin}/vercel.json`, `lib/ci/src/deploy-check.ts` (it already fetches a
+chunk: assert both headers), README's "How the vercel.json works".
+**Accept:** the deploy check sees `immutable` on a hashed file, a 404 for a missing one, and the
+security headers on both and on `index.html`.
+
+### S.2 `[ ]` CI: a third of the minutes
+**Problem:** `ci.yml` runs 12 jobs, each billed separately and rounded up to the minute, and every
+change runs them four times: its PR, the push to `staging`, the promotion PR and the push to
+`main`. Pushes to `claude/**` run them again, alongside the PR. Trust XP's Plan 53 went from 1,347
+to 442 billed minutes a week (−67%) with the changes below, most of it from the push skip, and 22
+of 23 pushes skipped with none skipped wrongly. Private repos pay for minutes, and a spending
+limit reached blocks all CI (Trust XP, 2026-10-28).
+**Change**, in this order:
+1. Drop `claude/**` from the push trigger: a merge is gated on the PR's run anyway.
+2. One "Static checks" job: lint, typecheck, knip, codegen, migration drift and audit, one
+   install, each step `if: ${{ !cancelled() }}` so every failure shows.
+3. **Skip a push whose tree a passing PR run already tested.** `CI passed` records the tree
+   (`tested-tree-<sha>` artifact) once every job it needs has passed, E2E included. A push's first
+   job looks for it, and the expensive jobs skip when it's there; `CI passed` accepts `skipped`
+   only then, and only for those jobs. `tests-with-code` and `promotion-source` never skip.
+   Identical trees are identical code, workflow included; a PR merged onto a moved `staging` gets
+   a new tree and a full run. A failed lookup or an expired artifact runs everything. Accept only
+   artifacts from this repository (`head_repository_id`), since a fork's run can upload one.
+4. **Skip docs-only changes:** only `docs/**` and root `*.md`, never `AGENTS.md`, `CLAUDE.md`,
+   `.agents/` or `.claude/`, compared with `--no-renames` so code moved into `docs/` still runs. As
+   `lib/ci/src/docs-only.ts` with a test, like `tests-with-code`.
+**Files:** `.github/workflows/ci.yml`, `lib/ci/src/`, `docs/DEPLOYMENTS.md` (the push run may now
+skip; Railway's "Wait for CI" still sees `CI passed`).
+**Accept:** on a scratch repo, as P.3 was: a PR with a lint error fails; a docs-only PR skips; a
+docs and code PR runs everything; a promotion runs and deploys; a push after a passing PR skips
+and still deploys.
+
+### S.3 `[ ]` `.gitignore`: Claude Code's worktrees and local settings
+**Problem:** Claude Code puts session worktrees in `.claude/worktrees/`. Unignored, the main
+checkout sees each as an untracked repository (`git add -A` embeds it) and Biome (`"**"`) scans
+it. `.claude/settings.local.json` is ignored only by a personal global gitignore.
+**Change:** `/.claude/worktrees/` (anchored: unanchored, knip run inside a worktree fails, as
+Trust XP's `65dd7c0a` found) and `.claude/settings.local.json`.
+**Files:** `.gitignore`. **Accept:** `git check-ignore` on both, with no global gitignore.
+
+### S.4 `[ ]` The org switcher is links
+**Problem:** with two orgs or more, `OrgHomePage.tsx` shows a `<select>` that navigates on change.
+It can't open another org in a new tab, which is what A.1's org-in-the-address was for, it
+replaces the page's `<h1>`, and a select that navigates on change fails WCAG 3.2.2 (On Input).
+**Change:** a menu of `<Link>`s, like `AccountMenu`, beside the heading (Trust XP `dda471b2`).
+**Files:** `artifacts/web/src/pages/OrgHomePage.tsx`, a component test, the E2E org switch.
+**Accept:** each org is a link to `/o/<handle>`; the heading stays; axe passes.
+
+### S.5 `[ ]` Security checks that run by themselves
+**Problem:** nothing scans for committed secrets, checks the workflows, or fuzzes the API.
+`/provision-github` notes that private repos get no secret scanning. Trust XP's tool trial (Plan 56):
+Schemathesis gave the best return of anything tried, 10 real 500s, a 30-second stall and 19 inputs
+wrongly accepted, in seconds.
+**Change:**
+- Schemathesis against the E2E server's API in CI: fail on a 5xx, report the rest.
+- gitleaks in the pre-commit hook and CI.
+- zizmor on workflow changes, and `persist-credentials: false` on every checkout.
+- pnpm's `trustPolicy: no-downgrade`, `blockExoticSubdeps` and `strictDepBuilds`, after
+  confirming a clean frozen install.
+**Files:** `.github/workflows/ci.yml`, the git hooks, `pnpm-workspace.yaml`, `docs/TESTING.md`.
+**Accept:** each check fails on a planted problem (a fake key, a 500 route, an unpinned action).
+
+### S.6 `[ ]` What agents may do, enforced rather than asked
+**Problem:** AGENTS.md says agents don't change deployed infrastructure or print secrets, and
+that's the only control. Trust XP's Plan 44 (a Railway security incident) and Plan 56 G8 found
+agents holding production keys, and `railway variables` printing every secret.
+**Change:** a committed `.claude/settings.json` with `ask` or `deny` rules for reading secret
+values (`railway variables`, `.env`), `railway config apply`,
+`railway ssh` and database shells; `/provision-railway` marks secrets sealed where Railway allows.
+**Files:** `.claude/settings.json`, `provision-railway` skill, AGENTS.md (one line, if it fits).
+**Accept:** each rule prompts or refuses in a session; ordinary work isn't interrupted.
+
+### S.7 `[ ]` Email outside production says so
+**Problem:** staging sends from the same address and name as production, so its emails look real,
+and can reach real people if real addresses are in staging's data. Only the `environment` tag
+differs, which nobody reading the email sees.
+**Change:** a `[Staging]` prefix on the sender's name outside production; an optional `replyTo` on
+`Email` (an invitation's goes to the inviter); and a staging allow-list of recipient domains, where
+other addresses are only logged (Trust XP Plans 56 G15 and 58).
+**Files:** `lib/email.ts`, `@repo/env`, `email.test.ts`, `.env.example`.
+**Accept:** tests for each; production's sender unchanged.
+
+### S.8 `[ ]` A security baseline every project starts with
+**Problem:** `DEPLOYMENTS.md` says to rotate a leaked secret and nothing more. There's no incident
+process, no list of what each secret allows, and nothing on email or DNS security, which matter
+most to a product whose main action is "click the link in this email" (Trust XP Plan 56 G11, G12).
+**Change:**
+- `docs/SECURITY.md`, pre-filled: what the template already does, scored against MVSP v3.0
+  (re-scored yearly); each secret, what its leak allows, and how to rotate it (create, deploy,
+  then revoke the old one); reviewing logs before they expire; the 72-hour notice customers expect;
+  fix times by severity; a promises table (what the site and contracts say about deletion,
+  cookies, second factors, reviews), checked each release.
+- `/provision-railway` and `/provision-vercel`: DMARC at `p=none` with reports to a shared mailbox,
+  then `quarantine`; CAA records listing every issuer in use; no wildcard DNS records; remove
+  subdomains that point at nothing.
+- A `security.txt` and a short `SECURITY.md` at the root, with scope and safe harbour.
+**Files:** `docs/SECURITY.md`, `SECURITY.md`, the provisioning skills, `new-project` (the promises
+table). **Accept:** a project made from the template has each, filled in by the skills.
+
+### S.9 `[ ]` Smaller API items
+- **Clerk calls have no timeout** (`identity.ts`), and a Clerk outage answers 401, as if signed
+  out. Time them out and answer 503.
+- **Unhandled rejections behave differently with and without Sentry:** Sentry's
+  `onUnhandledRejectionIntegration` defaults to `warn`, so with `SENTRY_DSN` set the process keeps
+  running, and without it Node exits. Choose one (Sentry's `strict`, or our own fatal log and exit).
+- **The invitation link sits in `pgboss.job` for 7 days** (pg-boss keeps completed jobs that long),
+  while `org_invitations` keeps only its hash. Accepting also needs the invited, verified email,
+  so the risk is low; delete the job's data once sent, or shorten its retention.
+**Files:** `lib/identity.ts`, `lib/error-tracker.ts`, `jobs/`. **Accept:** a test for each.
+
+### S.10 `[ ]` Agent process: a session's scope, and a review on every PR
+- **A `session-charter` skill** (Trust XP `e672cc76`, `20483204`): each session has one kind of
+  work and one outcome, says when it drifts, and hands off with a ready prompt; parallel sessions
+  each use their own worktree. Without Trust XP's own steps. AGENTS.md has 318 bytes left, so at
+  most a one-line pointer.
+- **A Claude review on every PR into `staging`**, comment-only, as an optional `/provision-github`
+  step, plus one after any change to auth or billing (Trust XP Plan 56 D7). The `security-review`
+  skill exists; nothing runs it.
+- **Not taken:** Trust XP's batched PRs (2dd0b516, cbe59abd). The template promotes small and
+  often, and S.2 makes small PRs cheap. `DEPLOYMENTS.md` gains one line instead: every push to an
+  open PR is a full CI run, so push when the PR is ready.
+
+---
+
 ## Session Log
 
 | Date | Items completed | Notes |
@@ -829,3 +970,4 @@ Every project built from the template inherits this. Moving it later is a breaki
 | 2026-10-30 | UI basics | Both apps get a small `src/components/` (`Header`, `AccountMenu`, `Page`, `Card`, `Button`, `Field`…) using only theme tokens. Fixed: the header resized when Clerk's button arrived (now a fixed height, and a skeleton in the button's own box); "Loading…" sat against the left edge (every state is in `Page`); Home scrolled by exactly the header's height (`min-h-screen` under a header); admin was uncentered. `AccountMenu` replaces Clerk's `UserButton`, from TrustXP's, with full keyboard use, so axe now checks it too. E2E checks no scrollbar and zero layout shift. The header takes the page's background: with always-visible scrollbars, a raised one stopped short of the reserved gutter. Open: 2 of 23 full E2E runs failed. The one captured sat on "Loading…" at `/app` past the 5-second wait (`/api/me` usually answers in 350 ms); the other's log was lost, and it happened with the new layout test skipped. 12 runs with network logging all passed, so the cause isn't known |
 | 2026-10-30 | L.1 | Copied from Jig & Kerf, plus `pnpm ports assign`: each project's own block of ports, hashed from its folder name, as a step in `/new-project`, setup and the quickstart. Found through a 500 on every signed-in request: a native PostgreSQL 16 on 5432 answered in place of the project's container, with a stale `appdb`, while `/health` passed |
 | 2026-10-29 | 0.5 and 0.6 proposed | Two defects Jig & Kerf's E2E turned up. 0.5: a staff account's first two requests at once, one refused 403 (fixed there, ready to copy). 0.6: the worker takes one job per queue every 2 seconds, so a burst of emails waits in line; the E2E server's polling is fixed there, production's choice is open |
+| 2026-11-10 | Trust XP review; six fixes, two tests | Trust XP's changes since 2026-10-22 reviewed. Fixed, each test shown red: (1) sign-in passed `forceRedirectUrl`, which beats `redirect_url`, so a signed-out invitee lost their invitation (now `fallbackRedirectUrl`; the E2E opens the link signed out, first run in CI since this machine has no Clerk keys); (2) the code Clerk emails to trust a new browser counted as staff's second factor (now also `twoFactorEnabled`); (3) drizzle's failed-query errors put the query's values in logs, Sentry and pg-boss job rows, and a NUL in a request made a 500 at will; (4) the rate limiter keyed on Railway's proxy, not the client (now `X-Real-IP`); (5) a removed, demoted or departed admin's invitations stayed valid (migration 0008 cascades `invited_by`); (6) a database down at startup left the API down after Railway's 3 restarts (startBoss retries for 5 minutes), and Resend had no timeout. New tests: a record is reached only from its own org even by someone in both; every request string has a `maxLength` (found the page cursor unbounded; now 200). Proposed S.1–S.10. Eight entries to `CAPABILITIES.md` (loading pages by route, a searchable dropdown, row-level security, a security event log, other languages, billing, AI, schedules per org), and the demo and handle-rename entries amended |
