@@ -34,6 +34,20 @@ describe("/api/example", () => {
       const other = await createOrg(db);
       expect((await request.get("/api/example").set(m.as(other))).status).toBe(403);
     });
+
+    it("reaches a record only from its own org, even for someone in both", async () => {
+      // The org acted in decides, not every org the person is in: a single-record query that
+      // matched the id and any of their orgs would let a change meant for one org reach another.
+      const [a, b] = [await createOrg(db), await createOrg(db)];
+      const m = await createMember(db, { orgs: [a, b] });
+      const row = await create(m.as(b), "B's record");
+      const url = `/api/example/${row.id}`;
+      expect((await request.get(url).set(m.as(b))).status).toBe(200);
+      expect((await request.get(url).set(m.as(a))).status).toBe(404);
+      expect((await request.patch(url).set(m.as(a)).send({ name: "Moved" })).status).toBe(404);
+      expect((await request.delete(url).set(m.as(a))).status).toBe(404);
+      expect((await request.get(url).set(m.as(b))).body.name).toBe("B's record");
+    });
   });
 
   describe("POST /", () => {
