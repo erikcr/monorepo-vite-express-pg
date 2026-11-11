@@ -7,10 +7,16 @@ import { env } from "@repo/env";
 export interface Identity {
   /** Clerk user id (`user_…`): the key for `users.clerk_user_id`. */
   clerkUserId: string;
-  /** Minutes since the second factor was verified in this session; null if it never was. */
+  /**
+   * Minutes since the second factor was verified in this session; null if it never was. On its
+   * own it doesn't prove two-step verification: Clerk also records the code it emails to trust a
+   * new browser here. Check `twoFactorEnabled()` too.
+   */
   secondFactorAgeMinutes: number | null;
   /** The account's email and name; null until Clerk has verified its primary email. */
   profile(): Promise<Profile | null>;
+  /** The account has two-step verification set up: an authenticator, phone or backup codes. */
+  twoFactorEnabled(): Promise<boolean>;
 }
 
 interface Profile {
@@ -25,9 +31,10 @@ interface SessionClaims {
   sub: string;
   fva?: readonly [number, number];
   sts?: string;
-  /** Test tokens only: stand in for the email and name Clerk's API would return. */
+  /** Test tokens only: stand in for what Clerk's API would return. */
   email?: string;
   name?: string;
+  twoFactorEnabled?: boolean;
 }
 
 const TEST_PREFIX = "test:";
@@ -60,14 +67,34 @@ export async function verifySession(token: string): Promise<Identity | null> {
   if (!claims.sub || claims.sts === "pending") return null;
 
   const second = claims.fva?.[1];
+  const isTest = token.startsWith(TEST_PREFIX);
   return {
     clerkUserId: claims.sub,
     secondFactorAgeMinutes: second === undefined || second < 0 ? null : second,
     profile: () =>
-      token.startsWith(TEST_PREFIX)
+      isTest
         ? Promise.resolve(claims.email ? { email: claims.email, name: claims.name ?? "" } : null)
         : fetchProfile(claims.sub),
+    twoFactorEnabled: () =>
+      isTest ? Promise.resolve(claims.twoFactorEnabled === true) : fetchTwoFactor(claims.sub),
   };
+}
+
+// What Clerk last said about an account's two-step verification, until when to believe it. Only
+// staff with a grant are asked (requireStaff), so this holds at most one entry per staff member,
+// and the admin app's requests don't each cost a Clerk API call.
+const TWO_FACTOR_CACHE_MS = 60_000;
+const twoFactorCache = new Map<string, { enabled: boolean; until: number }>();
+
+async function fetchTwoFactor(clerkUserId: string): Promise<boolean> {
+  const secretKey = env.CLERK_SECRET_KEY;
+  if (!secretKey) return false;
+  const cached = twoFactorCache.get(clerkUserId);
+  if (cached && cached.until > Date.now()) return cached.enabled;
+  const user = await createClerkClient({ secretKey }).users.getUser(clerkUserId);
+  const enabled = user.twoFactorEnabled === true;
+  twoFactorCache.set(clerkUserId, { enabled, until: Date.now() + TWO_FACTOR_CACHE_MS });
+  return enabled;
 }
 
 // Accounts Clerk last said have no verified email, until when to believe it. Such an account is

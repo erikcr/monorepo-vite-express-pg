@@ -46,6 +46,13 @@ describe("verifySession: test tokens", () => {
     expect((await verifySession(test({ sub: "u" })))?.secondFactorAgeMinutes).toBeNull();
   });
 
+  it("reads two-step verification from the token's stand-in claim", async () => {
+    expect(
+      await (await verifySession(test({ sub: "u", twoFactorEnabled: true })))?.twoFactorEnabled()
+    ).toBe(true);
+    expect(await (await verifySession(test({ sub: "u" })))?.twoFactorEnabled()).toBe(false);
+  });
+
   it("refuses a pending session", async () => {
     expect(await verifySession(test({ sub: "user_1", sts: "pending" }))).toBeNull();
   });
@@ -119,6 +126,23 @@ describe("verifySession: Clerk tokens", () => {
       ],
     });
     expect(await ask()).toBe("u@x.test");
+    expect(getUser).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks Clerk whether two-step verification is set up, at most once a minute", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_abc");
+    verifyToken.mockResolvedValue({ sub: "user_2fa", fva: [2, 2] });
+    const ask = async () => (await verifySession("jwt"))?.twoFactorEnabled();
+
+    getUser.mockResolvedValue({ twoFactorEnabled: false });
+    expect(await ask()).toBe(false);
+    getUser.mockResolvedValue({ twoFactorEnabled: true });
+    expect(await ask()).toBe(false); // still the remembered answer
+    expect(getUser).toHaveBeenCalledOnce();
+
+    vi.setSystemTime(Date.now() + 60_001);
+    expect(await ask()).toBe(true);
     expect(getUser).toHaveBeenCalledTimes(2);
   });
 

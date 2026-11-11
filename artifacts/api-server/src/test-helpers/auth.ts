@@ -10,6 +10,7 @@ export const testToken = (claims: {
   email?: string;
   name?: string;
   fva?: [number, number];
+  twoFactorEnabled?: boolean;
 }) => `test:${JSON.stringify(claims)}`;
 
 /** `Authorization` header for a test session. */

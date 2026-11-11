@@ -116,8 +116,12 @@ describe("requireOrg: permissions", () => {
 });
 
 describe("requireStaff", () => {
-  const staffSession = (sub: string, email: string, fva?: [number, number]) =>
-    bearer({ sub, email, ...(fva ? { fva } : {}) });
+  const staffSession = (
+    sub: string,
+    email: string,
+    fva?: [number, number],
+    twoFactorEnabled = true
+  ) => bearer({ sub, email, twoFactorEnabled, ...(fva ? { fva } : {}) });
 
   it("refuses people without a staff grant", async () => {
     const m = await createMember(db);
@@ -157,6 +161,7 @@ describe("requireStaff", () => {
       clerkUserId,
       secondFactorAgeMinutes: null,
       profile: vi.fn(async () => ({ email, name: "" })),
+      twoFactorEnabled: async () => false,
     });
 
     const outsider = identity("user_outsider", "outsider@x.test");
@@ -200,5 +205,17 @@ describe("requireStaff", () => {
       .set(staffSession("user_mfa", "mfa@x.test", [721, 721]));
     expect(stale.status).toBe(403);
     expect(stale.body.code).toBe("second_factor_required");
+  });
+
+  it("doesn't count the code Clerk emails to trust a new browser", async () => {
+    // Clerk records that code in the session's fva like a second factor (seen on a real instance,
+    // an account with no authenticator: fva [2, 2], twoFactorEnabled false), so a staff
+    // account's mailbox alone would pass. Only a factor the person set up counts.
+    vi.stubEnv("STAFF_MFA_REQUIRED", "true");
+    await grantStaff(db, "emailcode@x.test");
+    const emailedCode = staffSession("user_emailcode", "emailcode@x.test", [2, 2], false);
+    const res = await request.get("/staff").set(emailedCode);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("second_factor_required");
   });
 });

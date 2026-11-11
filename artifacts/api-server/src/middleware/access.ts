@@ -130,9 +130,9 @@ export function createAccess(db: Db): Access {
     });
 
   /**
-   * Staff routes (/api/admin): an active staff grant with `permission`, plus a second factor
-   * completed in this session within STAFF_SECOND_FACTOR_MAX_AGE_MINUTES, unless
-   * STAFF_MFA_REQUIRED is off (development and tests).
+   * Staff routes (/api/admin): an active staff grant with `permission`, plus two-step
+   * verification set up and used in this session within STAFF_SECOND_FACTOR_MAX_AGE_MINUTES,
+   * unless STAFF_MFA_REQUIRED is off (development and tests).
    */
   const requireStaff = (permission: StaffPermission) =>
     declare(`staff:${permission}`, async (req, res, next) => {
@@ -149,7 +149,11 @@ export function createAccess(db: Db): Access {
       const factorAge = identity.secondFactorAgeMinutes;
       if (
         env.STAFF_MFA_REQUIRED &&
-        (factorAge === null || factorAge > STAFF_SECOND_FACTOR_MAX_AGE_MINUTES)
+        (factorAge === null ||
+          factorAge > STAFF_SECOND_FACTOR_MAX_AGE_MINUTES ||
+          // The session's factor alone isn't enough: Clerk also counts the code it emails to
+          // trust a new browser, so a mailbox would do. Only a factor they set up counts.
+          !(await identity.twoFactorEnabled()))
       ) {
         refuse(
           res,
