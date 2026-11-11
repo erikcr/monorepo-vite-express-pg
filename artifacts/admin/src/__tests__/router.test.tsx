@@ -158,6 +158,9 @@ describe("routes (admin)", () => {
   it("renders sign-in and the 404 page", async () => {
     renderAt("/sign-in/");
     expect(await screen.findByText("clerk sign-in form")).toBeTruthy();
+    // Back to the page that sent them (redirect_url), which a forceRedirectUrl would override.
+    expect(clerk.signInProps.fallbackRedirectUrl).toBe("/");
+    expect(clerk.signInProps).not.toHaveProperty("forceRedirectUrl");
     renderAt("/no-such-page");
     expect(await screen.findByRole("heading", { name: "Page not found" })).toBeTruthy();
   });

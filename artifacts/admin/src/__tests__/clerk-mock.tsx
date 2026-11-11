@@ -14,6 +14,8 @@ export const clerk = {
   },
   signOut: vi.fn(),
   openUserProfile: vi.fn(),
+  /** The props the last <SignIn> rendered with. */
+  signInProps: {} as Record<string, unknown>,
 };
 
 export function Show({
@@ -30,7 +32,10 @@ export function Show({
 }
 
 export const RedirectToSignIn = () => <p>redirecting to sign-in</p>;
-export const SignIn = () => <p>clerk sign-in form</p>;
+export const SignIn = (props: Record<string, unknown>) => {
+  clerk.signInProps = props;
+  return <p>clerk sign-in form</p>;
+};
 export const useUser = () => ({
   isLoaded: clerk.loaded,
   isSignedIn: clerk.signedIn,

@@ -69,6 +69,15 @@ describe("routes (web)", () => {
     expect(screen.queryByRole("link", { name: "Sign in" })).toBeNull();
   });
 
+  it("signs people in back to the page that sent them, and only otherwise to /app", async () => {
+    // <RedirectToSignIn> puts that page in the address as redirect_url. Clerk lets a
+    // forceRedirectUrl beat it, which lost a signed-out invitee's invitation; a fallback doesn't.
+    renderAt("/sign-in");
+    await screen.findByText("clerk sign-in form");
+    expect(clerk.signInProps.fallbackRedirectUrl).toBe("/app");
+    expect(clerk.signInProps).not.toHaveProperty("forceRedirectUrl");
+  });
+
   it("renders Clerk's sign-in under /sign-in, including its sub-steps", async () => {
     renderAt("/sign-in");
     expect(await screen.findByText("clerk sign-in form")).toBeTruthy();

@@ -1,7 +1,7 @@
 import { E2E_USERS } from "../clerk-env";
 import { API, WEB } from "../playwright.config";
 import { expect, expectAccessible, test } from "./fixtures";
-import { requireClerk, signIn } from "./signed-in";
+import { requireClerk, signIn, signInFrom } from "./signed-in";
 
 test("shows the real API and database as healthy", async ({ page }) => {
   const errors: string[] = [];
@@ -171,11 +171,11 @@ test.describe("signed in", () => {
     const link = /(https?:\/\/\S+\/invite#\S+)/.exec(email.text)?.[1];
     expect(link?.startsWith(`${WEB}/invite#`)).toBe(true);
 
-    // The invitee, in their own browser session.
+    // The invitee, signed out in their own browser, as most are when they open the email: the
+    // link sends them to sign in, and signing in brings them back to it, token and all.
     const inviteeContext = await browser.newContext({ baseURL: WEB });
     const invitee = await inviteeContext.newPage();
-    await signIn(invitee, E2E_USERS.invitee);
-    await invitee.goto(link as string);
+    await signInFrom(invitee, link as string, E2E_USERS.invitee);
     await expect(invitee.getByRole("button", { name: "Accept invitation" })).toBeVisible();
     await expectAccessible(invitee);
     await invitee.getByRole("button", { name: "Accept invitation" }).click();
