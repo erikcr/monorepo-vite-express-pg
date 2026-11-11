@@ -48,7 +48,8 @@ as its first handler (`route-access.test.ts` lists them all). People join an org
 by accepting an emailed invitation (single use, 7 days, only for the invited email, verified and checked with Clerk on accepting; at
 most 50 sent per person a day, since anyone can create an org and email from it;
 `src/routes/members.ts`). Memberships change only through `src/lib/memberships.ts`, which locks the
-org's row and never leaves an org without an org_admin. A product that sets orgs up for its
+org's row and never leaves an org without an org_admin; someone removed, demoted or leaving loses
+the invitations they sent there, and deleting an account takes them too. A product that sets orgs up for its
 customers instead has staff create them, with self-serve creation switched off (`CAPABILITIES.md`).
 
 ### createApp(db, queue) factory

@@ -293,6 +293,69 @@ describe("POST /api/orgs/current/invitations", () => {
   });
 });
 
+describe("invitations from someone who can no longer invite", () => {
+  // Otherwise an admin about to be removed could invite another address of theirs, and come back
+  // through it after they'd gone.
+  async function twoAdmins() {
+    const { admin, member, org } = await team();
+    const other = await createMember(db, { role: "org_admin", orgs: admin.orgs });
+    queue.enqueued.length = 0;
+    for (const [inviter, email] of [
+      [other, "theirs@x.test"],
+      [admin, "kept@x.test"],
+    ] as const) {
+      const res = await request
+        .post("/api/orgs/current/invitations")
+        .set(inviter.headers)
+        .send({ email, role: "org_admin" });
+      expect(res.status).toBe(201);
+    }
+    const pending = async () =>
+      (
+        await db
+          .select({ email: orgInvitationsTable.email })
+          .from(orgInvitationsTable)
+          .where(eq(orgInvitationsTable.orgId, org.id))
+      )
+        .map((i) => i.email)
+        .sort();
+    expect(await pending()).toEqual(["kept@x.test", "theirs@x.test"]);
+    return { admin, member, other, org, pending };
+  }
+
+  it("stop working when they're removed", async () => {
+    const { admin, other, pending } = await twoAdmins();
+    const res = await request
+      .delete(`/api/orgs/current/members/${other.user.id}`)
+      .set(admin.headers);
+    expect(res.status).toBe(204);
+    expect(await pending()).toEqual(["kept@x.test"]);
+  });
+
+  it("stop working when they're given a role that can't invite, but not one that can", async () => {
+    const { admin, other, pending } = await twoAdmins();
+    const roleOf = (role: string) =>
+      request.patch(`/api/orgs/current/members/${other.user.id}`).set(admin.headers).send({ role });
+    expect((await roleOf("org_admin")).status).toBe(200);
+    expect(await pending()).toEqual(["kept@x.test", "theirs@x.test"]);
+    expect((await roleOf("org_member")).status).toBe(200);
+    expect(await pending()).toEqual(["kept@x.test"]);
+  });
+
+  it("stop working when they leave the org", async () => {
+    const { other, org, pending } = await twoAdmins();
+    const res = await request.delete("/api/orgs/current/membership").set(other.as(org));
+    expect(res.status).toBe(204);
+    expect(await pending()).toEqual(["kept@x.test"]);
+  });
+
+  it("go with their account", async () => {
+    const { other, pending } = await twoAdmins();
+    await db.delete(usersTable).where(eq(usersTable.id, other.user.id));
+    expect(await pending()).toEqual(["kept@x.test"]);
+  });
+});
+
 describe("GET /api/orgs/current/invitations", () => {
   it("lists the org's pending invitations, newest first, to every member", async () => {
     const { admin, member } = await team();

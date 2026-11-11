@@ -2,9 +2,9 @@
 // first, so changes to one org's memberships happen one at a time: two admins stepping down
 // together can't both see the other still there, and the org never loses its last org_admin.
 import type { Db } from "@repo/db";
-import { orgsTable, orgUsersTable } from "@repo/db/schema";
+import { orgInvitationsTable, orgsTable, orgUsersTable } from "@repo/db/schema";
 import { and, eq } from "drizzle-orm";
-import type { OrgRole } from "./authz/policy.js";
+import { type OrgRole, orgPermissions } from "./authz/policy.js";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
@@ -21,7 +21,9 @@ export type MembershipChange = { remove: true } | { role: OrgRole };
 
 /**
  * Removes `userId` from the org, or gives them `role` there. "not_found" when they aren't a
- * member; "last_org_admin" when the change would leave the org without one.
+ * member; "last_org_admin" when the change would leave the org without one. Someone left unable
+ * to invite loses the invitations they sent there too: otherwise an admin about to be removed
+ * could invite another address of theirs and come back through it.
  */
 export async function changeMembership(
   db: Db,
@@ -45,6 +47,13 @@ export async function changeMembership(
     }
     if ("remove" in change) await tx.delete(orgUsersTable).where(inOrg);
     else await tx.update(orgUsersTable).set({ role: change.role }).where(inOrg);
+    if ("remove" in change || !orgPermissions(change.role).includes("org.members.manage")) {
+      await tx
+        .delete(orgInvitationsTable)
+        .where(
+          and(eq(orgInvitationsTable.orgId, orgId), eq(orgInvitationsTable.invitedBy, userId))
+        );
+    }
     return "done";
   });
 }

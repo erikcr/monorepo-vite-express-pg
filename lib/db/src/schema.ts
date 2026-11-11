@@ -102,7 +102,8 @@ export const orgInvitationsTable = pgTable(
     role: text("role").notNull(),
     /** SHA-256 (hex) of the token in the invitation link. */
     tokenHash: text("token_hash").notNull().unique(),
-    invitedBy: uuid("invited_by").references(() => usersTable.id, { onDelete: "set null" }),
+    /** Who sent it. Their invitations go with their account, as their grants do. */
+    invitedBy: uuid("invited_by").references(() => usersTable.id, { onDelete: "cascade" }),
     expiresAt: timestamp("expires_at", { withTimezone: true, precision: 3 }).notNull(),
     createdAt: createdAt(),
   },
