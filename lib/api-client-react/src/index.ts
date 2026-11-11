@@ -354,6 +354,7 @@ export type ListOrgMembersParams = {
 limit?: PageLimitParameter;
 /**
  * The nextCursor from the previous page; omit for the first page
+ * @maxLength 200
  */
 cursor?: PageCursorParameter;
 };
@@ -366,6 +367,7 @@ export type ListInvitationsParams = {
 limit?: PageLimitParameter;
 /**
  * The nextCursor from the previous page; omit for the first page
+ * @maxLength 200
  */
 cursor?: PageCursorParameter;
 };
@@ -380,11 +382,12 @@ q?: string;
  * @minimum 1
  * @maximum 100
  */
-limit?: number;
+limit?: PageLimitParameter;
 /**
  * The nextCursor from the previous page; omit for the first page
+ * @maxLength 200
  */
-cursor?: string;
+cursor?: PageCursorParameter;
 };
 
 export type ListExamplesParams = {
@@ -392,11 +395,12 @@ export type ListExamplesParams = {
  * @minimum 1
  * @maximum 100
  */
-limit?: number;
+limit?: PageLimitParameter;
 /**
  * The nextCursor from the previous page; omit for the first page
+ * @maxLength 200
  */
-cursor?: string;
+cursor?: PageCursorParameter;
 };
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];

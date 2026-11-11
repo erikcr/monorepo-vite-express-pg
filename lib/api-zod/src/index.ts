@@ -150,11 +150,13 @@ export const LeaveCurrentOrgResponse = zod.void()
 export const listOrgMembersQueryLimitDefault = 20;
 export const listOrgMembersQueryLimitMax = 100;
 
+export const listOrgMembersQueryCursorMax = 200;
+
 
 
 export const ListOrgMembersQueryParams = zod.object({
   "limit": zod.coerce.number().int().min(1).max(listOrgMembersQueryLimitMax).default(listOrgMembersQueryLimitDefault),
-  "cursor": zod.string().optional().describe('The nextCursor from the previous page; omit for the first page')
+  "cursor": zod.string().max(listOrgMembersQueryCursorMax).optional().describe('The nextCursor from the previous page; omit for the first page')
 })
 
 export const ListOrgMembersResponse = zod.object({
@@ -207,11 +209,13 @@ export const RemoveOrgMemberResponse = zod.void()
 export const listInvitationsQueryLimitDefault = 20;
 export const listInvitationsQueryLimitMax = 100;
 
+export const listInvitationsQueryCursorMax = 200;
+
 
 
 export const ListInvitationsQueryParams = zod.object({
   "limit": zod.coerce.number().int().min(1).max(listInvitationsQueryLimitMax).default(listInvitationsQueryLimitDefault),
-  "cursor": zod.string().optional().describe('The nextCursor from the previous page; omit for the first page')
+  "cursor": zod.string().max(listInvitationsQueryCursorMax).optional().describe('The nextCursor from the previous page; omit for the first page')
 })
 
 export const ListInvitationsResponse = zod.object({
@@ -292,12 +296,14 @@ export const listAdminOrgsQueryQMax = 100;
 export const listAdminOrgsQueryLimitDefault = 20;
 export const listAdminOrgsQueryLimitMax = 100;
 
+export const listAdminOrgsQueryCursorMax = 200;
+
 
 
 export const ListAdminOrgsQueryParams = zod.object({
   "q": zod.string().max(listAdminOrgsQueryQMax).optional().describe('Only orgs whose name contains this (case-insensitive)'),
   "limit": zod.coerce.number().int().min(1).max(listAdminOrgsQueryLimitMax).default(listAdminOrgsQueryLimitDefault),
-  "cursor": zod.string().optional().describe('The nextCursor from the previous page; omit for the first page')
+  "cursor": zod.string().max(listAdminOrgsQueryCursorMax).optional().describe('The nextCursor from the previous page; omit for the first page')
 })
 
 export const ListAdminOrgsResponse = zod.object({
@@ -317,11 +323,13 @@ export const ListAdminOrgsResponse = zod.object({
 export const listExamplesQueryLimitDefault = 20;
 export const listExamplesQueryLimitMax = 100;
 
+export const listExamplesQueryCursorMax = 200;
+
 
 
 export const ListExamplesQueryParams = zod.object({
   "limit": zod.coerce.number().int().min(1).max(listExamplesQueryLimitMax).default(listExamplesQueryLimitDefault),
-  "cursor": zod.string().optional().describe('The nextCursor from the previous page; omit for the first page')
+  "cursor": zod.string().max(listExamplesQueryCursorMax).optional().describe('The nextCursor from the previous page; omit for the first page')
 })
 
 export const ListExamplesResponse = zod.object({

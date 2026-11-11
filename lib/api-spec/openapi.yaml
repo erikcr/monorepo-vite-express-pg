@@ -390,20 +390,8 @@ paths:
           schema:
             type: string
             maxLength: 100
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-        - name: cursor
-          in: query
-          required: false
-          description: The nextCursor from the previous page; omit for the first page
-          schema:
-            type: string
+        - $ref: "#/components/parameters/PageLimit"
+        - $ref: "#/components/parameters/PageCursor"
       responses:
         "200":
           description: OK
@@ -424,20 +412,8 @@ paths:
       summary: List example records, newest first, one page at a time
       tags: [example]
       parameters:
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 20
-        - name: cursor
-          in: query
-          required: false
-          description: The nextCursor from the previous page; omit for the first page
-          schema:
-            type: string
+        - $ref: "#/components/parameters/PageLimit"
+        - $ref: "#/components/parameters/PageCursor"
       responses:
         "200":
           description: OK
@@ -565,6 +541,8 @@ components:
       description: The nextCursor from the previous page; omit for the first page
       schema:
         type: string
+        # A cursor is about 90 characters (src/lib/pagination.ts).
+        maxLength: 200
     MemberUserId:
       name: userId
       in: path
