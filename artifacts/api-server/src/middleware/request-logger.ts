@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import { type Options, pinoHttp } from "pino-http";
-import { logger } from "../logger.js";
+import { errSerializer, logger } from "../logger.js";
 
 const withoutQuery = (url: string | undefined) => (url ?? "").split(/[?#]/)[0];
 
@@ -24,6 +24,8 @@ export const requestLogOptions = {
   customLogLevel: (_req, res, err) =>
     err || res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info",
   serializers: {
+    // pino-http replaces the logger's own error serializer with this one, so it's set again here.
+    err: errSerializer,
     req(req: IncomingMessage & { id?: string }) {
       const { referer, ...headers } = req.headers;
       return {

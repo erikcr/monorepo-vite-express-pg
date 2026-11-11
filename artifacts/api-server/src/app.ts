@@ -43,6 +43,16 @@ export function createRouters(db: Db, queue: JobQueue): Record<string, Router> {
   };
 }
 
+/** A JSON body with a NUL in any string (written `\u0000`: a raw one isn't valid JSON) is a 400. */
+function refuseNul(_req: unknown, _res: unknown, body: Buffer): void {
+  if (body.includes("\\u0000")) {
+    throw Object.assign(new Error("Text can't contain a NUL character"), {
+      status: 400,
+      expose: true,
+    });
+  }
+}
+
 /**
  * Who the rate limiter counts: the client's address. Behind Railway `req.ip` isn't it, whatever
  * `trust proxy` says: measured on Railway in production, one client's
@@ -89,10 +99,20 @@ export function createApp(db: Db, queue: JobQueue): Express {
       })
     );
   }
+  // Postgres text can't hold a NUL, so one in a request is never real input: it would only fail
+  // its query, as a 500 reported to Sentry. Refused at the door instead, in the address here and
+  // in JSON bodies by refuseNul.
+  app.use((req, res, next) => {
+    if (req.url.includes("%00")) {
+      res.status(400).json({ error: "The address can't contain a NUL character" });
+      return;
+    }
+    next();
+  });
   // Explicit body size cap (Express's default, stated): larger bodies get 413. Webhook bodies stay
   // bytes, which their signatures are checked against; express.json then leaves them alone.
   app.use("/api/webhooks", express.raw({ type: () => true, limit: "100kb" }));
-  app.use(express.json({ limit: "100kb" }));
+  app.use(express.json({ limit: "100kb", verify: refuseNul }));
 
   for (const [path, router] of Object.entries(createRouters(db, queue))) app.use(path, router);
 

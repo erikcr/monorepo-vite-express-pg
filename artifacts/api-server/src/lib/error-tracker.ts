@@ -45,10 +45,46 @@ export function initErrorTracker(options: Sentry.NodeOptions = {}): boolean {
   return true;
 }
 
-/** Reports an error to Sentry, if it's on. Never throws. */
+/**
+ * An error as it's safe to keep. Drizzle's failed-query error quotes every bound value in its
+ * message and stack and carries them as `params`: emails, names, whatever the row held. This keeps
+ * Postgres's reason and the query text, which holds only placeholders; any other error passes
+ * through. Takes a live error or one pino has already serialized (pino-http hands its error
+ * serializer that), since logs, Sentry and pg-boss's job rows all go through it.
+ */
+export function withoutQueryValues(err: unknown): unknown {
+  if (typeof err !== "object" || err === null || !("params" in err) || !("query" in err)) {
+    return err;
+  }
+  const { message, stack, query, params, cause } = err as {
+    message?: unknown;
+    stack?: unknown;
+    query: unknown;
+    params: unknown;
+    cause?: { message?: unknown };
+  };
+  // Postgres's reason is a live error's cause. pino drops the cause when it serializes one and
+  // appends its message to drizzle's ("Failed query: <query>\nparams: <values>: <reason>").
+  const quoted = `Failed query: ${String(query)}\nparams: ${String(params)}: `;
+  const reason =
+    typeof cause?.message === "string"
+      ? cause.message
+      : typeof message === "string" && message.startsWith(quoted)
+        ? message.slice(quoted.length)
+        : "Query failed";
+  const safe = new Error(`${reason}: ${String(query)}`);
+  // The old stack's frames say where it failed; its message lines are what quoted the values.
+  if (typeof stack === "string") {
+    const frames = stack.split("\n").filter((line) => /^\s+at /.test(line));
+    safe.stack = [`Error: ${safe.message}`, ...frames].join("\n");
+  }
+  return safe;
+}
+
+/** Reports an error to Sentry, if it's on, without the values a failed query carried. */
 export function trackError(err: unknown, context: ErrorContext = {}): void {
   if (!Sentry.isInitialized()) return;
-  Sentry.captureException(err, { tags: context.tags, extra: context.extra });
+  Sentry.captureException(withoutQueryValues(err), { tags: context.tags, extra: context.extra });
 }
 
 /** A browser crash report as POST /api/client-errors receives it. */

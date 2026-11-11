@@ -1,7 +1,7 @@
 import supertest from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../app.js";
-import { createMember } from "../test-helpers/auth.js";
+import { bearer, createMember, grantStaff } from "../test-helpers/auth.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
 import { createFakeQueue } from "../test-helpers/fake-queue.js";
 
@@ -82,6 +82,28 @@ describe("rate limiting", () => {
     expect((await from("198.51.100.1", "10.0.0.2")).status).toBe(200);
     expect((await from("198.51.100.1", "10.0.0.3")).status).toBe(429); // one client, any proxy
     expect((await from("198.51.100.2", "10.0.0.1")).status).toBe(200); // same proxy, own count
+  });
+});
+
+// Postgres text can't hold a NUL: one reaching a query fails it, a 500 reported to Sentry with the
+// request's values. Refused at the door instead.
+describe("NUL characters", () => {
+  it("answer 400 in a JSON body", async () => {
+    const { request, headers } = await memberApp();
+    const res = await request.post("/api/example").set(headers).send({ name: "a\u0000b" });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: "Text can't contain a NUL character" });
+  });
+
+  it("answer 400 in the address", async () => {
+    const db = await createTestDb();
+    await grantStaff(db, "nul@x.test", "staff_support");
+    const staff = bearer({ sub: "user_nul", email: "nul@x.test", twoFactorEnabled: true });
+    const request = supertest(createApp(db, createFakeQueue()));
+    expect((await request.get("/api/admin/orgs?q=a").set(staff)).status).toBe(200);
+    const res = await request.get("/api/admin/orgs?q=a%00b").set(staff);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: "The address can't contain a NUL character" });
   });
 });
 

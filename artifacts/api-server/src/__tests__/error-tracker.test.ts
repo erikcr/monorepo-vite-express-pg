@@ -12,6 +12,7 @@ import { flushErrorTracker, initErrorTracker, trackError } from "../lib/error-tr
 import { bearer } from "../test-helpers/auth.js";
 import { createTestBoss } from "../test-helpers/create-test-boss.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
+import { failedQuery } from "../test-helpers/failed-query.js";
 import { createFakeQueue } from "../test-helpers/fake-queue.js";
 
 // The real Sentry SDK with a well-formed but fake DSN; beforeSend records each event and drops it,
@@ -74,6 +75,24 @@ describe("with SENTRY_DSN", () => {
     expect(event?.request).toBeUndefined();
     expect(event?.user).toBeUndefined();
     expect(JSON.stringify(event)).not.toContain("token");
+  });
+
+  it("reports a failed query by Postgres's reason, without the values it carried", async () => {
+    const { queryError, secret } = await failedQuery(await createTestDb());
+    const db = {
+      select: () => {
+        throw queryError;
+      },
+    } as unknown as Db;
+    const res = await supertest(createApp(db, createFakeQueue()))
+      .get("/api/example/123e4567-e89b-42d3-a456-426614174000")
+      .set(bearer({ sub: "user_x", email: "x@x.test" }));
+    expect(res.status).toBe(500);
+    const [event] = await sent();
+    expect(event?.exception?.values?.[0]?.value).toMatch(
+      /^duplicate key value violates unique constraint .*: insert into "users"/
+    );
+    expect(JSON.stringify(event)).not.toContain(secret);
   });
 
   it("treats a dependency's error carrying an HTTP status as a 500, and reports it", async () => {

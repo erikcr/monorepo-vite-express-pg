@@ -1,12 +1,16 @@
 import { Writable } from "node:stream";
 import type { Db } from "@repo/db";
+import express from "express";
 import pino from "pino";
+import { pinoHttp } from "pino-http";
 import supertest from "supertest";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
+import { errSerializer, logger } from "../logger.js";
 import { requestLogOptions } from "../middleware/request-logger.js";
 import { bearer } from "../test-helpers/auth.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
+import { failedQuery } from "../test-helpers/failed-query.js";
 import { createFakeQueue } from "../test-helpers/fake-queue.js";
 
 const uuid = /^[0-9a-f-]{36}$/;
@@ -90,5 +94,34 @@ describe("request log lines", () => {
     expect(entry.req.headers.accept).toBe("*/*");
     expect(lines[0]).not.toContain("secret");
     expect(lines[0]).not.toContain("token=abc");
+  });
+
+  it("write a failed query's error by Postgres's reason, without the values it carried", async () => {
+    const { queryError, secret } = await failedQuery(await createTestDb());
+    const lines: string[] = [];
+    const sink = new Writable({
+      write(chunk, _enc, done) {
+        lines.push(String(chunk));
+        done();
+      },
+    });
+    // As the app logs from a handler: req.log, which pino-http gives its own error serializer.
+    const app = express();
+    app.use(pinoHttp({ ...requestLogOptions, logger: pino(sink) }));
+    app.get("/fail", (req, res) => {
+      req.log.error({ err: queryError }, "unhandled error");
+      res.status(500).end();
+    });
+    await supertest(app).get("/fail");
+    const entry = JSON.parse(lines.find((line) => line.includes("unhandled error")) ?? "{}");
+    expect(entry.err.message).toMatch(/^duplicate key value violates unique constraint/);
+    expect(lines.join("\n")).not.toContain(secret);
+    // Every other logger writes errors the same way.
+    expect(JSON.stringify(errSerializer(queryError))).not.toContain(secret);
+    expect(
+      (logger as unknown as Record<symbol, unknown>)[pino.symbols.serializersSym]
+    ).toMatchObject({
+      err: errSerializer,
+    });
   });
 });

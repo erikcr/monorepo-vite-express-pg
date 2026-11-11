@@ -1,6 +1,6 @@
 import type { Db } from "@repo/db";
 import type { PgBoss } from "pg-boss";
-import { trackError } from "../lib/error-tracker.js";
+import { trackError, withoutQueryValues } from "../lib/error-tracker.js";
 import { logger } from "../logger.js";
 import { jobs } from "./registry.js";
 
@@ -12,10 +12,12 @@ export async function startWorker(boss: PgBoss, db: Db): Promise<void> {
         try {
           await job.handler(data, { db, jobId: id });
         } catch (err) {
-          // Log with context, then rethrow so pg-boss records the failure and retries.
-          logger.error({ err, job: job.name, jobId: id }, "job failed");
-          trackError(err, { tags: { job: job.name, jobId: id } });
-          throw err;
+          // Log with context, then rethrow so pg-boss records the failure and retries. pg-boss
+          // keeps what's rethrown in the job's row, so that's without a failed query's values.
+          const safe = withoutQueryValues(err);
+          logger.error({ err: safe, job: job.name, jobId: id }, "job failed");
+          trackError(safe, { tags: { job: job.name, jobId: id } });
+          throw safe;
         }
       }
     });
