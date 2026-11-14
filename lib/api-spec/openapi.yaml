@@ -114,7 +114,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
         "409":
-          description: The handle is taken (`code` is handle_taken)
+          description: The handle is taken (`code` is handle_taken), or the person already belongs to as many orgs as can create another (org_limit)
           content:
             application/json:
               schema:
