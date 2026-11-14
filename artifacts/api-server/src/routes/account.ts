@@ -7,8 +7,8 @@ import {
   GetMeResponse,
 } from "@repo/api-zod";
 import type { Db } from "@repo/db";
-import { orgsTable, orgUsersTable } from "@repo/db/schema";
-import { asc, eq } from "drizzle-orm";
+import { orgsTable, orgUsersTable, usersTable } from "@repo/db/schema";
+import { asc, count, eq } from "drizzle-orm";
 import { type Request, Router } from "express";
 import { isOrgRole } from "../lib/authz/policy.js";
 import {
@@ -59,6 +59,12 @@ export function createMeRouter(db: Db, access: Access): Router {
 }
 
 /**
+ * The most orgs one person can belong to and still create another. Without a limit one account
+ * can fill the table with orgs and take handles nobody else can then use.
+ */
+export const MAX_ORGS_PER_PERSON = 20;
+
+/**
  * /api/orgs: self-serve org creation (the creator becomes its org_admin); deleting the current
  * org (X-Org-Id) and leaving it.
  */
@@ -75,6 +81,17 @@ export function createOrgsRouter(db: Db, access: Access): Router {
       return;
     }
     const org = await db.transaction(async (tx) => {
+      // Locks the person's row, so their requests are counted one at a time.
+      await tx
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.id, user.id))
+        .for("update");
+      const [memberships] = await tx
+        .select({ total: count() })
+        .from(orgUsersTable)
+        .where(eq(orgUsersTable.userId, user.id));
+      if ((memberships?.total ?? 0) >= MAX_ORGS_PER_PERSON) return "limit" as const;
       // Without a chosen handle (a client from before handles), one from the name.
       const handle = chosen ?? (await freeHandle(tx, req.body.name));
       const [created] = await tx
@@ -88,6 +105,13 @@ export function createOrgsRouter(db: Db, access: Access): Router {
         .values({ orgId: created.id, userId: user.id, role: "org_admin" });
       return created;
     });
+    if (org === "limit") {
+      res.status(409).json({
+        error: `You belong to ${MAX_ORGS_PER_PERSON} organizations, the most that can create another: leave or delete one first`,
+        code: "org_limit",
+      });
+      return;
+    }
     if (!org) {
       res.status(409).json(HANDLE_TAKEN);
       return;

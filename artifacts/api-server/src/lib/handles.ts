@@ -1,6 +1,6 @@
 import type { Db } from "@repo/db";
 import { orgsTable } from "@repo/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 // An org's handle is its address, /o/<handle>: 3–40 lowercase letters, digits and single
 // hyphens, chosen at creation and fixed after.
@@ -84,11 +84,27 @@ export function handleFromName(name: string): string {
   return base.length < 3 || RESERVED_HANDLES.has(base) ? `${base}-org` : base;
 }
 
-/** The name's handle, or with -2, -3… if taken. */
+const MAX_HANDLE_LENGTH = 40;
+
+/**
+ * The name's handle, or with -2, -3… if taken (a long name gives way to its number). One query
+ * however many are taken: this runs inside the transaction that creates the org.
+ */
 export async function freeHandle(db: Pick<Db, "select">, name: string): Promise<string> {
   const base = handleFromName(name);
-  for (let n = 1; ; n++) {
-    const candidate = n === 1 ? base : `${base}-${n}`;
-    if (!(await handleTaken(db, candidate))) return candidate;
-  }
+  const numbered = (n: number) => {
+    const suffix = `-${n}`;
+    return `${base.slice(0, MAX_HANDLE_LENGTH - suffix.length).replace(/-+$/, "")}${suffix}`;
+  };
+  // Every handle a number could turn this name into: the base, cut back by up to a few
+  // characters, then a number. The base holds only letters, digits and hyphens.
+  const stem = base.slice(0, 33);
+  const candidates = `^${stem}[a-z0-9-]{0,${base.length - stem.length}}(-[0-9]+)?$`;
+  const rows = await db
+    .select({ handle: orgsTable.handle })
+    .from(orgsTable)
+    .where(sql`${orgsTable.handle} ~ ${candidates}`);
+  const taken = new Set(rows.map((r) => r.handle));
+  if (!taken.has(base)) return base;
+  for (let n = 2; ; n++) if (!taken.has(numbered(n))) return numbered(n);
 }

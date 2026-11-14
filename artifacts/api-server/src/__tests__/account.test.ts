@@ -2,8 +2,10 @@ import type { Db } from "@repo/db";
 import { exampleTable, orgsTable, orgUsersTable } from "@repo/db/schema";
 import { eq } from "drizzle-orm";
 import supertest from "supertest";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { createApp } from "../app.js";
+import { freeHandle } from "../lib/handles.js";
+import { MAX_ORGS_PER_PERSON } from "../routes/account.js";
 import { bearer, createMember, createOrg } from "../test-helpers/auth.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
 import { createFakeQueue } from "../test-helpers/fake-queue.js";
@@ -71,6 +73,41 @@ describe("POST /api/orgs", () => {
     };
     expect(await handleOf("Handle Test, Inc.")).toBe("handle-test-inc");
     expect(await handleOf("Handle test inc")).toBe("handle-test-inc-2");
+  });
+
+  it("finds the first free number in one query, however many are taken", async () => {
+    for (const handle of ["crowd", "crowd-2", "crowd-3", "crowd-5", "crowd-team"]) {
+      await db.insert(orgsTable).values({ name: "Crowd", handle });
+    }
+    const counted = { select: vi.fn(db.select.bind(db)) } as unknown as Pick<Db, "select">;
+    expect(await freeHandle(counted, "Crowd")).toBe("crowd-4");
+    expect(counted.select).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a numbered handle within 40 characters", async () => {
+    const name = "a".repeat(36);
+    const taken = [name, ...Array.from({ length: 998 }, (_, i) => `${name}-${i + 2}`)];
+    await db.insert(orgsTable).values(taken.map((handle) => ({ name, handle })));
+    // "-1000" on all 36 would be 41: the name gives way, not the number.
+    expect(await freeHandle(db, name)).toBe(`${"a".repeat(35)}-1000`);
+  });
+
+  it("refuses another org once the person belongs to as many as allowed", async () => {
+    const orgs = [];
+    for (let n = 1; n < MAX_ORGS_PER_PERSON; n++) orgs.push(await createOrg(db));
+    const m = await createMember(db, { orgs });
+    const last = await request.post("/api/orgs").set(m.headers).send({ name: "Last allowed" });
+    expect(last.status).toBe(201);
+
+    const over = await request.post("/api/orgs").set(m.headers).send({ name: "One too many" });
+    expect(over.status).toBe(409);
+    expect(over.body.code).toBe("org_limit");
+    expect(await db.select().from(orgsTable).where(eq(orgsTable.name, "One too many"))).toEqual([]);
+
+    // Leaving or deleting one makes room again.
+    await db.delete(orgsTable).where(eq(orgsTable.id, last.body.id));
+    const again = await request.post("/api/orgs").set(m.headers).send({ name: "Room again" });
+    expect(again.status).toBe(201);
   });
 
   it("gives nobody else access to the new org", async () => {
