@@ -10,7 +10,11 @@ const sameEmail = (
   email: string
 ) => sql`lower(${column}) = lower(${email})`;
 
-/** Grants (or re-activates, or changes the role of) staff access for an email. */
+/**
+ * Grants (or re-activates, or changes the role of) staff access for an email. Re-activating
+ * unlinks the grant, so it goes to the account that holds the email now: the one it was linked to
+ * can have changed its email since.
+ */
 export async function grantStaff(
   db: Db,
   email: string,
@@ -24,7 +28,11 @@ export async function grantStaff(
   if (existing) {
     await db
       .update(platformStaffTable)
-      .set({ role, status: "active" })
+      .set({
+        role,
+        status: "active",
+        ...(existing.status === "active" ? {} : { clerkUserId: null }),
+      })
       .where(eq(platformStaffTable.id, existing.id));
     return "updated";
   }
@@ -32,11 +40,14 @@ export async function grantStaff(
   return "created";
 }
 
-/** Disables an email's staff access (the row stays, as a record). False if there was none. */
+/**
+ * Disables an email's staff access and unlinks it from its account (the row stays, as a record).
+ * False if there was none.
+ */
 export async function revokeStaff(db: Db, email: string): Promise<boolean> {
   const rows = await db
     .update(platformStaffTable)
-    .set({ status: "disabled" })
+    .set({ status: "disabled", clerkUserId: null })
     .where(sameEmail(platformStaffTable.email, email))
     .returning({ id: platformStaffTable.id });
   return rows.length > 0;
