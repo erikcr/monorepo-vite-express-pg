@@ -27,6 +27,8 @@ const site = (filter: string, port: number) =>
   `pnpm --filter ${filter} exec vite build --outDir dist-e2e --logLevel warn && ` +
   `pnpm --filter ${filter} exec vite preview --outDir dist-e2e --port ${port} --strictPort`;
 
+const ADMIN_SPECS = /(^|[\\/])admin[^\\/]*\.spec\.ts$/;
+
 export default defineConfig({
   testDir: "./tests",
   globalSetup: "./global-setup.ts",
@@ -40,11 +42,17 @@ export default defineConfig({
   // In CI, also an HTML report with each failure's trace (uploaded by ci.yml on private repos).
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: { trace: "on-first-retry" },
+  // Which site a spec runs against is in its file name: admin*.spec.ts against admin, every
+  // other spec against web. So a new spec file always runs.
   projects: [
-    { name: "web", testMatch: "web.spec.ts", use: { ...devices["Desktop Chrome"], baseURL: WEB } },
+    {
+      name: "web",
+      testIgnore: ADMIN_SPECS,
+      use: { ...devices["Desktop Chrome"], baseURL: WEB },
+    },
     {
       name: "admin",
-      testMatch: "admin.spec.ts",
+      testMatch: ADMIN_SPECS,
       use: { ...devices["Desktop Chrome"], baseURL: ADMIN },
     },
   ],

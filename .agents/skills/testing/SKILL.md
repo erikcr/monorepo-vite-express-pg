@@ -21,7 +21,7 @@ For each behaviour, take every matching row of the required-tests table in `docs
 | A job's effect or schedule | Job test | `jobs.test.ts` (or `<job>.test.ts` beside it) |
 | A pure function's output | Unit test | the package's `src/__tests__/` |
 | What a page shows or does | Component test | `artifacts/<app>/src/__tests__/<page>.test.tsx` |
-| A person completing a flow across pages and the API | E2E | `e2e/tests/<flow>.spec.ts` |
+| A person completing a flow across pages and the API | E2E | `e2e/tests/<flow>.spec.ts` for web, `e2e/tests/admin-<flow>.spec.ts` for admin: the file name picks the site |
 
 Then the structural tests the change touches: a new route → its row in `route-access.test.ts` (and `contract.test.ts` must pass); a new table → `tenancy-schema.test.ts` (or `GLOBAL_TABLES`, explained); a data-changing migration → `migrations.test.ts`.
 
