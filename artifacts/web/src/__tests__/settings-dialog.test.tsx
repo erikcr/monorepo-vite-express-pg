@@ -142,12 +142,18 @@ describe("the settings dialog", () => {
       target: { value: "new@x.test" },
     });
 
+    const email = screen.getByLabelText("Email address");
+    email.focus();
     fireEvent.keyDown(dialog(), { key: "Escape" });
     expect(
       await screen.findByRole("alertdialog", { name: "Discard unsaved changes?" })
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Keep editing" }));
+    // The question takes the keyboard, on its safe answer, and gives it back where it was.
+    const keepEditing = screen.getByRole("button", { name: "Keep editing" });
+    await waitFor(() => expect(document.activeElement).toBe(keepEditing));
+    fireEvent.click(keepEditing);
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(document.activeElement).toBe(email);
     expect(router.state.location.search).toEqual({ settings: "members" });
     expect((screen.getByLabelText("Email address") as HTMLInputElement).value).toBe("new@x.test");
 

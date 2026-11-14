@@ -48,6 +48,17 @@ describe("/invite", () => {
     expect(accept).toHaveBeenCalledWith({ data: { token: "tok_123-abc" } });
   });
 
+  it("keeps the token while settings open and close over the page", async () => {
+    const { router } = renderAt("/invite#tok_kept");
+    await screen.findByRole("button", { name: "Accept invitation" });
+    // Settings are addressed by ?settings=, and navigating to them drops the fragment.
+    await act(() => router.navigate({ to: ".", search: { settings: "profile" } }));
+    await act(() => router.navigate({ to: ".", search: {} }));
+    expect(router.state.location.hash).toBe("");
+    fireEvent.click(screen.getByRole("button", { name: "Accept invitation" }));
+    expect(accept).toHaveBeenCalledWith({ data: { token: "tok_kept" } });
+  });
+
   it("then opens the org joined, at its address", async () => {
     const { router, queryClient } = renderAt("/invite#tok");
     await screen.findByRole("button", { name: "Accept invitation" });

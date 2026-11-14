@@ -79,6 +79,22 @@ export function SettingsDialog<Id extends string>({
     };
   }, []);
 
+  // The question takes the keyboard, on its safe answer; answered, focus goes back to where it
+  // was (or to the dialog, so Escape still reaches it).
+  const blocked = blocker.status === "blocked";
+  const keepEditing = useRef<HTMLButtonElement>(null);
+  const focusBeforeQuestion = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (blocked) {
+      focusBeforeQuestion.current = document.activeElement as HTMLElement | null;
+      keepEditing.current?.focus();
+      return;
+    }
+    const before = focusBeforeQuestion.current;
+    focusBeforeQuestion.current = null;
+    if (before) (before.isConnected ? before : dialog.current)?.focus();
+  }, [blocked]);
+
   const onKeyDown = (e: KeyboardEvent) => {
     // A menu inside the dialog handles its own Escape and marks it handled.
     if (e.key === "Escape" && !e.defaultPrevented) {
@@ -119,7 +135,7 @@ export function SettingsDialog<Id extends string>({
           </button>
         </div>
 
-        {blocker.status === "blocked" && (
+        {blocked && (
           <div
             role="alertdialog"
             aria-label="Discard unsaved changes?"
@@ -127,6 +143,7 @@ export function SettingsDialog<Id extends string>({
           >
             <span className="flex-1 font-semibold">You have unsaved changes. Discard them?</span>
             <button
+              ref={keepEditing}
               type="button"
               className="border border-border rounded-button px-3 py-1.5"
               onClick={blocker.reset}

@@ -2,6 +2,7 @@ import { RedirectToSignIn, Show } from "@clerk/react";
 import { getGetMeQueryKey, useAcceptInvitation, useGetMe } from "@repo/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { Button, Page, PageTitle } from "../components/ui.tsx";
 
 // An invitation email links to /invite#<token>. The token is in the fragment, which browsers
@@ -15,7 +16,8 @@ export function InvitePage() {
 }
 
 function AcceptInvitation() {
-  const token = useLocation({ select: (l) => l.hash });
+  // Read once: opening settings over this page navigates, which drops the fragment.
+  const [token] = useState(useLocation({ select: (l) => l.hash }));
   const { data: me } = useGetMe();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
