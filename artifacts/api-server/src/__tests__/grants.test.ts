@@ -2,6 +2,7 @@ import type { Db } from "@repo/db";
 import { orgUsersTable, platformStaffTable } from "@repo/db/schema";
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
+import { loadStaff } from "../lib/authz/access.js";
 import { grantOrgMembership, grantStaff, revokeStaff } from "../lib/grants.js";
 import { createMember, createOrg } from "../test-helpers/auth.js";
 import { createTestDb } from "../test-helpers/create-test-db.js";
@@ -20,6 +21,50 @@ describe("grantStaff / revokeStaff", () => {
     expect(rows.filter((r) => r.email.toLowerCase() === "lead@x.test")).toEqual([
       expect.objectContaining({ role: "staff_admin", status: "active" }),
     ]);
+  });
+
+  // The account a grant was linked to can since have changed its email, so the address may belong
+  // to someone else by the time it's granted again.
+  const account = (clerkUserId: string, email: string) => ({
+    clerkUserId,
+    secondFactorAgeMinutes: null,
+    profile: async () => ({ email, name: "" }),
+    twoFactorEnabled: async () => false,
+  });
+
+  it("gives a re-granted email to the account that holds it now, not the one it was revoked from", async () => {
+    await grantStaff(db, "desk@x.test", "staff_support");
+    expect(await loadStaff(db, account("user_before", "desk@x.test"))).not.toBeNull();
+    await revokeStaff(db, "desk@x.test");
+    expect(await loadStaff(db, account("user_before", "desk@x.test"))).toBeNull();
+
+    await grantStaff(db, "desk@x.test", "staff_admin");
+    expect(await loadStaff(db, account("user_before", "personal@x.test"))).toBeNull();
+    expect(await loadStaff(db, account("user_now", "desk@x.test"))).toMatchObject({
+      role: "staff_admin",
+    });
+  });
+
+  it("unlinks a grant that was disabled while still linked, when it's granted again", async () => {
+    await grantStaff(db, "legacy@x.test", "staff_support");
+    expect(await loadStaff(db, account("user_legacy", "legacy@x.test"))).not.toBeNull();
+    // How revoking left a row before it cleared the link.
+    await db
+      .update(platformStaffTable)
+      .set({ status: "disabled" })
+      .where(eq(platformStaffTable.email, "legacy@x.test"));
+
+    await grantStaff(db, "legacy@x.test", "staff_support");
+    expect(await loadStaff(db, account("user_legacy", "elsewhere@x.test"))).toBeNull();
+  });
+
+  it("keeps the link when only the role of an active grant changes", async () => {
+    await grantStaff(db, "steady@x.test", "staff_support");
+    expect(await loadStaff(db, account("user_steady", "steady@x.test"))).not.toBeNull();
+    await grantStaff(db, "steady@x.test", "staff_admin");
+    expect(await loadStaff(db, account("user_steady", "moved@x.test"))).toMatchObject({
+      role: "staff_admin",
+    });
   });
 
   it("rejects an unknown role and reports a missing grant", async () => {
