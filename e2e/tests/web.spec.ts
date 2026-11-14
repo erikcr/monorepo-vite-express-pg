@@ -1,3 +1,4 @@
+import { clerk } from "@clerk/testing/playwright";
 import { E2E_USERS } from "../clerk-env";
 import { API, WEB } from "../playwright.config";
 import { expect, expectAccessible, test } from "./fixtures";
@@ -213,6 +214,36 @@ test.describe("signed in", () => {
     await page.getByRole("button", { name: "Discard" }).click();
     await expect(page.getByRole("dialog", { name: "Settings" })).toBeHidden();
     await expect(page).toHaveURL(/\/o\/gamma-co$/);
+  });
+
+  test("shows the next person nothing of the one who signed out on the same page", async ({
+    page,
+  }) => {
+    await signIn(page, E2E_USERS.departing);
+    await page.goto("/app");
+    await page.getByLabel("Name").fill("Delta Co");
+    await expect(page.getByText("Available", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Create" }).click();
+    await expect(page).toHaveURL(/\/o\/delta-co$/);
+    await page.getByLabel("Record name").fill("Departing record");
+    await page.getByRole("button", { name: "Add" }).click();
+    await expect(page.getByText("Departing record")).toBeVisible();
+
+    // Signing out and in again happens without a page load, so only the app can forget.
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
+    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+    await clerk.signIn({ page, emailAddress: E2E_USERS.arriving });
+    await expect(page.getByRole("button", { name: "Account menu" })).toBeVisible();
+
+    // Home for the newcomer is their own: no org yet, and not the last one opened here.
+    await page.getByRole("link", { name: "App", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Create your organization" })).toBeVisible();
+    await expect(page.getByText("Departing record")).toHaveCount(0);
+    await page.goto("/o/delta-co");
+    await expect(
+      page.getByRole("heading", { name: "Not found, or you don't have access" })
+    ).toBeVisible();
   });
 
   test("moves nothing on the page as the account loads in", async ({ page }) => {

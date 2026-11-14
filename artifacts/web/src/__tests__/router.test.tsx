@@ -1,7 +1,7 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderAt } from "../test-helpers/render.tsx";
-import { clerk } from "./clerk-mock.tsx";
+import { clerk, signInAs } from "./clerk-mock.tsx";
 
 vi.mock("@clerk/react", () => import("./clerk-mock.tsx"));
 
@@ -22,6 +22,15 @@ describe("routes (web)", () => {
   it("renders the home page at /", async () => {
     renderAt("/");
     expect(await screen.findByText("Status")).toBeTruthy();
+  });
+
+  it("forgets every cached response when another person signs in on the same page", async () => {
+    clerk.signedIn = true;
+    const { queryClient } = renderAt("/");
+    await screen.findByText("Status");
+    queryClient.setQueryData(["/api/me"], { user: { email: "first@x.test" } });
+    act(() => signInAs("user_next"));
+    expect(queryClient.getQueryData(["/api/me"])).toBeUndefined();
   });
 
   it("renders the about page at /about", async () => {
