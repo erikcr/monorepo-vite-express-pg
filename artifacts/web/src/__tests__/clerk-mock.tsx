@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useSyncExternalStore } from "react";
 import { vi } from "vitest";
 
 // Stand-in for @clerk/react in component tests: `clerk.signedIn` decides what <Show> renders.
@@ -6,6 +6,7 @@ import { vi } from "vitest";
 export const clerk = {
   signedIn: false,
   loaded: true,
+  userId: "user_ada",
   user: {
     fullName: "Ada Lovelace" as string | null,
     primaryEmailAddress: { emailAddress: "ada@x.test" },
@@ -17,6 +18,13 @@ export const clerk = {
   /** The props the last <SignIn> rendered with. */
   signInProps: {} as Record<string, unknown>,
 };
+
+const listeners = new Set<() => void>();
+/** Another person takes over the session, as when one signs out and the next signs in. */
+export function signInAs(userId: string) {
+  clerk.userId = userId;
+  for (const listener of listeners) listener();
+}
 
 export function Show({
   when,
@@ -36,11 +44,20 @@ export const SignIn = (props: Record<string, unknown>) => {
   clerk.signInProps = props;
   return <p>clerk sign-in form</p>;
 };
-export const useUser = () => ({
-  isLoaded: clerk.loaded,
-  isSignedIn: clerk.signedIn,
-  user: clerk.signedIn ? clerk.user : null,
-});
+export const useUser = () => {
+  const id = useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    () => clerk.userId
+  );
+  return {
+    isLoaded: clerk.loaded,
+    isSignedIn: clerk.signedIn,
+    user: clerk.signedIn ? { ...clerk.user, id } : null,
+  };
+};
 export const useClerk = () => ({ signOut: clerk.signOut, openUserProfile: clerk.openUserProfile });
 export const UserProfile = () => <p>clerk user profile</p>;
 export const SignOutButton = ({ children }: { children: ReactNode }) => <>{children}</>;

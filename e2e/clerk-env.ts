@@ -28,4 +28,7 @@ export const E2E_USERS = {
   // The invitation test's own pair, so it shares no account with tests running alongside it.
   inviter: "e2e-inviter+clerk_test@example.com",
   invitee: "e2e-invitee+clerk_test@example.com",
+  // The shared-computer test's own pair: one signs out, the other signs in on the same page.
+  departing: "e2e-departing+clerk_test@example.com",
+  arriving: "e2e-arriving+clerk_test@example.com",
 } as const;

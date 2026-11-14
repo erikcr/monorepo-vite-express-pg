@@ -1,4 +1,6 @@
+import { useUser } from "@clerk/react";
 import { reportError } from "@repo/api-client-react/errors";
+import { useForgetOnUserChange } from "@repo/api-client-react/query-client";
 import type { QueryClient } from "@tanstack/react-query";
 import {
   createRootRouteWithContext,
@@ -26,6 +28,8 @@ export interface RouterContext {
 }
 
 function RootLayout() {
+  const { isLoaded, user } = useUser();
+  useForgetOnUserChange(isLoaded ? (user?.id ?? null) : undefined);
   return (
     <div className="min-h-dvh flex flex-col">
       <Header />

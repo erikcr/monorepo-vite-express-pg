@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderAt } from "../test-helpers/render.tsx";
-import { clerk } from "./clerk-mock.tsx";
+import { clerk, signInAs } from "./clerk-mock.tsx";
 
 vi.mock("@clerk/react", () => import("./clerk-mock.tsx"));
 
@@ -35,6 +35,14 @@ describe("routes (admin)", () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("forgets every cached response when another person signs in on the same page", async () => {
+    const { queryClient } = renderAt("/");
+    await screen.findByRole("button", { name: "Account menu" });
+    queryClient.setQueryData(["/api/admin/orgs"], { items: [{ name: "Seen by staff" }] });
+    act(() => signInAs("user_next"));
+    expect(queryClient.getQueryData(["/api/admin/orgs"])).toBeUndefined();
   });
 
   it("has an account menu with Clerk's profile, and holds its place while Clerk loads", async () => {
